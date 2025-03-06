@@ -7,9 +7,9 @@ local Camera = workspace.CurrentCamera
 -- GUI Setup
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
-gui.Name = "ExecutorGUI"
+gui.Name = "CustomGUI"
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui") -- Fixed line 12
+gui.Parent = player:WaitForChild("PlayerGui")
 
 -- Main Frame
 local mainFrame = Instance.new("Frame")
@@ -30,7 +30,7 @@ titleBar.Parent = mainFrame
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 1, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Executor GUI - Press Q to Toggle"
+titleLabel.Text = "Custom GUI - Press Q to Toggle"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextSize = 14
 titleLabel.Font = Enum.Font.SourceSans
@@ -118,7 +118,7 @@ exploitsTabButton.MouseButton1Click:Connect(function()
     exploitsFrame.Visible = true
 end)
 
--- Aimbot Script Implementation
+-- Aimbot Implementation
 local targetPlayer = nil
 local aimbotEnabled = false
 
@@ -188,7 +188,7 @@ aimbotToggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- ESP Script Implementation
+-- ESP Implementation
 local espEnabled = {
     Box = false,
     Name = false,
@@ -270,28 +270,9 @@ local function DrawESP(plr)
             end
 
             local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-            if not humanoid then
-                print("No Humanoid found for player: " .. plr.Name)
-                Box.Visible = false
-                name.Visible = false
-                distance.Visible = false
-                healthBar.Visible = false
-                tracer.Visible = false
-                for _, line in pairs(skeleton) do
-                    line.Visible = false
-                end
-                return
-            end
+            if not humanoid then return end
 
-            local success, healthError = pcall(function()
-                if humanoid.Health <= 0 then
-                    return false
-                end
-                return true
-            end)
-
-            if not success or not healthError then
-                print("Failed to access Health for player: " .. plr.Name .. " - Error: " .. tostring(healthError))
+            if humanoid.Health <= 0 then
                 Box.Visible = false
                 name.Visible = false
                 distance.Visible = false
@@ -338,18 +319,11 @@ local function DrawESP(plr)
                 end
 
                 if espEnabled.HealthBar then
-                    local success, healthPercent = pcall(function()
-                        return humanoid.Health / humanoid.MaxHealth
-                    end)
-                    if success then
-                        healthBar.From = Vector2.new(BottomRight.X + 5, BottomRight.Y)
-                        healthBar.To = Vector2.new(BottomRight.X + 5, TopRight.Y + ((BottomRight.Y - TopRight.Y) * (1 - healthPercent)))
-                        healthBar.Color = Color3.fromRGB(0, 255, 0)
-                        healthBar.Visible = true
-                    else
-                        healthBar.Visible = false
-                        print("Failed to calculate health percent for player: " .. plr.Name .. " - Error: " .. tostring(healthPercent))
-                    end
+                    local healthPercent = humanoid.Health / humanoid.MaxHealth
+                    healthBar.From = Vector2.new(BottomRight.X + 5, BottomRight.Y)
+                    healthBar.To = Vector2.new(BottomRight.X + 5, TopRight.Y + ((BottomRight.Y - TopRight.Y) * (1 - healthPercent)))
+                    healthBar.Color = Color3.fromRGB(0, 255, 0)
+                    healthBar.Visible = true
                 else
                     healthBar.Visible = false
                 end
@@ -447,7 +421,7 @@ for _, toggleData in pairs(espToggles) do
     end)
 end
 
--- Fly Script Implementation
+-- Fly Implementation
 local flyEnabled = false
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
