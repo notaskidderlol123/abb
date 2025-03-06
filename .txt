@@ -5,28 +5,12 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
--- Create a Test GUI to confirm rendering
-local TestGui = Instance.new("ScreenGui")
-TestGui.Name = "TestGui"
-TestGui.ResetOnSpawn = false
-TestGui.Enabled = true
-TestGui.Parent = game:GetService("CoreGui")
-print("TestGui parented to CoreGui:", TestGui.Parent)
-
-local TestFrame = Instance.new("Frame")
-TestFrame.Size = UDim2.new(0, 100, 0, 100)
-TestFrame.Position = UDim2.new(0, 10, 0, 10)
-TestFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-TestFrame.Parent = TestGui
-print("TestFrame created at position:", TestFrame.Position)
-
 -- Create Main GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HackGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Enabled = true
 ScreenGui.Parent = game:GetService("CoreGui")
-print("ScreenGui parented to CoreGui:", ScreenGui.Parent)
 
 local Frame = Instance.new("Frame")
 Frame.Size = UDim2.new(0, 400, 0, 500)
@@ -34,13 +18,9 @@ Frame.Position = UDim2.new(0.5, -200, 0.5, -250)
 Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 Frame.Visible = true
 Frame.Parent = ScreenGui
-print("Frame position:", Frame.Position, "Frame size:", Frame.Size, "Frame visible:", Frame.Visible)
 
 -- Make GUI Draggable with Left Click
-local dragging
-local dragInput
-local dragStart
-local startPos
+local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
     Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
@@ -51,7 +31,6 @@ Frame.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos = Frame.Position
-        
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -77,7 +56,6 @@ local bindKey = Enum.KeyCode.Q
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == bindKey then
         Frame.Visible = not Frame.Visible
-        print("Toggled GUI visibility to:", Frame.Visible)
     end
 end)
 
@@ -85,33 +63,8 @@ end)
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 40)
 TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-TabFrame.ZIndex = 2 -- Ensure tabs are clickable
 TabFrame.Parent = Frame
 
-local function createTab(name, posX, contentFrame)
-    local TabButton = Instance.new("TextButton")
-    TabButton.Size = UDim2.new(0.25, 0, 1, 0)
-    TabButton.Position = UDim2.new(posX, 0, 0, 0)
-    TabButton.Text = name
-    TabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TabButton.TextSize = 16
-    TabButton.ZIndex = 3 -- Higher ZIndex for clickability
-    TabButton.Parent = TabFrame
-    
-    TabButton.MouseButton1Click:Connect(function()
-        print("Tab clicked:", name) -- Debug print to confirm click
-        -- Explicitly set all frames to invisible first
-        for _, frame in pairs({AimbotFrame, VisualsFrame, ExploitsFrame, SettingsFrame}) do
-            frame.Visible = false
-            print("Set", frame.Name, "to invisible") -- Debug print
-        end
-        contentFrame.Visible = true
-        print("Set", contentFrame.Name, "to visible") -- Debug print
-    end)
-end
-
--- Content Frames with Scrolling
 local AimbotFrame = Instance.new("ScrollingFrame")
 AimbotFrame.Size = UDim2.new(1, 0, 1, -40)
 AimbotFrame.Position = UDim2.new(0, 0, 0, 40)
@@ -119,7 +72,6 @@ AimbotFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 AimbotFrame.Visible = true
 AimbotFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 AimbotFrame.ScrollBarThickness = 8
-AimbotFrame.ZIndex = 1
 AimbotFrame.Parent = Frame
 
 local VisualsFrame = Instance.new("ScrollingFrame")
@@ -129,7 +81,6 @@ VisualsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 VisualsFrame.Visible = false
 VisualsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 VisualsFrame.ScrollBarThickness = 8
-VisualsFrame.ZIndex = 1
 VisualsFrame.Parent = Frame
 
 local ExploitsFrame = Instance.new("ScrollingFrame")
@@ -139,7 +90,6 @@ ExploitsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 ExploitsFrame.Visible = false
 ExploitsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ExploitsFrame.ScrollBarThickness = 8
-ExploitsFrame.ZIndex = 1
 ExploitsFrame.Parent = Frame
 
 local SettingsFrame = Instance.new("ScrollingFrame")
@@ -149,15 +99,33 @@ SettingsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 SettingsFrame.Visible = false
 SettingsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 SettingsFrame.ScrollBarThickness = 8
-SettingsFrame.ZIndex = 1
 SettingsFrame.Parent = Frame
+
+local contentFrames = {AimbotFrame, VisualsFrame, ExploitsFrame, SettingsFrame}
+
+local function createTab(name, posX, contentFrame)
+    local TabButton = Instance.new("TextButton")
+    TabButton.Size = UDim2.new(0.25, 0, 1, 0)
+    TabButton.Position = UDim2.new(posX, 0, 0, 0)
+    TabButton.Text = name
+    TabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabButton.TextSize = 16
+    TabButton.Parent = TabFrame
+    
+    TabButton.MouseButton1Click:Connect(function()
+        for _, frame in pairs(contentFrames) do
+            frame.Visible = (frame == contentFrame) -- Only the clicked tab's frame is visible
+        end
+    end)
+end
 
 createTab("Aimbot", 0, AimbotFrame)
 createTab("Visuals", 0.25, VisualsFrame)
 createTab("Exploits", 0.50, ExploitsFrame)
 createTab("Settings", 0.75, SettingsFrame)
 
--- Helper function for toggle buttons
+-- Helper Functions
 local function createToggleButton(parent, text, posY, callback)
     local Button = Instance.new("TextButton")
     Button.Size = UDim2.new(0.9, 0, 0, 40)
@@ -174,28 +142,10 @@ local function createToggleButton(parent, text, posY, callback)
         Button.Text = text .. (state and ": ON" or ": OFF")
         Button.BackgroundColor3 = state and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
         callback(state)
-        parent.CanvasSize = UDim2.new(0, 0, 0, posY + 50) -- Update canvas size
+        parent.CanvasSize = UDim2.new(0, 0, 0, posY + 50)
     end)
 end
 
--- Helper function for text buttons (for settings)
-local function createTextButton(parent, text, posY, callback)
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0.9, 0, 0, 40)
-    Button.Position = UDim2.new(0.05, 0, 0, posY)
-    Button.Text = text .. " (Current: " .. bindKey.Name .. ")"
-    Button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.TextSize = 14
-    Button.Parent = parent
-    
-    Button.MouseButton1Click:Connect(function()
-        callback()
-    end)
-    parent.CanvasSize = UDim2.new(0, 0, 0, posY + 50) -- Update canvas size
-end
-
--- Helper function for sliders with rounding on release
 local function createSlider(parent, name, posY, minValue, maxValue, defaultValue, callback)
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Size = UDim2.new(0.9, 0, 0, 40)
@@ -205,8 +155,7 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
 
     local Label = Instance.new("TextLabel")
     Label.Size = UDim2.new(0.5, 0, 1, 0)
-    Label.Position = UDim2.new(0, 0, 0, 0)
-    Label.Text = name .. ": " .. defaultValue
+    Label.Text = name .. ": " .. (defaultValue == 0 and "Bottom" or defaultValue == 1 and "Middle" or "Top")
     Label.TextColor3 = Color3.fromRGB(255, 255, 255)
     Label.BackgroundTransparency = 1
     Label.TextSize = 14
@@ -221,7 +170,6 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
 
     local SliderFill = Instance.new("Frame")
     SliderFill.Size = UDim2.new((defaultValue - minValue) / (maxValue - minValue), 0, 1, 0)
-    SliderFill.Position = UDim2.new(0, 0, 0, 0)
     SliderFill.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
     SliderFill.Parent = SliderButton
 
@@ -237,14 +185,8 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             draggingSlider = false
             local roundedValue = math.round(currentValue)
-            if maxValue == 2 then -- For tracer position slider
-                roundedValue = math.clamp(roundedValue, 0, 2)
-                if roundedValue == 0 then Label.Text = name .. ": Bottom Middle"
-                elseif roundedValue == 1 then Label.Text = name .. ": Behind"
-                else Label.Text = name .. ": Front" end
-            else
-                Label.Text = name .. ": " .. roundedValue
-            end
+            roundedValue = math.clamp(roundedValue, 0, 2)
+            Label.Text = name .. ": " .. (roundedValue == 0 and "Bottom" or roundedValue == 1 and "Middle" or "Top")
             SliderFill.Size = UDim2.new((roundedValue - minValue) / (maxValue - minValue), 0, 1, 0)
             callback(roundedValue)
         end
@@ -258,55 +200,27 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
             local relativePos = math.clamp((mousePos - buttonPos) / buttonSize, 0, 1)
             currentValue = minValue + (maxValue - minValue) * relativePos
             SliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
-            if maxValue == 2 then
-                if math.round(currentValue) == 0 then Label.Text = name .. ": Bottom Middle"
-                elseif math.round(currentValue) == 1 then Label.Text = name .. ": Behind"
-                else Label.Text = name .. ": Front" end
-            else
-                Label.Text = name .. ": " .. math.floor(currentValue + 0.5)
-            end
+            Label.Text = name .. ": " .. (math.round(currentValue) == 0 and "Bottom" or math.round(currentValue) == 1 and "Middle" or "Top")
         end
     end)
-    parent.CanvasSize = UDim2.new(0, 0, 0, posY + 50) -- Update canvas size
+    parent.CanvasSize = UDim2.new(0, 0, 0, posY + 50)
 end
 
--- Helper function for text boxes
-local function createTextBox(parent, text, posY, defaultValue, callback)
-    local TextBoxFrame = Instance.new("Frame")
-    TextBoxFrame.Size = UDim2.new(0.9, 0, 0, 40)
-    TextBoxFrame.Position = UDim2.new(0.05, 0, 0, posY)
-    TextBoxFrame.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    TextBoxFrame.Parent = parent
-
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.3, 0, 1, 0)
-    Label.Position = UDim2.new(0, 0, 0, 0)
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Label.BackgroundTransparency = 1
-    Label.TextSize = 14
-    Label.Parent = TextBoxFrame
-
-    local TextBox = Instance.new("TextBox")
-    TextBox.Size = UDim2.new(0.6, 0, 0.8, 0)
-    TextBox.Position = UDim2.new(0.35, 0, 0.1, 0)
-    TextBox.Text = tostring(defaultValue)
-    TextBox.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TextBox.TextSize = 14
-    TextBox.Parent = TextBoxFrame
-
-    TextBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            local num = tonumber(TextBox.Text) or defaultValue
-            TextBox.Text = tostring(num)
-            callback(num)
-        end
-    end)
-    parent.CanvasSize = UDim2.new(0, 0, 0, posY + 50) -- Update canvas size
+local function createTextButton(parent, text, posY, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0.9, 0, 0, 40)
+    Button.Position = UDim2.new(0.05, 0, 0, posY)
+    Button.Text = text .. " (Current: " .. bindKey.Name .. ")"
+    Button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 14
+    Button.Parent = parent
+    
+    Button.MouseButton1Click:Connect(callback)
+    parent.CanvasSize = UDim2.new(0, 0, 0, posY + 50)
 end
 
--- Aimbot Tab (Camera Lock-On)
+-- Aimbot Tab
 local targetPlayer = nil
 local aimbotActive = false
 local deadCheckAimbot = false
@@ -374,7 +288,7 @@ end)
 
 -- Visuals Tab (ESP Features)
 local espStates = {Box = false, Tracer = false, Name = false, Distance = false, Health = false, Skeleton = false}
-local tracerPosition = 1 -- Default to Behind (0 = Bottom Middle, 1 = Behind, 2 = Front)
+local tracerPosition = 1 -- 0 = Bottom, 1 = Middle, 2 = Top
 local deadCheckVisuals = false
 local teamCheckVisuals = false
 local espConnections = {}
@@ -425,35 +339,32 @@ local function DrawESP(plr)
     local function Update()
         local connection
         connection = RunService.RenderStepped:Connect(function()
-            if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+            if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+                for _, obj in pairs(objects) do
+                    if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
+                end
+                return
+            end
             local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
             if deadCheckVisuals and humanoid and humanoid.Health <= 0 then
                 for _, obj in pairs(objects) do
-                    if type(obj) == "table" then
-                        for _, line in pairs(obj) do line.Visible = false end
-                    else
-                        obj.Visible = false
-                    end
+                    if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
                 end
                 return
             end
             local isSameTeam = (LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team)
             if teamCheckVisuals and isSameTeam then
                 for _, obj in pairs(objects) do
-                    if type(obj) == "table" then
-                        for _, line in pairs(obj) do line.Visible = false end
-                    else
-                        obj.Visible = false
-                    end
+                    if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
                 end
                 return
             end
             
             local points = {
-                TopLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, 0)).p),
-                TopRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, 0)).p),
-                BottomLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, 0)).p),
-                BottomRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, 0)).p)
+                TopLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, 0)).Position),
+                TopRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, 0)).Position),
+                BottomLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, 0)).Position),
+                BottomRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, 0)).Position)
             }
             
             if espStates.Box then
@@ -492,23 +403,16 @@ local function DrawESP(plr)
             if espStates.Tracer then
                 local tracerY = Camera.ViewportSize.Y
                 local tracerToX, tracerToY
-                if tracerPosition == 0 then tracerY = Camera.ViewportSize.Y -- Bottom Middle
+                if tracerPosition == 0 then -- Bottom
+                    tracerY = Camera.ViewportSize.Y
                     tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
-                elseif tracerPosition == 1 then tracerY = Camera.ViewportSize.Y / 2 -- Behind
-                    if plr.Character and plr.Character:FindFirstChild("UpperTorso") then
-                        print("Using UpperTorso for", plr.Name)
-                        local chestPos = Camera:WorldToViewportPoint(plr.Character.UpperTorso.Position)
-                        tracerToX, tracerToY = chestPos.X, chestPos.Y
-                    elseif plr.Character and plr.Character:FindFirstChild("Torso") then
-                        print("Using Torso for", plr.Name)
-                        local chestPos = Camera:WorldToViewportPoint(plr.Character.Torso.Position)
-                        tracerToX, tracerToY = chestPos.X, chestPos.Y
-                    else
-                        print("Falling back to BottomRight for", plr.Name)
-                        tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
-                    end
-                elseif tracerPosition == 2 then tracerY = 0 -- Front
-                    tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
+                elseif tracerPosition == 1 then -- Middle
+                    tracerY = Camera.ViewportSize.Y / 2
+                    local chestPos = plr.Character:FindFirstChild("UpperTorso") and Camera:WorldToViewportPoint(plr.Character.UpperTorso.Position) or Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                    tracerToX, tracerToY = chestPos.X, chestPos.Y
+                elseif tracerPosition == 2 then -- Top
+                    tracerY = 0
+                    tracerToX, tracerToY = points.TopRight.X, points.TopRight.Y
                 end
                 objects.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, tracerY)
                 objects.Tracer.To = Vector2.new(tracerToX, tracerToY)
@@ -519,14 +423,12 @@ local function DrawESP(plr)
                 for _, pair in ipairs(bones) do
                     local p1, p2 = plr.Character:FindFirstChild(pair[1]), plr.Character:FindFirstChild(pair[2])
                     if p1 and p2 then
-                        local sp1, v1 = Camera:WorldToViewportPoint(p1.Position)
-                        local sp2, v2 = Camera:WorldToViewportPoint(p2.Position)
-                        if v1 and v2 then
-                            objects.Skeleton[pair[1] .. pair[2]].From = Vector2.new(sp1.X, sp1.Y)
-                            objects.Skeleton[pair[1] .. pair[2]].To = Vector2.new(sp2.X, sp2.Y)
-                            objects.Skeleton[pair[1] .. pair[2]].Visible = true
-                        else objects.Skeleton[pair[1] .. pair[2]].Visible = false end
-                    end
+                        local sp1 = Camera:WorldToViewportPoint(p1.Position)
+                        local sp2 = Camera:WorldToViewportPoint(p2.Position)
+                        objects.Skeleton[pair[1] .. pair[2]].From = Vector2.new(sp1.X, sp1.Y)
+                        objects.Skeleton[pair[1] .. pair[2]].To = Vector2.new(sp2.X, sp2.Y)
+                        objects.Skeleton[pair[1] .. pair[2]].Visible = true
+                    else objects.Skeleton[pair[1] .. pair[2]].Visible = false end
                 end
             else
                 for _, line in pairs(objects.Skeleton) do line.Visible = false end
@@ -538,28 +440,18 @@ local function DrawESP(plr)
 end
 
 for _, player in pairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        DrawESP(player)
-    end
+    if player ~= LocalPlayer then DrawESP(player) end
 end
 
 Players.PlayerAdded:Connect(function(player)
-    wait(1)
-    if player ~= LocalPlayer then
-        DrawESP(player)
-    end
+    task.wait(1)
+    if player ~= LocalPlayer then DrawESP(player) end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
     if espObjects[player] then
         for _, obj in pairs(espObjects[player]) do
-            if type(obj) == "table" then
-                for _, line in pairs(obj) do
-                    line:Remove()
-                end
-            else
-                obj:Remove()
-            end
+            if type(obj) == "table" then for _, line in pairs(obj) do line:Remove() end else obj:Remove() end
         end
         espObjects[player] = nil
     end
@@ -571,22 +463,15 @@ end)
 
 createToggleButton(VisualsFrame, "Box ESP", 10, function(state) espStates.Box = state end)
 createToggleButton(VisualsFrame, "Tracers", 60, function(state) espStates.Tracer = state end)
-createSlider(VisualsFrame, "Tracer Position", 110, 0, 2, 1, function(value)
-    tracerPosition = value
-    print("Tracer position set to:", tracerPosition)
-end)
+createSlider(VisualsFrame, "Tracer Position", 110, 0, 2, 1, function(value) tracerPosition = value end)
 createToggleButton(VisualsFrame, "Name Tags", 160, function(state) espStates.Name = state end)
 createToggleButton(VisualsFrame, "Distance", 210, function(state) espStates.Distance = state end)
 createToggleButton(VisualsFrame, "Health Bar", 260, function(state) espStates.Health = state end)
 createToggleButton(VisualsFrame, "Skeleton", 310, function(state) espStates.Skeleton = state end)
-createToggleButton(VisualsFrame, "Dead Check", 360, function(state)
-    deadCheckVisuals = state
-end)
-createToggleButton(VisualsFrame, "Team Check", 410, function(state)
-    teamCheckVisuals = state
-end)
+createToggleButton(VisualsFrame, "Dead Check", 360, function(state) deadCheckVisuals = state end)
+createToggleButton(VisualsFrame, "Team Check", 410, function(state) teamCheckVisuals = state end)
 
--- Exploits Tab (Admin Fly, No Clip, Fly Speed Slider, Save Last Position)
+-- Exploits Tab
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
@@ -597,15 +482,10 @@ local noClipActive = false
 local noClipConnection = nil
 local lastPosition = nil
 local saveLastPosition = false
-local deadCheckExploits = false
-local teamCheckExploits = false
 
--- Admin Fly with Respawn Fix and Speed Slider
 local function setupFly()
     if flying and rootPart and humanoid then
-        if saveLastPosition and not lastPosition then
-            lastPosition = rootPart.Position
-        end
+        if saveLastPosition and not lastPosition then lastPosition = rootPart.Position end
         humanoid.PlatformStand = true
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
@@ -619,10 +499,10 @@ local function setupFly()
         bg.CFrame = rootPart.CFrame
         bg.Parent = rootPart
         
-        spawn(function()
+        task.spawn(function()
             while flying and rootPart and humanoid do
                 local cam = workspace.CurrentCamera
-                local move = Vector3.new(0, 0, 0)
+                local move = Vector3.new()
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
@@ -637,7 +517,7 @@ local function setupFly()
                 else
                     bv.Velocity = Vector3.new(0, 0, 0)
                 end
-                wait()
+                task.wait()
             end
         end)
     end
@@ -663,28 +543,20 @@ LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     rootPart = character:WaitForChild("HumanoidRootPart")
     humanoid = character:WaitForChild("Humanoid")
-    if flying then
-        setupFly()
-    end
-    if noClipActive then
-        toggleNoClip(true)
-    end
+    if flying then setupFly() end
+    if noClipActive then toggleNoClip(true) end
 end)
 
--- No Clip Feature with Proper Toggle Off
 local function toggleNoClip(state)
     noClipActive = state
     if noClipActive then
-        local function noClip()
+        noClipConnection = RunService.Stepped:Connect(function()
             if character and rootPart then
                 for _, part in pairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
+                    if part:IsA("BasePart") then part.CanCollide = false end
                 end
             end
-        end
-        noClipConnection = RunService.Stepped:Connect(noClip)
+        end)
     else
         if noClipConnection then
             noClipConnection:Disconnect()
@@ -692,49 +564,29 @@ local function toggleNoClip(state)
         end
         if character then
             for _, part in pairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
+                if part:IsA("BasePart") then part.CanCollide = true end
             end
         end
     end
 end
 
 createToggleButton(ExploitsFrame, "Admin Fly", 10, toggleFly)
-createSlider(ExploitsFrame, "Fly Speed", 60, 10, 200, 75, function(value)
-    speed = value
-    print("Fly speed set to:", speed)
-end)
+createSlider(ExploitsFrame, "Fly Speed", 60, 10, 200, 75, function(value) speed = value end)
 createToggleButton(ExploitsFrame, "No Clip", 110, toggleNoClip)
-createToggleButton(ExploitsFrame, "Dead Check", 160, function(state)
-    deadCheckExploits = state
-end)
-createToggleButton(ExploitsFrame, "Team Check", 210, function(state)
-    teamCheckExploits = state
-end)
-createToggleButton(ExploitsFrame, "Save Last Position", 260, function(state)
-    saveLastPosition = state
-end)
+createToggleButton(ExploitsFrame, "Save Last Position", 160, function(state) saveLastPosition = state end)
 
--- Settings Tab (Change Bind and GUI Color)
+-- Settings Tab (Only Bind Change)
 local bindChangeActive = false
-local guiColor = Color3.fromRGB(50, 50, 50) -- Default GUI color
-
 createTextButton(SettingsFrame, "Change GUI Bind", 10, function()
     if not bindChangeActive then
         bindChangeActive = true
         local button = SettingsFrame:FindFirstChild("Change GUI Bind")
-        if button then
-            button.Text = "Change GUI Bind (Press a key)"
-        end
+        if button then button.Text = "Change GUI Bind (Press a key)" end
         local bindChangeConnection
         bindChangeConnection = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard and bindChangeActive then
                 bindKey = input.KeyCode
-                if button then
-                    button.Text = "Change GUI Bind (Current: " .. bindKey.Name .. ")"
-                end
-                print("New GUI bind set to:", bindKey.Name)
+                if button then button.Text = "Change GUI Bind (Current: " .. bindKey.Name .. ")" end
                 bindChangeActive = false
                 bindChangeConnection:Disconnect()
             end
@@ -742,25 +594,4 @@ createTextButton(SettingsFrame, "Change GUI Bind", 10, function()
     end
 end)
 
-createTextBox(SettingsFrame, "GUI Color (R,G,B)", 60, "50,50,50", function(value)
-    local r, g, b = value:match("(%d+),(%d+),(%d+)")
-    if r and g and b then
-        r, g, b = tonumber(r), tonumber(g), tonumber(b)
-        if r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255 then
-            guiColor = Color3.fromRGB(r, g, b)
-            Frame.BackgroundColor3 = guiColor
-            TabFrame.BackgroundColor3 = guiColor:Lerp(Color3.fromRGB(30, 30, 30), 0.5)
-            AimbotFrame.BackgroundColor3 = guiColor
-            VisualsFrame.BackgroundColor3 = guiColor
-            ExploitsFrame.BackgroundColor3 = guiColor
-            SettingsFrame.BackgroundColor3 = guiColor
-            print("GUI color set to:", r, g, b)
-        else
-            print("Invalid RGB values. Use 0-255 for each component.")
-        end
-    else
-        print("Invalid format. Use R,G,B (e.g., 255,0,0)")
-    end
-end)
-
-print("GUI Loaded! Use the tabs to toggle features. Press Q to toggle GUI visibility (or custom bind). Drag with left click.")
+print("GUI Loaded! Press Q (or custom bind) to toggle visibility. Drag with left click.")
