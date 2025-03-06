@@ -3,7 +3,6 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Camera = workspace.CurrentCamera
-
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
@@ -20,6 +19,8 @@ mainFrame.Size = UDim2.new(0, 400, 0, 300)
 mainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true -- Allow dragging
 mainFrame.Visible = true
 mainFrame.Parent = gui
 
@@ -39,7 +40,7 @@ titleLabel.Parent = titleBar
 
 -- GUI Toggle
 local guiVisible = true
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Q then
         guiVisible = not guiVisible
         mainFrame.Visible = guiVisible
@@ -48,7 +49,7 @@ end)
 
 -- Fly Implementation
 local flying = false
-local flySpeed = 75
+local flySpeed = 50
 local flyForce = 10000
 
 local function toggleFly()
@@ -67,25 +68,22 @@ local function toggleFly()
         bg.CFrame = rootPart.CFrame
         bg.Parent = rootPart
 
-        spawn(function()
-            while flying do
-                local cam = workspace.CurrentCamera
-                local move = Vector3.new(0, 0, 0)
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
+        RunService.RenderStepped:Connect(function()
+            if not flying then return end
+            local move = Vector3.new(0, 0, 0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
 
-                if move.Magnitude > 0 then
-                    move = move.Unit * flySpeed
-                    bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
-                    bg.CFrame = cam.CFrame
-                else
-                    bv.Velocity = Vector3.new(0, 0, 0)
-                end
-                wait()
+            if move.Magnitude > 0 then
+                move = move.Unit * flySpeed
+                rootPart.Velocity = Camera.CFrame:VectorToWorldSpace(move)
+                bg.CFrame = Camera.CFrame
+            else
+                rootPart.Velocity = Vector3.new(0, 0, 0)
             end
         end)
     else
@@ -108,77 +106,54 @@ flyToggle.Parent = mainFrame
 
 flyToggle.MouseButton1Click:Connect(function()
     toggleFly()
-    if flying then
-        flyToggle.Text = "Fly: ON"
-        flyToggle.TextColor3 = Color3.fromRGB(0, 255, 0)
-    else
-        flyToggle.Text = "Fly: OFF"
-        flyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    end
+    flyToggle.Text = flying and "Fly: ON" or "Fly: OFF"
+    flyToggle.TextColor3 = flying and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
--- Aimbot Implementation
-local targetPlayer = nil
+-- Fly Speed Slider
+local flySpeedSlider = Instance.new("TextButton")
+flySpeedSlider.Size = UDim2.new(0, 200, 0, 30)
+flySpeedSlider.Position = UDim2.new(0, 10, 0, 50)
+flySpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+flySpeedSlider.Text = "Fly Speed: " .. flySpeed
+flySpeedSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
+flySpeedSlider.TextSize = 14
+flySpeedSlider.Parent = mainFrame
 
-local function getNearestPlayer()
-    local nearestDistance = math.huge
-    local nearestPlayer = nil
+flySpeedSlider.MouseButton1Click:Connect(function()
+    flySpeed = (flySpeed % 100) + 1
+    flySpeedSlider.Text = "Fly Speed: " .. flySpeed
+end)
 
-    for _, otherPlayer in pairs(Players:GetPlayers()) do
-        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (player.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if distance < nearestDistance then
-                nearestDistance = distance
-                nearestPlayer = otherPlayer
+-- No-Clip Implementation
+local noClip = false
+local function toggleNoClip()
+    noClip = not noClip
+    RunService.Stepped:Connect(function()
+        if noClip then
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
             end
         end
-    end
-
-    return nearestPlayer
-end
-
-UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        targetPlayer = getNearestPlayer()
-        if targetPlayer then
-            RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
-            end)
-        end
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        RunService:UnbindFromRenderStep("LockOnPlayer")
-    end
-end)
-
--- ESP Toggles (Box, Name, Distance, etc.)
-local espToggles = {
-    {"Box ESP", "Box", 50},
-    {"Name ESP", "Name", 90},
-    {"Distance ESP", "Distance", 130}
-}
-
-local espEnabled = {Box = false, Name = false, Distance = false}
-
-for _, toggleData in pairs(espToggles) do
-    local toggleName, key, yPos = toggleData[1], toggleData[2], toggleData[3]
-    local toggle = Instance.new("TextButton")
-    toggle.Size = UDim2.new(0, 200, 0, 30)
-    toggle.Position = UDim2.new(0, 10, 0, yPos)
-    toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    toggle.Text = toggleName .. ": OFF"
-    toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    toggle.TextSize = 14
-    toggle.Parent = mainFrame
-
-    toggle.MouseButton1Click:Connect(function()
-        espEnabled[key] = not espEnabled[key]
-        toggle.Text = toggleName .. (espEnabled[key] and ": ON" or ": OFF")
-        toggle.TextColor3 = espEnabled[key] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end)
 end
 
-print("Loaded GUI with Fly, Aimbot, and ESP toggles!")
+-- No-Clip Toggle Button
+local noClipToggle = Instance.new("TextButton")
+noClipToggle.Size = UDim2.new(0, 200, 0, 30)
+noClipToggle.Position = UDim2.new(0, 10, 0, 90)
+noClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+noClipToggle.Text = "No-Clip: OFF"
+noClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+noClipToggle.TextSize = 14
+noClipToggle.Parent = mainFrame
+
+noClipToggle.MouseButton1Click:Connect(function()
+    toggleNoClip()
+    noClipToggle.Text = noClip and "No-Clip: ON" or "No-Clip: OFF"
+    noClipToggle.TextColor3 = noClip and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
+print("Optimized GUI loaded with Fly, Speed Slider, and No-Clip Toggle!")
