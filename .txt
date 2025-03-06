@@ -7,14 +7,27 @@ local Camera = workspace.CurrentCamera
 
 -- Create GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = game:GetService("StarterGui")
 ScreenGui.Name = "HackGui"
+ScreenGui.ResetOnSpawn = false -- Prevent GUI from resetting on respawn
+ScreenGui.Enabled = true -- Ensure GUI is enabled
+
+-- Parent to PlayerGui or CoreGui (try PlayerGui first)
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") -- Use PlayerGui for better compatibility
+print("ScreenGui parented to PlayerGui:", ScreenGui.Parent)
+
+-- Fallback to CoreGui if PlayerGui doesn't work
+if not ScreenGui:IsDescendantOf(game) then
+    ScreenGui.Parent = game:GetService("CoreGui")
+    print("ScreenGui parented to CoreGui:", ScreenGui.Parent)
+end
 
 local Frame = Instance.new("Frame")
 Frame.Size = UDim2.new(0, 300, 0, 400)
 Frame.Position = UDim2.new(0.5, -150, 0.5, -200)
 Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Frame.Visible = true -- Ensure frame is visible
 Frame.Parent = ScreenGui
+print("Frame position:", Frame.Position, "Frame size:", Frame.Size)
 
 -- Tab System
 local TabFrame = Instance.new("Frame")
@@ -136,7 +149,7 @@ end)
 
 -- Visuals Tab (ESP Features)
 local espStates = {Box = false, Tracer = false, Name = false, Distance = false, Health = false, Skeleton = false}
-local espConnections = {} -- Store connections per player
+local espConnections = {}
 local espObjects = {}
 
 local function DrawESP(plr)
@@ -279,14 +292,12 @@ local function DrawESP(plr)
     Update()
 end
 
--- Initialize ESP for existing players
 for _, player in pairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         DrawESP(player)
     end
 end
 
--- Handle new players
 Players.PlayerAdded:Connect(function(player)
     wait(1)
     if player ~= LocalPlayer then
@@ -294,7 +305,6 @@ Players.PlayerAdded:Connect(function(player)
     end
 end)
 
--- Clean up when players leave
 Players.PlayerRemoving:Connect(function(player)
     if espObjects[player] then
         for _, obj in pairs(espObjects[player]) do
@@ -314,7 +324,6 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- Visuals Tab Buttons
 createToggleButton(VisualsFrame, "Box ESP", 10, function(state) espStates.Box = state end)
 createToggleButton(VisualsFrame, "Tracers", 50, function(state) espStates.Tracer = state end)
 createToggleButton(VisualsFrame, "Name Tags", 90, function(state) espStates.Name = state end)
