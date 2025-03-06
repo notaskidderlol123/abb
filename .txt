@@ -29,14 +29,14 @@ ScreenGui.Parent = game:GetService("CoreGui")
 print("ScreenGui parented to CoreGui:", ScreenGui.Parent)
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 300, 0, 400)
-Frame.Position = UDim2.new(0.5, -150, 0.5, -200)
+Frame.Size = UDim2.new(0, 400, 0, 500) -- Increased size: 400x500
+Frame.Position = UDim2.new(0.5, -200, 0.5, -250) -- Adjusted position for larger size
 Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 Frame.Visible = true
 Frame.Parent = ScreenGui
 print("Frame position:", Frame.Position, "Frame size:", Frame.Size, "Frame visible:", Frame.Visible)
 
--- Make GUI Draggable
+-- Make GUI Draggable with Left Click
 local dragging
 local dragInput
 local dragStart
@@ -47,7 +47,7 @@ local function update(input)
 end
 
 Frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then -- Left click to drag
         dragging = true
         dragStart = input.Position
         startPos = Frame.Position
@@ -83,17 +83,18 @@ end)
 
 -- Tab System
 local TabFrame = Instance.new("Frame")
-TabFrame.Size = UDim2.new(1, 0, 0, 30)
+TabFrame.Size = UDim2.new(1, 0, 0, 40) -- Increased height for better visibility
 TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 TabFrame.Parent = Frame
 
 local function createTab(name, posX, contentFrame)
     local TabButton = Instance.new("TextButton")
-    TabButton.Size = UDim2.new(0.25, 0, 1, 0) -- Adjusted for 4 tabs
+    TabButton.Size = UDim2.new(0.25, 0, 1, 0) -- Equal spacing for 4 tabs
     TabButton.Position = UDim2.new(posX, 0, 0, 0)
     TabButton.Text = name
     TabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabButton.TextSize = 16 -- Increased text size for readability
     TabButton.Parent = TabFrame
     
     TabButton.MouseButton1Click:Connect(function()
@@ -103,34 +104,35 @@ local function createTab(name, posX, contentFrame)
             end
         end
         contentFrame.Visible = true
+        print("Switched to tab:", name)
     end)
 end
 
 -- Content Frames
 local AimbotFrame = Instance.new("Frame")
-AimbotFrame.Size = UDim2.new(1, 0, 1, -30)
-AimbotFrame.Position = UDim2.new(0, 0, 0, 30)
+AimbotFrame.Size = UDim2.new(1, 0, 1, -40) -- Adjusted for larger TabFrame
+AimbotFrame.Position = UDim2.new(0, 0, 0, 40)
 AimbotFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 AimbotFrame.Visible = true
 AimbotFrame.Parent = Frame
 
 local VisualsFrame = Instance.new("Frame")
-VisualsFrame.Size = UDim2.new(1, 0, 1, -30)
-VisualsFrame.Position = UDim2.new(0, 0, 0, 30)
+VisualsFrame.Size = UDim2.new(1, 0, 1, -40)
+VisualsFrame.Position = UDim2.new(0, 0, 0, 40)
 VisualsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 VisualsFrame.Visible = false
 VisualsFrame.Parent = Frame
 
 local ExploitsFrame = Instance.new("Frame")
-ExploitsFrame.Size = UDim2.new(1, 0, 1, -30)
-ExploitsFrame.Position = UDim2.new(0, 0, 0, 30)
+ExploitsFrame.Size = UDim2.new(1, 0, 1, -40)
+ExploitsFrame.Position = UDim2.new(0, 0, 0, 40)
 ExploitsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 ExploitsFrame.Visible = false
 ExploitsFrame.Parent = Frame
 
 local SettingsFrame = Instance.new("Frame")
-SettingsFrame.Size = UDim2.new(1, 0, 1, -30)
-SettingsFrame.Position = UDim2.new(0, 0, 0, 30)
+SettingsFrame.Size = UDim2.new(1, 0, 1, -40)
+SettingsFrame.Position = UDim2.new(0, 0, 0, 40)
 SettingsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 SettingsFrame.Visible = false
 SettingsFrame.Parent = Frame
@@ -143,11 +145,12 @@ createTab("Settings", 0.75, SettingsFrame)
 -- Helper function for toggle buttons
 local function createToggleButton(parent, text, posY, callback)
     local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0.9, 0, 0, 30)
+    Button.Size = UDim2.new(0.9, 0, 0, 40) -- Increased button height
     Button.Position = UDim2.new(0.05, 0, 0, posY)
     Button.Text = text .. ": OFF"
     Button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
     Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 14 -- Increased text size
     Button.Parent = parent
     local state = false
     
@@ -162,11 +165,12 @@ end
 -- Helper function for text buttons (for settings)
 local function createTextButton(parent, text, posY, callback)
     local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0.9, 0, 0, 30)
+    Button.Size = UDim2.new(0.9, 0, 0, 40) -- Increased button height
     Button.Position = UDim2.new(0.05, 0, 0, posY)
     Button.Text = text
     Button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 14 -- Increased text size
     Button.Parent = parent
     
     Button.MouseButton1Click:Connect(callback)
@@ -398,11 +402,11 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 createToggleButton(VisualsFrame, "Box ESP", 10, function(state) espStates.Box = state end)
-createToggleButton(VisualsFrame, "Tracers", 50, function(state) espStates.Tracer = state end)
-createToggleButton(VisualsFrame, "Name Tags", 90, function(state) espStates.Name = state end)
-createToggleButton(VisualsFrame, "Distance", 130, function(state) espStates.Distance = state end)
-createToggleButton(VisualsFrame, "Health Bar", 170, function(state) espStates.Health = state end)
-createToggleButton(VisualsFrame, "Skeleton", 210, function(state) espStates.Skeleton = state end)
+createToggleButton(VisualsFrame, "Tracers", 60, function(state) espStates.Tracer = state end)
+createToggleButton(VisualsFrame, "Name Tags", 110, function(state) espStates.Name = state end)
+createToggleButton(VisualsFrame, "Distance", 160, function(state) espStates.Distance = state end)
+createToggleButton(VisualsFrame, "Health Bar", 210, function(state) espStates.Health = state end)
+createToggleButton(VisualsFrame, "Skeleton", 260, function(state) espStates.Skeleton = state end)
 
 -- Exploits Tab (Admin Fly)
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -465,7 +469,7 @@ createTextButton(SettingsFrame, "Change GUI Bind (Press a key)", 10, function()
     bindChangeActive = true
     print("Press any key to set new GUI bind...")
     local bindChangeConnection = UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.UserInputType == Enum.UserInputType.Keyboard and bindChangeActive then
             bindKey = input.KeyCode
             print("New GUI bind set to:", bindKey.Name)
             bindChangeActive = false
@@ -474,4 +478,4 @@ createTextButton(SettingsFrame, "Change GUI Bind (Press a key)", 10, function()
     end)
 end)
 
-print("GUI Loaded! Use the tabs to toggle features. Press F to toggle GUI visibility (or custom bind).")
+print("GUI Loaded! Use the tabs to toggle features. Press F to toggle GUI visibility (or custom bind). Drag with left click.")
