@@ -176,7 +176,7 @@ local function createTextButton(parent, text, posY, callback)
     Button.MouseButton1Click:Connect(callback)
 end
 
--- Helper function for sliders
+-- Helper function for sliders with rounding
 local function createSlider(parent, name, posY, minValue, maxValue, defaultValue, callback)
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Size = UDim2.new(0.9, 0, 0, 40)
@@ -226,14 +226,16 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
             local buttonSize = SliderButton.AbsoluteSize.X
             local relativePos = math.clamp((mousePos - buttonPos) / buttonSize, 0, 1)
             local value = minValue + (maxValue - minValue) * relativePos
-            value = math.floor(value + 0.5) -- Round to nearest integer
+            value = math.round(value) -- Round to nearest integer
             if maxValue == 2 then -- For tracer position slider
-                value = math.clamp(math.round(value), 0, 2)
+                value = math.clamp(value, 0, 2)
                 if value == 0 then Label.Text = name .. ": Bottom"
                 elseif value == 1 then Label.Text = name .. ": Middle"
                 else Label.Text = name .. ": Top" end
+            else
+                Label.Text = name .. ": " .. value
             end
-            SliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
+            SliderFill.Size = UDim2.new((value - minValue) / (maxValue - minValue), 0, 1, 0)
             callback(value)
         end
     end)
@@ -473,8 +475,8 @@ end)
 createToggleButton(VisualsFrame, "Box ESP", 10, function(state) espStates.Box = state end)
 createToggleButton(VisualsFrame, "Tracers", 60, function(state) espStates.Tracer = state end)
 createSlider(VisualsFrame, "Tracer Position", 110, 0, 2, 1, function(value)
-    tracerPosition = value
-    print("Tracer position set to:", value)
+    tracerPosition = math.round(value) -- Ensure rounding to nearest integer
+    print("Tracer position set to:", tracerPosition)
 end)
 createToggleButton(VisualsFrame, "Name Tags", 160, function(state) espStates.Name = state end)
 createToggleButton(VisualsFrame, "Distance", 210, function(state) espStates.Distance = state end)
