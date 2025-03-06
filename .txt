@@ -176,7 +176,7 @@ local function createTextButton(parent, text, posY, callback)
     Button.MouseButton1Click:Connect(callback)
 end
 
--- Helper function for sliders with rounding
+-- Helper function for sliders with rounding on release
 local function createSlider(parent, name, posY, minValue, maxValue, defaultValue, callback)
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Size = UDim2.new(0.9, 0, 0, 40)
@@ -207,6 +207,7 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
     SliderFill.Parent = SliderButton
 
     local draggingSlider = false
+    local currentValue = defaultValue
     SliderButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             draggingSlider = true
@@ -216,6 +217,17 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
     SliderButton.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             draggingSlider = false
+            local roundedValue = math.round(currentValue)
+            if maxValue == 2 then -- For tracer position slider
+                roundedValue = math.clamp(roundedValue, 0, 2)
+                if roundedValue == 0 then Label.Text = name .. ": Bottom"
+                elseif roundedValue == 1 then Label.Text = name .. ": Middle"
+                else Label.Text = name .. ": Top" end
+            else
+                Label.Text = name .. ": " .. roundedValue
+            end
+            SliderFill.Size = UDim2.new((roundedValue - minValue) / (maxValue - minValue), 0, 1, 0)
+            callback(roundedValue)
         end
     end)
 
@@ -225,18 +237,15 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
             local buttonPos = SliderButton.AbsolutePosition.X
             local buttonSize = SliderButton.AbsoluteSize.X
             local relativePos = math.clamp((mousePos - buttonPos) / buttonSize, 0, 1)
-            local value = minValue + (maxValue - minValue) * relativePos
-            value = math.round(value) -- Round to nearest integer
-            if maxValue == 2 then -- For tracer position slider
-                value = math.clamp(value, 0, 2)
-                if value == 0 then Label.Text = name .. ": Bottom"
-                elseif value == 1 then Label.Text = name .. ": Middle"
+            currentValue = minValue + (maxValue - minValue) * relativePos
+            SliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
+            if maxValue == 2 then
+                if math.round(currentValue) == 0 then Label.Text = name .. ": Bottom"
+                elseif math.round(currentValue) == 1 then Label.Text = name .. ": Middle"
                 else Label.Text = name .. ": Top" end
             else
-                Label.Text = name .. ": " .. value
+                Label.Text = name .. ": " .. math.floor(currentValue + 0.5)
             end
-            SliderFill.Size = UDim2.new((value - minValue) / (maxValue - minValue), 0, 1, 0)
-            callback(value)
         end
     end)
 end
@@ -400,12 +409,21 @@ local function DrawESP(plr)
                 
                 if espStates.Tracer then
                     local tracerY = Camera.ViewportSize.Y
+                    local tracerToX, tracerToY
                     if tracerPosition == 0 then tracerY = Camera.ViewportSize.Y -- Bottom
+                        tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
                     elseif tracerPosition == 1 then tracerY = Camera.ViewportSize.Y / 2 -- Middle
+                        if plr.Character and plr.Character:FindFirstChild("UpperTorso") then
+                            local chestPos = Camera:WorldToViewportPoint(plr.Character.UpperTorso.Position)
+                            tracerToX, tracerToY = chestPos.X, chestPos.Y
+                        else
+                            tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
+                        end
                     elseif tracerPosition == 2 then tracerY = 0 -- Top
+                        tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
                     end
                     objects.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, tracerY)
-                    objects.Tracer.To = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
+                    objects.Tracer.To = Vector2.new(tracerToX, tracerToY)
                     objects.Tracer.Visible = true
                 else objects.Tracer.Visible = false end
                 
@@ -475,7 +493,7 @@ end)
 createToggleButton(VisualsFrame, "Box ESP", 10, function(state) espStates.Box = state end)
 createToggleButton(VisualsFrame, "Tracers", 60, function(state) espStates.Tracer = state end)
 createSlider(VisualsFrame, "Tracer Position", 110, 0, 2, 1, function(value)
-    tracerPosition = math.round(value) -- Ensure rounding to nearest integer
+    tracerPosition = value -- Updated on release, not during drag
     print("Tracer position set to:", tracerPosition)
 end)
 createToggleButton(VisualsFrame, "Name Tags", 160, function(state) espStates.Name = state end)
