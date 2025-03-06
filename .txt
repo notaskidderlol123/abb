@@ -9,7 +9,7 @@ local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "ExecutorGUI"
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = player:WaitForCharacter("PlayerGui")
 
 -- Main Frame
 local mainFrame = Instance.new("Frame")
@@ -250,10 +250,34 @@ local function DrawESP(plr)
 
     local function Update()
         local c
+        local retryCount = 0
+        local maxRetries = 5
         c = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-                if not humanoid or humanoid.Health <= 0 then
+            if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+                Box.Visible = false
+                name.Visible = false
+                distance.Visible = false
+                healthBar.Visible = false
+                tracer.Visible = false
+                for _, line in pairs(skeleton) do
+                    line.Visible = false
+                end
+                if not Players:FindFirstChild(plr.Name) then
+                    c:Disconnect()
+                    espObjects[plr] = nil
+                end
+                return
+            end
+
+            local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+            if not humanoid then
+                if retryCount < maxRetries then
+                    retryCount = retryCount + 1
+                    wait(0.1) -- Small delay before retrying
+                    print("Retrying to find Humanoid for " .. plr.Name .. " (Attempt " .. retryCount .. ")")
+                    return
+                else
+                    print("Failed to find Humanoid for " .. plr.Name .. " after " .. maxRetries .. " attempts")
                     Box.Visible = false
                     name.Visible = false
                     distance.Visible = false
@@ -264,87 +288,90 @@ local function DrawESP(plr)
                     end
                     return
                 end
+            end
 
-                local pos, vis = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-                if vis then
-                    local TopLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, 0)).p)
-                    local TopRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, 0)).p)
-                    local BottomLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, 0)).p)
-                    local BottomRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, 0)).p)
+            if humanoid and humanoid.Health <= 0 then
+                Box.Visible = false
+                name.Visible = false
+                distance.Visible = false
+                healthBar.Visible = false
+                tracer.Visible = false
+                for _, line in pairs(skeleton) do
+                    line.Visible = false
+                end
+                return
+            end
 
-                    if espEnabled.Box then
-                        Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
-                        Box.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
-                        Box.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
-                        Box.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
-                        Box.Visible = true
-                    else
-                        Box.Visible = false
-                    end
+            local pos, vis = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+            if vis then
+                local TopLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, 0)).p)
+                local TopRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, 0)).p)
+                local BottomLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, 0)).p)
+                local BottomRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, 0)).p)
 
-                    if espEnabled.Name then
-                        name.Position = Vector2.new(TopRight.X, TopRight.Y - 20)
-                        name.Text = plr.Name
-                        name.Visible = true
-                    else
-                        name.Visible = false
-                    end
+                if espEnabled.Box then
+                    Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
+                    Box.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
+                    Box.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
+                    Box.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
+                    Box.Visible = true
+                else
+                    Box.Visible = false
+                end
 
-                    if espEnabled.Distance then
-                        local playerDistance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-                        distance.Position = Vector2.new(BottomRight.X, BottomRight.Y + 5)
-                        distance.Text = tostring(math.floor(playerDistance)) .. "m"
-                        distance.Visible = true
-                    else
-                        distance.Visible = false
-                    end
+                if espEnabled.Name then
+                    name.Position = Vector2.new(TopRight.X, TopRight.Y - 20)
+                    name.Text = plr.Name
+                    name.Visible = true
+                else
+                    name.Visible = false
+                end
 
-                    if espEnabled.HealthBar and humanoid then
-                        local healthPercent = humanoid.Health / humanoid.MaxHealth
-                        healthBar.From = Vector2.new(BottomRight.X + 5, BottomRight.Y)
-                        healthBar.To = Vector2.new(BottomRight.X + 5, TopRight.Y + ((BottomRight.Y - TopRight.Y) * (1 - healthPercent)))
-                        healthBar.Color = Color3.fromRGB(0, 255, 0)
-                        healthBar.Visible = true
-                    else
-                        healthBar.Visible = false
-                    end
+                if espEnabled.Distance then
+                    local playerDistance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+                    distance.Position = Vector2.new(BottomRight.X, BottomRight.Y + 5)
+                    distance.Text = tostring(math.floor(playerDistance)) .. "m"
+                    distance.Visible = true
+                else
+                    distance.Visible = false
+                end
 
-                    if espEnabled.Tracer then
-                        tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                        tracer.To = Vector2.new(BottomRight.X, BottomRight.Y)
-                        tracer.Visible = true
-                    else
-                        tracer.Visible = false
-                    end
+                if espEnabled.HealthBar and humanoid then
+                    local healthPercent = humanoid.Health / humanoid.MaxHealth
+                    healthBar.From = Vector2.new(BottomRight.X + 5, BottomRight.Y)
+                    healthBar.To = Vector2.new(BottomRight.X + 5, TopRight.Y + ((BottomRight.Y - TopRight.Y) * (1 - healthPercent)))
+                    healthBar.Color = Color3.fromRGB(0, 255, 0)
+                    healthBar.Visible = true
+                else
+                    healthBar.Visible = false
+                end
 
-                    if espEnabled.Skeleton then
-                        for _, pair in ipairs(bones) do
-                            local p1 = plr.Character:FindFirstChild(pair[1])
-                            local p2 = plr.Character:FindFirstChild(pair[2])
-                            if p1 and p2 then
-                                local screenP1, vis1 = Camera:WorldToViewportPoint(p1.Position)
-                                local screenP2, vis2 = Camera:WorldToViewportPoint(p2.Position)
-                                if vis1 and vis2 then
-                                    local boneLine = skeleton[pair[1] .. pair[2]]
-                                    boneLine.From = Vector2.new(screenP1.X, screenP1.Y)
-                                    boneLine.To = Vector2.new(screenP2.X, screenP2.Y)
-                                    boneLine.Visible = true
-                                else
-                                    skeleton[pair[1] .. pair[2]].Visible = false
-                                end
+                if espEnabled.Tracer then
+                    tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    tracer.To = Vector2.new(BottomRight.X, BottomRight.Y)
+                    tracer.Visible = true
+                else
+                    tracer.Visible = false
+                end
+
+                if espEnabled.Skeleton then
+                    for _, pair in ipairs(bones) do
+                        local p1 = plr.Character:FindFirstChild(pair[1])
+                        local p2 = plr.Character:FindFirstChild(pair[2])
+                        if p1 and p2 then
+                            local screenP1, vis1 = Camera:WorldToViewportPoint(p1.Position)
+                            local screenP2, vis2 = Camera:WorldToViewportPoint(p2.Position)
+                            if vis1 and vis2 then
+                                local boneLine = skeleton[pair[1] .. pair[2]]
+                                boneLine.From = Vector2.new(screenP1.X, screenP1.Y)
+                                boneLine.To = Vector2.new(screenP2.X, screenP2.Y)
+                                boneLine.Visible = true
+                            else
+                                skeleton[pair[1] .. pair[2]].Visible = false
                             end
-                        end
-                    else
-                        for _, line in pairs(skeleton) do
-                            line.Visible = false
                         end
                     end
                 else
-                    Box.Visible = false
-                    name.Visible = false
-                    distance.Visible = false
-                    healthBar.Visible = false
-                    tracer.Visible = false
                     for _, line in pairs(skeleton) do
                         line.Visible = false
                     end
@@ -357,10 +384,6 @@ local function DrawESP(plr)
                 tracer.Visible = false
                 for _, line in pairs(skeleton) do
                     line.Visible = false
-                end
-                if not Players:FindFirstChild(plr.Name) then
-                    c:Disconnect()
-                    espObjects[plr] = nil
                 end
             end
         end)
