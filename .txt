@@ -9,7 +9,7 @@ local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "ExecutorGUI"
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForCharacter("PlayerGui")
+gui.Parent = player:WaitForChild("PlayerGui") -- Fixed line 12
 
 -- Main Frame
 local mainFrame = Instance.new("Frame")
@@ -145,7 +145,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         targetPlayer = getNearestPlayer()
         if targetPlayer then
             aimbotConnection = RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+                if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+                end
             end)
         end
     end
@@ -250,8 +252,6 @@ local function DrawESP(plr)
 
     local function Update()
         local c
-        local retryCount = 0
-        local maxRetries = 5
         c = RunService.RenderStepped:Connect(function()
             if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
                 Box.Visible = false
@@ -271,26 +271,27 @@ local function DrawESP(plr)
 
             local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
             if not humanoid then
-                if retryCount < maxRetries then
-                    retryCount = retryCount + 1
-                    wait(0.1) -- Small delay before retrying
-                    print("Retrying to find Humanoid for " .. plr.Name .. " (Attempt " .. retryCount .. ")")
-                    return
-                else
-                    print("Failed to find Humanoid for " .. plr.Name .. " after " .. maxRetries .. " attempts")
-                    Box.Visible = false
-                    name.Visible = false
-                    distance.Visible = false
-                    healthBar.Visible = false
-                    tracer.Visible = false
-                    for _, line in pairs(skeleton) do
-                        line.Visible = false
-                    end
-                    return
+                print("No Humanoid found for player: " .. plr.Name)
+                Box.Visible = false
+                name.Visible = false
+                distance.Visible = false
+                healthBar.Visible = false
+                tracer.Visible = false
+                for _, line in pairs(skeleton) do
+                    line.Visible = false
                 end
+                return
             end
 
-            if humanoid and humanoid.Health <= 0 then
+            local success, healthError = pcall(function()
+                if humanoid.Health <= 0 then
+                    return false
+                end
+                return true
+            end)
+
+            if not success or not healthError then
+                print("Failed to access Health for player: " .. plr.Name .. " - Error: " .. tostring(healthError))
                 Box.Visible = false
                 name.Visible = false
                 distance.Visible = false
@@ -336,12 +337,19 @@ local function DrawESP(plr)
                     distance.Visible = false
                 end
 
-                if espEnabled.HealthBar and humanoid then
-                    local healthPercent = humanoid.Health / humanoid.MaxHealth
-                    healthBar.From = Vector2.new(BottomRight.X + 5, BottomRight.Y)
-                    healthBar.To = Vector2.new(BottomRight.X + 5, TopRight.Y + ((BottomRight.Y - TopRight.Y) * (1 - healthPercent)))
-                    healthBar.Color = Color3.fromRGB(0, 255, 0)
-                    healthBar.Visible = true
+                if espEnabled.HealthBar then
+                    local success, healthPercent = pcall(function()
+                        return humanoid.Health / humanoid.MaxHealth
+                    end)
+                    if success then
+                        healthBar.From = Vector2.new(BottomRight.X + 5, BottomRight.Y)
+                        healthBar.To = Vector2.new(BottomRight.X + 5, TopRight.Y + ((BottomRight.Y - TopRight.Y) * (1 - healthPercent)))
+                        healthBar.Color = Color3.fromRGB(0, 255, 0)
+                        healthBar.Visible = true
+                    else
+                        healthBar.Visible = false
+                        print("Failed to calculate health percent for player: " .. plr.Name .. " - Error: " .. tostring(healthPercent))
+                    end
                 else
                     healthBar.Visible = false
                 end
