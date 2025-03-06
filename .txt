@@ -1,0 +1,317 @@
+-- GUI with Aimbot, Visuals, and Exploits
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+-- Create GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game.StarterGui
+ScreenGui.Name = "HackGui"
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 300, 0, 400)
+Frame.Position = UDim2.new(0.5, -150, 0.5, -200)
+Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Frame.Parent = ScreenGui
+
+-- Tab System
+local TabFrame = Instance.new("Frame")
+TabFrame.Size = UDim2.new(1, 0, 0, 30)
+TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TabFrame.Parent = Frame
+
+local function createTab(name, posX, contentFrame)
+    local TabButton = Instance.new("TextButton")
+    TabButton.Size = UDim2.new(0.33, 0, 1, 0)
+    TabButton.Position = UDim2.new(posX, 0, 0, 0)
+    TabButton.Text = name
+    TabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabButton.Parent = TabFrame
+    
+    TabButton.MouseButton1Click:Connect(function()
+        for _, child in pairs(Frame:GetChildren()) do
+            if child:IsA("Frame") and child ~= TabFrame then
+                child.Visible = false
+            end
+        end
+        contentFrame.Visible = true
+    end)
+end
+
+-- Content Frames
+local AimbotFrame = Instance.new("Frame")
+AimbotFrame.Size = UDim2.new(1, 0, 1, -30)
+AimbotFrame.Position = UDim2.new(0, 0, 0, 30)
+AimbotFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+AimbotFrame.Visible = true
+AimbotFrame.Parent = Frame
+
+local VisualsFrame = Instance.new("Frame")
+VisualsFrame.Size = UDim2.new(1, 0, 1, -30)
+VisualsFrame.Position = UDim2.new(0, 0, 0, 30)
+VisualsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+VisualsFrame.Visible = false
+VisualsFrame.Parent = Frame
+
+local ExploitsFrame = Instance.new("Frame")
+ExploitsFrame.Size = UDim2.new(1, 0, 1, -30)
+ExploitsFrame.Position = UDim2.new(0, 0, 0, 30)
+ExploitsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ExploitsFrame.Visible = false
+ExploitsFrame.Parent = Frame
+
+createTab("Aimbot", 0, AimbotFrame)
+createTab("Visuals", 0.33, VisualsFrame)
+createTab("Exploits", 0.66, ExploitsFrame)
+
+-- Helper function for toggle buttons
+local function createToggleButton(parent, text, posY, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0.9, 0, 0, 30)
+    Button.Position = UDim2.new(0.05, 0, 0, posY)
+    Button.Text = text .. ": OFF"
+    Button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.Parent = parent
+    local state = false
+    
+    Button.MouseButton1Click:Connect(function()
+        state = not state
+        Button.Text = text .. (state and ": ON" or ": OFF")
+        Button.BackgroundColor3 = state and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
+        callback(state)
+    end)
+end
+
+-- Aimbot Tab (Camera Lock-On)
+local targetPlayer = nil
+local aimbotActive = false
+
+local function getNearestPlayer()
+    local nearestDistance = math.huge
+    local nearestPlayer = nil
+    for _, otherPlayer in pairs(Players:GetPlayers()) do
+        if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (LocalPlayer.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if distance < nearestDistance then
+                nearestDistance = distance
+                nearestPlayer = otherPlayer
+            end
+        end
+    end
+    return nearestPlayer
+end
+
+createToggleButton(AimbotFrame, "Aimbot (Right Click)", 10, function(state)
+    aimbotActive = state
+    if not state then
+        RunService:UnbindFromRenderStep("LockOnPlayer")
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input)
+    if aimbotActive and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        targetPlayer = getNearestPlayer()
+        if targetPlayer then
+            RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+            end)
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        RunService:UnbindFromRenderStep("LockOnPlayer")
+    end
+end)
+
+-- Visuals Tab (ESP Features)
+local espStates = {Box = false, Tracer = false, Name = false, Distance = false, Health = false, Skeleton = false}
+local espObjects = {}
+
+local function DrawESP(plr)
+    if plr == LocalPlayer then return end
+    local objects = {
+        Box = Drawing.new("Quad"), Name = Drawing.new("Text"), Distance = Drawing.new("Text"),
+        Health = Drawing.new("Line"), Tracer = Drawing.new("Line"), Skeleton = {}
+    }
+    objects.Box.Color = Color3.fromRGB(255, 255, 255)
+    objects.Box.Thickness = 1
+    objects.Box.Transparency = 1
+    objects.Name.Size = 18
+    objects.Name.Color = Color3.fromRGB(255, 255, 255)
+    objects.Name.Outline = true
+    objects.Distance.Size = 16
+    objects.Distance.Color = Color3.fromRGB(255, 255, 255)
+    objects.Distance.Outline = true
+    objects.Health.Thickness = 3
+    objects.Tracer.Color = Color3.fromRGB(0, 255, 0)
+    objects.Tracer.Thickness = 1
+    
+    local bones = {
+        {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"}, {"LowerTorso", "LeftUpperLeg"},
+        {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"}, {"LowerTorso", "RightUpperLeg"},
+        {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}, {"UpperTorso", "LeftUpperArm"},
+        {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"}, {"UpperTorso", "RightUpperArm"},
+        {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"}
+    }
+    for _, pair in ipairs(bones) do
+        local line = Drawing.new("Line")
+        line.Color = Color3.fromRGB(255, 165, 0)
+        line.Thickness = 2
+        objects.Skeleton[pair[1] .. pair[2]] = line
+    end
+    
+    local function Update()
+        local c = RunService.RenderStepped:Connect(function()
+            if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
+                if vis then
+                    local points = {
+                        TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p),
+                        TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p),
+                        BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p),
+                        BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
+                    }
+                    
+                    if espStates.Box then
+                        objects.Box.PointA = Vector2.new(points.TopRight.X, points.TopRight.Y)
+                        objects.Box.PointB = Vector2.new(points.TopLeft.X, points.TopLeft.Y)
+                        objects.Box.PointC = Vector2.new(points.BottomLeft.X, points.BottomLeft.Y)
+                        objects.Box.PointD = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
+                        objects.Box.Visible = true
+                    else objects.Box.Visible = false end
+                    
+                    if espStates.Name then
+                        objects.Name.Position = Vector2.new(points.TopRight.X, points.TopRight.Y - 20)
+                        objects.Name.Text = plr.Name
+                        objects.Name.Visible = true
+                    else objects.Name.Visible = false end
+                    
+                    if espStates.Distance then
+                        local dist = (LocalPlayer.Character.HumanoidRootPart.Position - plr.Character.PrimaryPart.Position).Magnitude
+                        objects.Distance.Position = Vector2.new(points.BottomRight.X, points.BottomRight.Y + 5)
+                        objects.Distance.Text = math.floor(dist) .. "m"
+                        objects.Distance.Visible = true
+                    else objects.Distance.Visible = false end
+                    
+                    if espStates.Health then
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            local hp = hum.Health / hum.MaxHealth
+                            objects.Health.From = Vector2.new(points.BottomRight.X + 5, points.BottomRight.Y)
+                            objects.Health.To = Vector2.new(points.BottomRight.X + 5, points.TopRight.Y + ((points.BottomRight.Y - points.TopRight.Y) * (1 - hp)))
+                            objects.Health.Color = Color3.fromRGB(0, 255, 0)
+                            objects.Health.Visible = true
+                        end
+                    else objects.Health.Visible = false end
+                    
+                    if espStates.Tracer then
+                        objects.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                        objects.Tracer.To = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
+                        objects.Tracer.Visible = true
+                    else objects.Tracer.Visible = false end
+                    
+                    if espStates.Skeleton then
+                        for _, pair in ipairs(bones) do
+                            local p1, p2 = plr.Character:FindFirstChild(pair[1]), plr.Character:FindFirstChild(pair[2])
+                            if p1 and p2 then
+                                local sp1, v1 = Camera:WorldToViewportPoint(p1.Position)
+                                local sp2, v2 = Camera:WorldToViewportPoint(p2.Position)
+                                if v1 and v2 then
+                                    objects.Skeleton[pair[1] .. pair[2]].From = Vector2.new(sp1.X, sp1.Y)
+                                    objects.Skeleton[pair[1] .. pair[2]].To = Vector2.new(sp2.X, sp2.Y)
+                                    objects.Skeleton[pair[1] .. pair[2]].Visible = true
+                                else objects.Skeleton[pair[1] .. pair[2]].Visible = false end
+                            end
+                        end
+                    else
+                        for _, line in pairs(objects.Skeleton) do line.Visible = false end
+                    end
+                else
+                    for _, obj in pairs(objects) do
+                        if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
+                    end
+                end
+            else
+                for _, obj in pairs(objects) do
+                    if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
+                end
+                if not Players:FindFirstChild(plr.Name) then c:Disconnect() end
+            end
+        end)
+    end
+    coroutine.wrap(Update)()
+    espObjects[plr] = objects
+end
+
+for _, player in pairs(Players:GetPlayers()) do DrawESP(player) end
+Players.PlayerAdded:Connect(function(player) wait(1) DrawESP(player) end)
+
+createToggleButton(VisualsFrame, "Box ESP", 10, function(state) espStates.Box = state end)
+createToggleButton(VisualsFrame, "Tracers", 50, function(state) espStates.Tracer = state end)
+createToggleButton(VisualsFrame, "Name Tags", 90, function(state) espStates.Name = state end)
+createToggleButton(VisualsFrame, "Distance", 130, function(state) espStates.Distance = state end)
+createToggleButton(VisualsFrame, "Health Bar", 170, function(state) espStates.Health = state end)
+createToggleButton(VisualsFrame, "Skeleton", 210, function(state) espStates.Skeleton = state end)
+
+-- Exploits Tab (Admin Fly)
+local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
+local flying = false
+local speed = 75
+local controlSpeed = 10000
+
+local function toggleFly(state)
+    flying = state
+    if flying then
+        humanoid.PlatformStand = true
+        local bv = Instance.new("BodyVelocity")
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
+        bv.Parent = rootPart
+        
+        local bg = Instance.new("BodyGyro")
+        bg.MaxTorque = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
+        bg.P = 5000
+        bg.D = 500
+        bg.CFrame = rootPart.CFrame
+        bg.Parent = rootPart
+        
+        spawn(function()
+            while flying and rootPart and humanoid do
+                local cam = workspace.CurrentCamera
+                local move = Vector3.new(0, 0, 0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
+                
+                if move.Magnitude > 0 then
+                    move = move.Unit * speed
+                    bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
+                    bg.CFrame = cam.CFrame
+                else
+                    bv.Velocity = Vector3.new(0, 0, 0)
+                end
+                wait()
+            end
+        end)
+    else
+        humanoid.PlatformStand = false
+        if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
+        if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
+        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+end
+
+createToggleButton(ExploitsFrame, "Admin Fly", 10, toggleFly)
+
+print("GUI Loaded! Use the tabs to toggle features.")
