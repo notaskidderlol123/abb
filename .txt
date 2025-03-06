@@ -10,13 +10,13 @@ local TestGui = Instance.new("ScreenGui")
 TestGui.Name = "TestGui"
 TestGui.ResetOnSpawn = false
 TestGui.Enabled = true
-TestGui.Parent = game:GetService("CoreGui") -- Use CoreGui for reliability
+TestGui.Parent = game:GetService("CoreGui")
 print("TestGui parented to CoreGui:", TestGui.Parent)
 
 local TestFrame = Instance.new("Frame")
 TestFrame.Size = UDim2.new(0, 100, 0, 100)
-TestFrame.Position = UDim2.new(0, 10, 0, 10) -- Top-left corner
-TestFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Bright red for visibility
+TestFrame.Position = UDim2.new(0, 10, 0, 10)
+TestFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 TestFrame.Parent = TestGui
 print("TestFrame created at position:", TestFrame.Position)
 
@@ -25,7 +25,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HackGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Enabled = true
-ScreenGui.Parent = game:GetService("CoreGui") -- Use CoreGui instead of PlayerGui
+ScreenGui.Parent = game:GetService("CoreGui")
 print("ScreenGui parented to CoreGui:", ScreenGui.Parent)
 
 local Frame = Instance.new("Frame")
@@ -36,9 +36,46 @@ Frame.Visible = true
 Frame.Parent = ScreenGui
 print("Frame position:", Frame.Position, "Frame size:", Frame.Size, "Frame visible:", Frame.Visible)
 
--- Toggle GUI visibility with F key
+-- Make GUI Draggable
+local dragging
+local dragInput
+local dragStart
+local startPos
+local function update(input)
+    local delta = input.Position - dragStart
+    Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+Frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Toggle GUI visibility with custom bind (default F)
+local bindKey = Enum.KeyCode.F
 UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.F then
+    if input.KeyCode == bindKey then
         Frame.Visible = not Frame.Visible
         print("Toggled GUI visibility to:", Frame.Visible)
     end
@@ -52,7 +89,7 @@ TabFrame.Parent = Frame
 
 local function createTab(name, posX, contentFrame)
     local TabButton = Instance.new("TextButton")
-    TabButton.Size = UDim2.new(0.33, 0, 1, 0)
+    TabButton.Size = UDim2.new(0.25, 0, 1, 0) -- Adjusted for 4 tabs
     TabButton.Position = UDim2.new(posX, 0, 0, 0)
     TabButton.Text = name
     TabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
@@ -91,9 +128,17 @@ ExploitsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 ExploitsFrame.Visible = false
 ExploitsFrame.Parent = Frame
 
+local SettingsFrame = Instance.new("Frame")
+SettingsFrame.Size = UDim2.new(1, 0, 1, -30)
+SettingsFrame.Position = UDim2.new(0, 0, 0, 30)
+SettingsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+SettingsFrame.Visible = false
+SettingsFrame.Parent = Frame
+
 createTab("Aimbot", 0, AimbotFrame)
-createTab("Visuals", 0.33, VisualsFrame)
-createTab("Exploits", 0.66, ExploitsFrame)
+createTab("Visuals", 0.25, VisualsFrame)
+createTab("Exploits", 0.50, ExploitsFrame)
+createTab("Settings", 0.75, SettingsFrame)
 
 -- Helper function for toggle buttons
 local function createToggleButton(parent, text, posY, callback)
@@ -112,6 +157,19 @@ local function createToggleButton(parent, text, posY, callback)
         Button.BackgroundColor3 = state and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
         callback(state)
     end)
+end
+
+-- Helper function for text buttons (for settings)
+local function createTextButton(parent, text, posY, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0.9, 0, 0, 30)
+    Button.Position = UDim2.new(0.05, 0, 0, posY)
+    Button.Text = text
+    Button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.Parent = parent
+    
+    Button.MouseButton1Click:Connect(callback)
 end
 
 -- Aimbot Tab (Camera Lock-On)
@@ -401,4 +459,19 @@ end
 
 createToggleButton(ExploitsFrame, "Admin Fly", 10, toggleFly)
 
-print("GUI Loaded! Use the tabs to toggle features. Press F to toggle GUI visibility.")
+-- Settings Tab (Change Bind)
+local bindChangeActive = false
+createTextButton(SettingsFrame, "Change GUI Bind (Press a key)", 10, function()
+    bindChangeActive = true
+    print("Press any key to set new GUI bind...")
+    local bindChangeConnection = UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            bindKey = input.KeyCode
+            print("New GUI bind set to:", bindKey.Name)
+            bindChangeActive = false
+            bindChangeConnection:Disconnect()
+        end
+    end)
+end)
+
+print("GUI Loaded! Use the tabs to toggle features. Press F to toggle GUI visibility (or custom bind).")
