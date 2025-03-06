@@ -5,29 +5,44 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
--- Create GUI
+-- Create a Test GUI to confirm rendering
+local TestGui = Instance.new("ScreenGui")
+TestGui.Name = "TestGui"
+TestGui.ResetOnSpawn = false
+TestGui.Enabled = true
+TestGui.Parent = game:GetService("CoreGui") -- Use CoreGui for reliability
+print("TestGui parented to CoreGui:", TestGui.Parent)
+
+local TestFrame = Instance.new("Frame")
+TestFrame.Size = UDim2.new(0, 100, 0, 100)
+TestFrame.Position = UDim2.new(0, 10, 0, 10) -- Top-left corner
+TestFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Bright red for visibility
+TestFrame.Parent = TestGui
+print("TestFrame created at position:", TestFrame.Position)
+
+-- Create Main GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HackGui"
-ScreenGui.ResetOnSpawn = false -- Prevent GUI from resetting on respawn
-ScreenGui.Enabled = true -- Ensure GUI is enabled
-
--- Parent to PlayerGui or CoreGui (try PlayerGui first)
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") -- Use PlayerGui for better compatibility
-print("ScreenGui parented to PlayerGui:", ScreenGui.Parent)
-
--- Fallback to CoreGui if PlayerGui doesn't work
-if not ScreenGui:IsDescendantOf(game) then
-    ScreenGui.Parent = game:GetService("CoreGui")
-    print("ScreenGui parented to CoreGui:", ScreenGui.Parent)
-end
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Enabled = true
+ScreenGui.Parent = game:GetService("CoreGui") -- Use CoreGui instead of PlayerGui
+print("ScreenGui parented to CoreGui:", ScreenGui.Parent)
 
 local Frame = Instance.new("Frame")
 Frame.Size = UDim2.new(0, 300, 0, 400)
 Frame.Position = UDim2.new(0.5, -150, 0.5, -200)
 Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-Frame.Visible = true -- Ensure frame is visible
+Frame.Visible = true
 Frame.Parent = ScreenGui
-print("Frame position:", Frame.Position, "Frame size:", Frame.Size)
+print("Frame position:", Frame.Position, "Frame size:", Frame.Size, "Frame visible:", Frame.Visible)
+
+-- Toggle GUI visibility with F key
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.F then
+        Frame.Visible = not Frame.Visible
+        print("Toggled GUI visibility to:", Frame.Visible)
+    end
+end)
 
 -- Tab System
 local TabFrame = Instance.new("Frame")
@@ -386,4 +401,4 @@ end
 
 createToggleButton(ExploitsFrame, "Admin Fly", 10, toggleFly)
 
-print("GUI Loaded! Use the tabs to toggle features.")
+print("GUI Loaded! Use the tabs to toggle features. Press F to toggle GUI visibility.")
