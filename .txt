@@ -136,10 +136,12 @@ end)
 
 -- Visuals Tab (ESP Features)
 local espStates = {Box = false, Tracer = false, Name = false, Distance = false, Health = false, Skeleton = false}
+local espConnections = {} -- Store connections per player
 local espObjects = {}
 
 local function DrawESP(plr)
     if plr == LocalPlayer then return end
+    
     local objects = {
         Box = Drawing.new("Quad"), Name = Drawing.new("Text"), Distance = Drawing.new("Text"),
         Health = Drawing.new("Line"), Tracer = Drawing.new("Line"), Skeleton = {}
@@ -179,9 +181,24 @@ local function DrawESP(plr)
     
     espObjects[plr] = objects
     
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+    local function Update()
+        local connection
+        connection = RunService.RenderStepped:Connect(function()
+            if not plr.Character or not plr.Character.PrimaryPart or not plr.Character:FindFirstChildOfClass("Humanoid") or plr.Character:FindFirstChildOfClass("Humanoid").Health <= 0 then
+                for _, obj in pairs(objects) do
+                    if type(obj) == "table" then
+                        for _, line in pairs(obj) do line.Visible = false end
+                    else
+                        obj.Visible = false
+                    end
+                end
+                if not Players:FindFirstChild(plr.Name) and connection then
+                    connection:Disconnect()
+                    espConnections[plr] = nil
+                end
+                return
+            end
+            
             local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
             if vis then
                 local points = {
@@ -249,21 +266,17 @@ local function DrawESP(plr)
                 end
             else
                 for _, obj in pairs(objects) do
-                    if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
+                    if type(obj) == "table" then
+                        for _, line in pairs(obj) do line.Visible = false end
+                    else
+                        obj.Visible = false
+                    end
                 end
             end
-        else
-            for _, obj in pairs(objects) do
-                if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
-            end
-            if not Players:FindFirstChild(plr.Name) then
-                if connection then
-                    connection:Disconnect()
-                    espObjects[plr] = nil
-                end
-            end
-        end
-    end)
+        end)
+        espConnections[plr] = connection
+    end
+    Update()
 end
 
 -- Initialize ESP for existing players
@@ -294,6 +307,10 @@ Players.PlayerRemoving:Connect(function(player)
             end
         end
         espObjects[player] = nil
+    end
+    if espConnections[player] then
+        espConnections[player]:Disconnect()
+        espConnections[player] = nil
     end
 end)
 
