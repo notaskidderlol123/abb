@@ -251,13 +251,26 @@ local function DrawESP(plr)
     local function Update()
         local c
         c = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+                if not humanoid or humanoid.Health <= 0 then
+                    Box.Visible = false
+                    name.Visible = false
+                    distance.Visible = false
+                    healthBar.Visible = false
+                    tracer.Visible = false
+                    for _, line in pairs(skeleton) do
+                        line.Visible = false
+                    end
+                    return
+                end
+
+                local pos, vis = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
                 if vis then
-                    local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
-                    local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
-                    local BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p)
-                    local BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
+                    local TopLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, 0)).p)
+                    local TopRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, 0)).p)
+                    local BottomLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, 0)).p)
+                    local BottomRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, 0)).p)
 
                     if espEnabled.Box then
                         Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
@@ -286,15 +299,12 @@ local function DrawESP(plr)
                         distance.Visible = false
                     end
 
-                    if espEnabled.HealthBar then
-                        local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-                        if humanoid then
-                            local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            healthBar.From = Vector2.new(BottomRight.X + 5, BottomRight.Y)
-                            healthBar.To = Vector2.new(BottomRight.X + 5, TopRight.Y + ((BottomRight.Y - TopRight.Y) * (1 - healthPercent)))
-                            healthBar.Color = Color3.fromRGB(0, 255, 0)
-                            healthBar.Visible = true
-                        end
+                    if espEnabled.HealthBar and humanoid then
+                        local healthPercent = humanoid.Health / humanoid.MaxHealth
+                        healthBar.From = Vector2.new(BottomRight.X + 5, BottomRight.Y)
+                        healthBar.To = Vector2.new(BottomRight.X + 5, TopRight.Y + ((BottomRight.Y - TopRight.Y) * (1 - healthPercent)))
+                        healthBar.Color = Color3.fromRGB(0, 255, 0)
+                        healthBar.Visible = true
                     else
                         healthBar.Visible = false
                     end
@@ -358,18 +368,18 @@ local function DrawESP(plr)
     coroutine.wrap(Update)()
 end
 
+Players.PlayerAdded:Connect(function(plr)
+    repeat wait() until plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if plr ~= player then
+        DrawESP(plr)
+    end
+end)
+
 for _, plr in pairs(Players:GetPlayers()) do
     if plr ~= player then
         DrawESP(plr)
     end
 end
-
-Players.PlayerAdded:Connect(function(plr)
-    wait(1)
-    if plr ~= player then
-        DrawESP(plr)
-    end
-end)
 
 -- ESP Toggles
 local espToggles = {
