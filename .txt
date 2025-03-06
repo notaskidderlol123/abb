@@ -226,9 +226,14 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
             local buttonSize = SliderButton.AbsoluteSize.X
             local relativePos = math.clamp((mousePos - buttonPos) / buttonSize, 0, 1)
             local value = minValue + (maxValue - minValue) * relativePos
-            value = math.floor(value)
+            value = math.floor(value + 0.5) -- Round to nearest integer
+            if maxValue == 2 then -- For tracer position slider
+                value = math.clamp(math.round(value), 0, 2)
+                if value == 0 then Label.Text = name .. ": Bottom"
+                elseif value == 1 then Label.Text = name .. ": Middle"
+                else Label.Text = name .. ": Top" end
+            end
             SliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
-            Label.Text = name .. ": " .. value
             callback(value)
         end
     end)
@@ -284,6 +289,7 @@ end)
 
 -- Visuals Tab (ESP Features)
 local espStates = {Box = false, Tracer = false, Name = false, Distance = false, Health = false, Skeleton = false}
+local tracerPosition = 1 -- Default to Middle (0 = Bottom, 1 = Middle, 2 = Top)
 local espConnections = {}
 local espObjects = {}
 
@@ -391,7 +397,12 @@ local function DrawESP(plr)
                 else objects.Health.Visible = false end
                 
                 if espStates.Tracer then
-                    objects.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    local tracerY = Camera.ViewportSize.Y
+                    if tracerPosition == 0 then tracerY = Camera.ViewportSize.Y -- Bottom
+                    elseif tracerPosition == 1 then tracerY = Camera.ViewportSize.Y / 2 -- Middle
+                    elseif tracerPosition == 2 then tracerY = 0 -- Top
+                    end
+                    objects.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, tracerY)
                     objects.Tracer.To = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
                     objects.Tracer.Visible = true
                 else objects.Tracer.Visible = false end
@@ -461,10 +472,14 @@ end)
 
 createToggleButton(VisualsFrame, "Box ESP", 10, function(state) espStates.Box = state end)
 createToggleButton(VisualsFrame, "Tracers", 60, function(state) espStates.Tracer = state end)
-createToggleButton(VisualsFrame, "Name Tags", 110, function(state) espStates.Name = state end)
-createToggleButton(VisualsFrame, "Distance", 160, function(state) espStates.Distance = state end)
-createToggleButton(VisualsFrame, "Health Bar", 210, function(state) espStates.Health = state end)
-createToggleButton(VisualsFrame, "Skeleton", 260, function(state) espStates.Skeleton = state end)
+createSlider(VisualsFrame, "Tracer Position", 110, 0, 2, 1, function(value)
+    tracerPosition = value
+    print("Tracer position set to:", value)
+end)
+createToggleButton(VisualsFrame, "Name Tags", 160, function(state) espStates.Name = state end)
+createToggleButton(VisualsFrame, "Distance", 210, function(state) espStates.Distance = state end)
+createToggleButton(VisualsFrame, "Health Bar", 260, function(state) espStates.Health = state end)
+createToggleButton(VisualsFrame, "Skeleton", 310, function(state) espStates.Skeleton = state end)
 
 -- Exploits Tab (Admin Fly, No Clip, Fly Speed Slider)
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -474,6 +489,7 @@ local flying = false
 local speed = 75
 local controlSpeed = 10000
 local noClipActive = false
+local noClipConnection = nil
 
 -- Admin Fly with Respawn Fix and Speed Slider
 local function setupFly()
@@ -534,9 +550,12 @@ LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     if flying then
         setupFly()
     end
+    if noClipActive then
+        toggleNoClip(true) -- Reapply No Clip if active
+    end
 end)
 
--- No Clip Feature
+-- No Clip Feature with Proper Toggle Off
 local function toggleNoClip(state)
     noClipActive = state
     if noClipActive then
@@ -549,17 +568,16 @@ local function toggleNoClip(state)
                 end
             end
         end
-        RunService.Stepped:Connect(noClip)
+        noClipConnection = RunService.Stepped:Connect(noClip)
     else
+        if noClipConnection then
+            noClipConnection:Disconnect()
+            noClipConnection = nil
+        end
         if character then
             for _, part in pairs(character:GetDescendants()) do
                 if part:IsA("BasePart") then
                     part.CanCollide = true
-                end
-            end
-            for _, connection in pairs(getconnections(RunService.Stepped)) do
-                if connection.Function == noClip then
-                    connection:Disable()
                 end
             end
         end
