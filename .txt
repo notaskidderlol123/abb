@@ -305,7 +305,7 @@ local teamCheckAimbot = false
 local aimbotFOVActive = false
 local aimbotFOV = 100
 local aimbotFOVCircle = Drawing.new("Circle")
-aimbotFOVCircle.Color = Color3.fromRGB(255, 255, 255) -- White
+aimbotFOVCircle.Color = Color3.fromRGB(255, 0, 0)
 aimbotFOVCircle.Thickness = 2
 aimbotFOVCircle.Filled = false -- Hollow circle
 aimbotFOVCircle.Transparency = 1
@@ -354,7 +354,7 @@ createToggleButton(AimbotFrame, "Team Check", 110, function(state)
     teamCheckAimbot = state
 end)
 
-createToggleButton(AimbotFrame, "FOV Circle", 160, function(state)
+createToggleButton(AimbotFrame, "Aimbot FOV Toggle", 160, function(state)
     aimbotFOVActive = state
     aimbotFOVCircle.Visible = state and aimbotActive
 end)
@@ -444,7 +444,7 @@ local function DrawESP(plr)
     local function Update()
         local connection
         connection = RunService.RenderStepped:Connect(function()
-            if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+            if not plr.Character or not plr.Character.PrimaryPart or not plr.Character:FindFirstChildOfClass("Humanoid") then return end
             local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
             if deadCheckVisuals and humanoid and humanoid.Health <= 0 then
                 for _, obj in pairs(objects) do
@@ -468,87 +468,98 @@ local function DrawESP(plr)
                 return
             end
             
-            local points = {
-                TopLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, 0)).p),
-                TopRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, 0)).p),
-                BottomLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, 0)).p),
-                BottomRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, 0)).p)
-            }
-            
-            if espStates.Box then
-                objects.Box.PointA = Vector2.new(points.TopRight.X, points.TopRight.Y)
-                objects.Box.PointB = Vector2.new(points.TopLeft.X, points.TopLeft.Y)
-                objects.Box.PointC = Vector2.new(points.BottomLeft.X, points.BottomLeft.Y)
-                objects.Box.PointD = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
-                objects.Box.Visible = true
-            else objects.Box.Visible = false end
-            
-            if espStates.Name then
-                objects.Name.Position = Vector2.new(points.TopRight.X, points.TopRight.Y - 20)
-                objects.Name.Text = plr.Name
-                objects.Name.Visible = true
-            else objects.Name.Visible = false end
-            
-            if espStates.Distance then
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local dist = (LocalPlayer.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-                    objects.Distance.Position = Vector2.new(points.BottomRight.X, points.BottomRight.Y + 5)
-                    objects.Distance.Text = math.floor(dist) .. "m"
-                    objects.Distance.Visible = true
-                end
-            else objects.Distance.Visible = false end
-            
-            if espStates.Health then
-                if humanoid then
-                    local hp = humanoid.Health / humanoid.MaxHealth
-                    objects.Health.From = Vector2.new(points.BottomRight.X + 5, points.BottomRight.Y)
-                    objects.Health.To = Vector2.new(points.BottomRight.X + 5, points.TopRight.Y + ((points.BottomRight.Y - points.TopRight.Y) * (1 - hp)))
-                    objects.Health.Color = Color3.fromRGB(0, 255, 0)
-                    objects.Health.Visible = true
-                end
-            else objects.Health.Visible = false end
-            
-            if espStates.Tracer then
-                local tracerY = Camera.ViewportSize.Y
-                local tracerToX, tracerToY
-                if tracerPosition == 0 then tracerY = Camera.ViewportSize.Y -- Top
-                    tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
-                elseif tracerPosition == 1 then tracerY = Camera.ViewportSize.Y / 2 -- Behind
-                    if plr.Character and plr.Character:FindFirstChild("UpperTorso") then
-                        print("Using UpperTorso for", plr.Name)
-                        local chestPos = Camera:WorldToViewportPoint(plr.Character.UpperTorso.Position)
-                        tracerToX, tracerToY = chestPos.X, chestPos.Y
-                    elseif plr.Character and plr.Character:FindFirstChild("Torso") then
-                        print("Using Torso for", plr.Name)
-                        local chestPos = Camera:WorldToViewportPoint(plr.Character.Torso.Position)
-                        tracerToX, tracerToY = chestPos.X, chestPos.Y
-                    else
-                        print("Falling back to BottomRight for", plr.Name)
+            local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
+            if vis then
+                local points = {
+                    TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p),
+                    TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p),
+                    BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p),
+                    BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
+                }
+                
+                if espStates.Box then
+                    objects.Box.PointA = Vector2.new(points.TopRight.X, points.TopRight.Y)
+                    objects.Box.PointB = Vector2.new(points.TopLeft.X, points.TopLeft.Y)
+                    objects.Box.PointC = Vector2.new(points.BottomLeft.X, points.BottomLeft.Y)
+                    objects.Box.PointD = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
+                    objects.Box.Visible = true
+                else objects.Box.Visible = false end
+                
+                if espStates.Name then
+                    objects.Name.Position = Vector2.new(points.TopRight.X, points.TopRight.Y - 20)
+                    objects.Name.Text = plr.Name
+                    objects.Name.Visible = true
+                else objects.Name.Visible = false end
+                
+                if espStates.Distance then
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        local dist = (LocalPlayer.Character.HumanoidRootPart.Position - plr.Character.PrimaryPart.Position).Magnitude
+                        objects.Distance.Position = Vector2.new(points.BottomRight.X, points.BottomRight.Y + 5)
+                        objects.Distance.Text = math.floor(dist) .. "m"
+                        objects.Distance.Visible = true
+                    end
+                else objects.Distance.Visible = false end
+                
+                if espStates.Health then
+                    if humanoid then
+                        local hp = humanoid.Health / humanoid.MaxHealth
+                        objects.Health.From = Vector2.new(points.BottomRight.X + 5, points.BottomRight.Y)
+                        objects.Health.To = Vector2.new(points.BottomRight.X + 5, points.TopRight.Y + ((points.BottomRight.Y - points.TopRight.Y) * (1 - hp)))
+                        objects.Health.Color = Color3.fromRGB(0, 255, 0)
+                        objects.Health.Visible = true
+                    end
+                else objects.Health.Visible = false end
+                
+                if espStates.Tracer then
+                    local tracerY = Camera.ViewportSize.Y
+                    local tracerToX, tracerToY
+                    if tracerPosition == 0 then tracerY = Camera.ViewportSize.Y -- Top
+                        tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
+                    elseif tracerPosition == 1 then tracerY = Camera.ViewportSize.Y / 2 -- Behind
+                        if plr.Character and plr.Character:FindFirstChild("UpperTorso") then
+                            print("Using UpperTorso for", plr.Name)
+                            local chestPos = Camera:WorldToViewportPoint(plr.Character.UpperTorso.Position)
+                            tracerToX, tracerToY = chestPos.X, chestPos.Y
+                        elseif plr.Character and plr.Character:FindFirstChild("Torso") then
+                            print("Using Torso for", plr.Name)
+                            local chestPos = Camera:WorldToViewportPoint(plr.Character.Torso.Position)
+                            tracerToX, tracerToY = chestPos.X, chestPos.Y
+                        else
+                            print("Falling back to BottomRight for", plr.Name)
+                            tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
+                        end
+                    elseif tracerPosition == 2 then tracerY = 0 -- Front
                         tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
                     end
-                elseif tracerPosition == 2 then tracerY = 0 -- Front
-                    tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
-                end
-                objects.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, tracerY)
-                objects.Tracer.To = Vector2.new(tracerToX, tracerToY)
-                objects.Tracer.Visible = true
-            else objects.Tracer.Visible = false end
-            
-            if espStates.Skeleton then
-                for _, pair in ipairs(bones) do
-                    local p1, p2 = plr.Character:FindFirstChild(pair[1]), plr.Character:FindFirstChild(pair[2])
-                    if p1 and p2 then
-                        local sp1, v1 = Camera:WorldToViewportPoint(p1.Position)
-                        local sp2, v2 = Camera:WorldToViewportPoint(p2.Position)
-                        if v1 and v2 then
-                            objects.Skeleton[pair[1] .. pair[2]].From = Vector2.new(sp1.X, sp1.Y)
-                            objects.Skeleton[pair[1] .. pair[2]].To = Vector2.new(sp2.X, sp2.Y)
-                            objects.Skeleton[pair[1] .. pair[2]].Visible = true
-                        else objects.Skeleton[pair[1] .. pair[2]].Visible = false end
+                    objects.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, tracerY)
+                    objects.Tracer.To = Vector2.new(tracerToX, tracerToY)
+                    objects.Tracer.Visible = true
+                else objects.Tracer.Visible = false end
+                
+                if espStates.Skeleton then
+                    for _, pair in ipairs(bones) do
+                        local p1, p2 = plr.Character:FindFirstChild(pair[1]), plr.Character:FindFirstChild(pair[2])
+                        if p1 and p2 then
+                            local sp1, v1 = Camera:WorldToViewportPoint(p1.Position)
+                            local sp2, v2 = Camera:WorldToViewportPoint(p2.Position)
+                            if v1 and v2 then
+                                objects.Skeleton[pair[1] .. pair[2]].From = Vector2.new(sp1.X, sp1.Y)
+                                objects.Skeleton[pair[1] .. pair[2]].To = Vector2.new(sp2.X, sp2.Y)
+                                objects.Skeleton[pair[1] .. pair[2]].Visible = true
+                            else objects.Skeleton[pair[1] .. pair[2]].Visible = false end
+                        end
                     end
+                else
+                    for _, line in pairs(objects.Skeleton) do line.Visible = false end
                 end
             else
-                for _, line in pairs(objects.Skeleton) do line.Visible = false end
+                for _, obj in pairs(objects) do
+                    if type(obj) == "table" then
+                        for _, line in pairs(obj) do line.Visible = false end
+                    else
+                        obj.Visible = false
+                    end
+                end
             end
         end)
         espConnections[plr] = connection
@@ -629,7 +640,6 @@ local controlSpeed = 10000
 local noClipActive = false
 local noClipConnection = nil
 local spinbotActive = false
-local spinSpeed = 15 -- Default spin speed in degrees
 local loopTPActive = false
 local tpDistance = 10 -- Default teleport distance in studs
 local tpPosition = 1 -- Default to Behind (0 = Top, 1 = Behind, 2 = Front)
@@ -697,14 +707,14 @@ local function toggleFly(state)
     end
 end
 
--- Spinbot with Adjustable Speed
+-- Spinbot (Faster)
 local spinbotConnection = nil
 local function toggleSpinbot(state)
     spinbotActive = state
     if spinbotActive and rootPart then
         spinbotConnection = RunService.RenderStepped:Connect(function()
             if rootPart then
-                rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+                rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(15), 0) -- Faster spin
             end
         end)
     elseif spinbotConnection then
@@ -721,10 +731,7 @@ local function getNearestEnemy()
     local myRoot = character and character:FindFirstChild("HumanoidRootPart")
     local myTeam = LocalPlayer.Team
 
-    if not myRoot then
-        print("No root part found for local player")
-        return nil
-    end
+    if not myRoot then return nil end
 
     for _, otherPlayer in pairs(Players:GetPlayers()) do
         if otherPlayer ~= LocalPlayer and 
@@ -736,7 +743,6 @@ local function getNearestEnemy()
         then
             local otherRoot = otherPlayer.Character.HumanoidRootPart
             local distance = (myRoot.Position - otherRoot.Position).Magnitude
-            print("Checking player:", otherPlayer.Name, "Distance:", distance)
 
             if distance < nearestDistance then
                 nearestDistance = distance
@@ -745,21 +751,17 @@ local function getNearestEnemy()
         end
     end
 
-    if nearestEnemy then
-        print("Nearest enemy found:", nearestEnemy.Name)
-    else
-        print("No nearest enemy found")
-    end
     return nearestEnemy
 end
 
 local function aimlock()
-    if not character or not Camera or not loopTPActive or not rootPart then return end
+    if not character or not Camera or not loopTPActive then return end
 
     local target = getNearestEnemy()
     if target and target.Character then
         local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
-        if targetRoot then
+
+        if targetRoot and rootPart then
             local lookVector = targetRoot.CFrame.LookVector
             local offset = tpDistance
             local tpPos = targetRoot.Position
@@ -771,9 +773,6 @@ local function aimlock()
                 tpPos = tpPos + lookVector * offset
             end
             rootPart.CFrame = CFrame.new(tpPos)
-            print("Teleported to:", tpPos)
-        else
-            print("No target root found for:", target.Name)
         end
     end
 end
@@ -782,11 +781,9 @@ local function toggleLoopTP(state)
     loopTPActive = state
     if loopTPActive and rootPart then
         tpConnection = RunService.RenderStepped:Connect(aimlock)
-        print("Loop TP activated")
     elseif tpConnection then
         tpConnection:Disconnect()
         tpConnection = nil
-        print("Loop TP deactivated")
     end
 end
 
@@ -844,26 +841,22 @@ createSlider(ExploitsFrame, "Fly Speed", 60, 10, 200, 75, function(value)
 end)
 createToggleButton(ExploitsFrame, "No Clip", 110, toggleNoClip)
 createToggleButton(ExploitsFrame, "Spinbot", 160, toggleSpinbot)
-createTextBox(ExploitsFrame, "Spin Speed", 210, 15, function(value)
-    spinSpeed = value
-    print("Spin speed set to:", spinSpeed)
-end)
-createToggleButton(ExploitsFrame, "Loop TP to Player", 260, toggleLoopTP)
-createTextBox(ExploitsFrame, "TP Distance", 310, 10, function(value)
+createToggleButton(ExploitsFrame, "Loop TP to Player", 210, toggleLoopTP)
+createTextBox(ExploitsFrame, "TP Distance", 260, 10, function(value)
     tpDistance = value
     print("TP distance set to:", tpDistance)
 end)
-createSlider(ExploitsFrame, "TP Position", 360, 0, 2, 1, function(value)
+createSlider(ExploitsFrame, "TP Position", 310, 0, 2, 1, function(value)
     tpPosition = value
     print("TP position set to:", tpPosition)
 end)
-createToggleButton(ExploitsFrame, "Save Last Position", 410, function(state)
+createToggleButton(ExploitsFrame, "Save Last Position", 360, function(state)
     saveLastPosition = state
 end)
-createToggleButton(ExploitsFrame, "Dead Check", 460, function(state)
+createToggleButton(ExploitsFrame, "Dead Check", 410, function(state)
     deadCheckExploits = state
 end)
-createToggleButton(ExploitsFrame, "Team Check", 510, function(state)
+createToggleButton(ExploitsFrame, "Team Check", 460, function(state)
     teamCheckExploits = state
 end)
 
