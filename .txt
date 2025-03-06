@@ -85,6 +85,7 @@ end)
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 40)
 TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TabFrame.ZIndex = 2 -- Ensure tabs are clickable
 TabFrame.Parent = Frame
 
 local function createTab(name, posX, contentFrame)
@@ -95,16 +96,19 @@ local function createTab(name, posX, contentFrame)
     TabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButton.TextSize = 16
+    TabButton.ZIndex = 3 -- Higher ZIndex for clickability
     TabButton.Parent = TabFrame
     
     TabButton.MouseButton1Click:Connect(function()
+        print("Tab clicked:", name) -- Debug print to confirm click
         for _, child in pairs(Frame:GetChildren()) do
-            if child:IsA("Frame") and child ~= TabFrame then
+            if child:IsA("ScrollingFrame") and child ~= TabFrame then
                 child.Visible = false
+                print("Hiding:", child.Name) -- Debug print
             end
         end
         contentFrame.Visible = true
-        print("Switched to tab:", name)
+        print("Showing:", contentFrame.Name) -- Debug print
     end)
 end
 
@@ -116,6 +120,7 @@ AimbotFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 AimbotFrame.Visible = true
 AimbotFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 AimbotFrame.ScrollBarThickness = 8
+AimbotFrame.ZIndex = 1
 AimbotFrame.Parent = Frame
 
 local VisualsFrame = Instance.new("ScrollingFrame")
@@ -125,6 +130,7 @@ VisualsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 VisualsFrame.Visible = false
 VisualsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 VisualsFrame.ScrollBarThickness = 8
+VisualsFrame.ZIndex = 1
 VisualsFrame.Parent = Frame
 
 local ExploitsFrame = Instance.new("ScrollingFrame")
@@ -134,6 +140,7 @@ ExploitsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 ExploitsFrame.Visible = false
 ExploitsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ExploitsFrame.ScrollBarThickness = 8
+ExploitsFrame.ZIndex = 1
 ExploitsFrame.Parent = Frame
 
 local SettingsFrame = Instance.new("ScrollingFrame")
@@ -143,6 +150,7 @@ SettingsFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 SettingsFrame.Visible = false
 SettingsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 SettingsFrame.ScrollBarThickness = 8
+SettingsFrame.ZIndex = 1
 SettingsFrame.Parent = Frame
 
 createTab("Aimbot", 0, AimbotFrame)
@@ -182,7 +190,9 @@ local function createTextButton(parent, text, posY, callback)
     Button.TextSize = 14
     Button.Parent = parent
     
-    Button.MouseButton1Click:Connect(callback)
+    Button.MouseButton1Click:Connect(function()
+        callback()
+    end)
     parent.CanvasSize = UDim2.new(0, 0, 0, posY + 50) -- Update canvas size
 end
 
