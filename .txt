@@ -29,8 +29,8 @@ ScreenGui.Parent = game:GetService("CoreGui")
 print("ScreenGui parented to CoreGui:", ScreenGui.Parent)
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 400, 0, 500) -- Increased size: 400x500
-Frame.Position = UDim2.new(0.5, -200, 0.5, -250) -- Adjusted position for larger size
+Frame.Size = UDim2.new(0, 400, 0, 500)
+Frame.Position = UDim2.new(0.5, -200, 0.5, -250)
 Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 Frame.Visible = true
 Frame.Parent = ScreenGui
@@ -47,7 +47,7 @@ local function update(input)
 end
 
 Frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then -- Left click to drag
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
         startPos = Frame.Position
@@ -83,18 +83,18 @@ end)
 
 -- Tab System
 local TabFrame = Instance.new("Frame")
-TabFrame.Size = UDim2.new(1, 0, 0, 40) -- Increased height for better visibility
+TabFrame.Size = UDim2.new(1, 0, 0, 40)
 TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 TabFrame.Parent = Frame
 
 local function createTab(name, posX, contentFrame)
     local TabButton = Instance.new("TextButton")
-    TabButton.Size = UDim2.new(0.25, 0, 1, 0) -- Equal spacing for 4 tabs
+    TabButton.Size = UDim2.new(0.25, 0, 1, 0)
     TabButton.Position = UDim2.new(posX, 0, 0, 0)
     TabButton.Text = name
     TabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TabButton.TextSize = 16 -- Increased text size for readability
+    TabButton.TextSize = 16
     TabButton.Parent = TabFrame
     
     TabButton.MouseButton1Click:Connect(function()
@@ -110,7 +110,7 @@ end
 
 -- Content Frames
 local AimbotFrame = Instance.new("Frame")
-AimbotFrame.Size = UDim2.new(1, 0, 1, -40) -- Adjusted for larger TabFrame
+AimbotFrame.Size = UDim2.new(1, 0, 1, -40)
 AimbotFrame.Position = UDim2.new(0, 0, 0, 40)
 AimbotFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 AimbotFrame.Visible = true
@@ -145,12 +145,12 @@ createTab("Settings", 0.75, SettingsFrame)
 -- Helper function for toggle buttons
 local function createToggleButton(parent, text, posY, callback)
     local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0.9, 0, 0, 40) -- Increased button height
+    Button.Size = UDim2.new(0.9, 0, 0, 40)
     Button.Position = UDim2.new(0.05, 0, 0, posY)
     Button.Text = text .. ": OFF"
     Button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
     Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.TextSize = 14 -- Increased text size
+    Button.TextSize = 14
     Button.Parent = parent
     local state = false
     
@@ -165,15 +165,25 @@ end
 -- Helper function for text buttons (for settings)
 local function createTextButton(parent, text, posY, callback)
     local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0.9, 0, 0, 40) -- Increased button height
+    Button.Size = UDim2.new(0.9, 0, 0, 40)
     Button.Position = UDim2.new(0.05, 0, 0, posY)
-    Button.Text = text
+    Button.Text = text .. " (Current: " .. bindKey.Name .. ")"
     Button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.TextSize = 14 -- Increased text size
+    Button.TextSize = 14
     Button.Parent = parent
     
-    Button.MouseButton1Click:Connect(callback)
+    Button.MouseButton1Click:Connect(function()
+        Button.Text = "Change GUI Bind (Press a key)"
+        local bindChangeConnection = UserInputService.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                bindKey = input.KeyCode
+                Button.Text = "Change GUI Bind (Current: " .. bindKey.Name .. ")"
+                print("New GUI bind set to:", bindKey.Name)
+                bindChangeConnection:Disconnect()
+            end
+        end)
+    end)
 end
 
 -- Aimbot Tab (Camera Lock-On)
@@ -408,17 +418,18 @@ createToggleButton(VisualsFrame, "Distance", 160, function(state) espStates.Dist
 createToggleButton(VisualsFrame, "Health Bar", 210, function(state) espStates.Health = state end)
 createToggleButton(VisualsFrame, "Skeleton", 260, function(state) espStates.Skeleton = state end)
 
--- Exploits Tab (Admin Fly)
+-- Exploits Tab (Admin Fly and No Clip)
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 local flying = false
 local speed = 75
 local controlSpeed = 10000
+local noClipActive = false
 
-local function toggleFly(state)
-    flying = state
-    if flying then
+-- Admin Fly with Respawn Fix
+local function setupFly()
+    if flying and rootPart and humanoid then
         humanoid.PlatformStand = true
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
@@ -453,6 +464,13 @@ local function toggleFly(state)
                 wait()
             end
         end)
+    end
+end
+
+local function toggleFly(state)
+    flying = state
+    if flying then
+        setupFly()
     else
         humanoid.PlatformStand = false
         if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
@@ -461,21 +479,63 @@ local function toggleFly(state)
     end
 end
 
+LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    rootPart = character:WaitForChild("HumanoidRootPart")
+    humanoid = character:WaitForChild("Humanoid")
+    if flying then
+        setupFly()
+    end
+end)
+
+-- No Clip Feature
+local function toggleNoClip(state)
+    noClipActive = state
+    if noClipActive then
+        local function noClip()
+            if character and rootPart then
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+        RunService.Stepped:Connect(noClip)
+    else
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+            for _, connection in pairs(getconnections(RunService.Stepped)) do
+                if connection.Function == noClip then
+                    connection:Disable()
+                end
+            end
+        end
+    end
+end
+
 createToggleButton(ExploitsFrame, "Admin Fly", 10, toggleFly)
+createToggleButton(ExploitsFrame, "No Clip", 60, toggleNoClip)
 
 -- Settings Tab (Change Bind)
 local bindChangeActive = false
-createTextButton(SettingsFrame, "Change GUI Bind (Press a key)", 10, function()
-    bindChangeActive = true
-    print("Press any key to set new GUI bind...")
-    local bindChangeConnection = UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Keyboard and bindChangeActive then
-            bindKey = input.KeyCode
-            print("New GUI bind set to:", bindKey.Name)
-            bindChangeActive = false
-            bindChangeConnection:Disconnect()
-        end
-    end)
+createTextButton(SettingsFrame, "Change GUI Bind (Current: " .. bindKey.Name .. ")", 10, function()
+    local button = SettingsFrame:FindFirstChild("Change GUI Bind (Current: " .. bindKey.Name .. ")")
+    if button then
+        button.Text = "Change GUI Bind (Press a key)"
+        local bindChangeConnection = UserInputService.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                bindKey = input.KeyCode
+                button.Text = "Change GUI Bind (Current: " .. bindKey.Name .. ")"
+                print("New GUI bind set to:", bindKey.Name)
+                bindChangeConnection:Disconnect()
+            end
+        end)
+    end
 end)
 
 print("GUI Loaded! Use the tabs to toggle features. Press F to toggle GUI visibility (or custom bind). Drag with left click.")
