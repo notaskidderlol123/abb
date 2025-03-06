@@ -7,7 +7,7 @@ local Camera = workspace.CurrentCamera
 
 -- Create GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = game.StarterGui
+ScreenGui.Parent = game:GetService("StarterGui")
 ScreenGui.Name = "HackGui"
 
 local Frame = Instance.new("Frame")
@@ -91,6 +91,7 @@ local targetPlayer = nil
 local aimbotActive = false
 
 local function getNearestPlayer()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return nil end
     local nearestDistance = math.huge
     local nearestPlayer = nil
     for _, otherPlayer in pairs(Players:GetPlayers()) do
@@ -117,7 +118,11 @@ UserInputService.InputBegan:Connect(function(input)
         targetPlayer = getNearestPlayer()
         if targetPlayer then
             RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+                if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+                else
+                    RunService:UnbindFromRenderStep("LockOnPlayer")
+                end
             end)
         end
     end
@@ -142,15 +147,20 @@ local function DrawESP(plr)
     objects.Box.Color = Color3.fromRGB(255, 255, 255)
     objects.Box.Thickness = 1
     objects.Box.Transparency = 1
+    objects.Box.Visible = false
     objects.Name.Size = 18
     objects.Name.Color = Color3.fromRGB(255, 255, 255)
     objects.Name.Outline = true
+    objects.Name.Visible = false
     objects.Distance.Size = 16
     objects.Distance.Color = Color3.fromRGB(255, 255, 255)
     objects.Distance.Outline = true
+    objects.Distance.Visible = false
     objects.Health.Thickness = 3
+    objects.Health.Visible = false
     objects.Tracer.Color = Color3.fromRGB(0, 255, 0)
     objects.Tracer.Thickness = 1
+    objects.Tracer.Visible = false
     
     local bones = {
         {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"}, {"LowerTorso", "LeftUpperLeg"},
@@ -163,95 +173,131 @@ local function DrawESP(plr)
         local line = Drawing.new("Line")
         line.Color = Color3.fromRGB(255, 165, 0)
         line.Thickness = 2
+        line.Visible = false
         objects.Skeleton[pair[1] .. pair[2]] = line
     end
     
-    local function Update()
-        local c = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
-                if vis then
-                    local points = {
-                        TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p),
-                        TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p),
-                        BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p),
-                        BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
-                    }
-                    
-                    if espStates.Box then
-                        objects.Box.PointA = Vector2.new(points.TopRight.X, points.TopRight.Y)
-                        objects.Box.PointB = Vector2.new(points.TopLeft.X, points.TopLeft.Y)
-                        objects.Box.PointC = Vector2.new(points.BottomLeft.X, points.BottomLeft.Y)
-                        objects.Box.PointD = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
-                        objects.Box.Visible = true
-                    else objects.Box.Visible = false end
-                    
-                    if espStates.Name then
-                        objects.Name.Position = Vector2.new(points.TopRight.X, points.TopRight.Y - 20)
-                        objects.Name.Text = plr.Name
-                        objects.Name.Visible = true
-                    else objects.Name.Visible = false end
-                    
-                    if espStates.Distance then
+    espObjects[plr] = objects
+    
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+            local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
+            if vis then
+                local points = {
+                    TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p),
+                    TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p),
+                    BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p),
+                    BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
+                }
+                
+                if espStates.Box then
+                    objects.Box.PointA = Vector2.new(points.TopRight.X, points.TopRight.Y)
+                    objects.Box.PointB = Vector2.new(points.TopLeft.X, points.TopLeft.Y)
+                    objects.Box.PointC = Vector2.new(points.BottomLeft.X, points.BottomLeft.Y)
+                    objects.Box.PointD = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
+                    objects.Box.Visible = true
+                else objects.Box.Visible = false end
+                
+                if espStates.Name then
+                    objects.Name.Position = Vector2.new(points.TopRight.X, points.TopRight.Y - 20)
+                    objects.Name.Text = plr.Name
+                    objects.Name.Visible = true
+                else objects.Name.Visible = false end
+                
+                if espStates.Distance then
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                         local dist = (LocalPlayer.Character.HumanoidRootPart.Position - plr.Character.PrimaryPart.Position).Magnitude
                         objects.Distance.Position = Vector2.new(points.BottomRight.X, points.BottomRight.Y + 5)
                         objects.Distance.Text = math.floor(dist) .. "m"
                         objects.Distance.Visible = true
-                    else objects.Distance.Visible = false end
-                    
-                    if espStates.Health then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        if hum then
-                            local hp = hum.Health / hum.MaxHealth
-                            objects.Health.From = Vector2.new(points.BottomRight.X + 5, points.BottomRight.Y)
-                            objects.Health.To = Vector2.new(points.BottomRight.X + 5, points.TopRight.Y + ((points.BottomRight.Y - points.TopRight.Y) * (1 - hp)))
-                            objects.Health.Color = Color3.fromRGB(0, 255, 0)
-                            objects.Health.Visible = true
+                    end
+                else objects.Distance.Visible = false end
+                
+                if espStates.Health then
+                    local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        local hp = hum.Health / hum.MaxHealth
+                        objects.Health.From = Vector2.new(points.BottomRight.X + 5, points.BottomRight.Y)
+                        objects.Health.To = Vector2.new(points.BottomRight.X + 5, points.TopRight.Y + ((points.BottomRight.Y - points.TopRight.Y) * (1 - hp)))
+                        objects.Health.Color = Color3.fromRGB(0, 255, 0)
+                        objects.Health.Visible = true
+                    end
+                else objects.Health.Visible = false end
+                
+                if espStates.Tracer then
+                    objects.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    objects.Tracer.To = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
+                    objects.Tracer.Visible = true
+                else objects.Tracer.Visible = false end
+                
+                if espStates.Skeleton then
+                    for _, pair in ipairs(bones) do
+                        local p1, p2 = plr.Character:FindFirstChild(pair[1]), plr.Character:FindFirstChild(pair[2])
+                        if p1 and p2 then
+                            local sp1, v1 = Camera:WorldToViewportPoint(p1.Position)
+                            local sp2, v2 = Camera:WorldToViewportPoint(p2.Position)
+                            if v1 and v2 then
+                                objects.Skeleton[pair[1] .. pair[2]].From = Vector2.new(sp1.X, sp1.Y)
+                                objects.Skeleton[pair[1] .. pair[2]].To = Vector2.new(sp2.X, sp2.Y)
+                                objects.Skeleton[pair[1] .. pair[2]].Visible = true
+                            else objects.Skeleton[pair[1] .. pair[2]].Visible = false end
                         end
-                    else objects.Health.Visible = false end
-                    
-                    if espStates.Tracer then
-                        objects.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                        objects.Tracer.To = Vector2.new(points.BottomRight.X, points.BottomRight.Y)
-                        objects.Tracer.Visible = true
-                    else objects.Tracer.Visible = false end
-                    
-                    if espStates.Skeleton then
-                        for _, pair in ipairs(bones) do
-                            local p1, p2 = plr.Character:FindFirstChild(pair[1]), plr.Character:FindFirstChild(pair[2])
-                            if p1 and p2 then
-                                local sp1, v1 = Camera:WorldToViewportPoint(p1.Position)
-                                local sp2, v2 = Camera:WorldToViewportPoint(p2.Position)
-                                if v1 and v2 then
-                                    objects.Skeleton[pair[1] .. pair[2]].From = Vector2.new(sp1.X, sp1.Y)
-                                    objects.Skeleton[pair[1] .. pair[2]].To = Vector2.new(sp2.X, sp2.Y)
-                                    objects.Skeleton[pair[1] .. pair[2]].Visible = true
-                                else objects.Skeleton[pair[1] .. pair[2]].Visible = false end
-                            end
-                        end
-                    else
-                        for _, line in pairs(objects.Skeleton) do line.Visible = false end
                     end
                 else
-                    for _, obj in pairs(objects) do
-                        if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
-                    end
+                    for _, line in pairs(objects.Skeleton) do line.Visible = false end
                 end
             else
                 for _, obj in pairs(objects) do
                     if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
                 end
-                if not Players:FindFirstChild(plr.Name) then c:Disconnect() end
             end
-        end)
-    end
-    coroutine.wrap(Update)()
-    espObjects[plr] = objects
+        else
+            for _, obj in pairs(objects) do
+                if type(obj) == "table" then for _, line in pairs(obj) do line.Visible = false end else obj.Visible = false end
+            end
+            if not Players:FindFirstChild(plr.Name) then
+                if connection then
+                    connection:Disconnect()
+                    espObjects[plr] = nil
+                end
+            end
+        end
+    end)
 end
 
-for _, player in pairs(Players:GetPlayers()) do DrawESP(player) end
-Players.PlayerAdded:Connect(function(player) wait(1) DrawESP(player) end)
+-- Initialize ESP for existing players
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        DrawESP(player)
+    end
+end
 
+-- Handle new players
+Players.PlayerAdded:Connect(function(player)
+    wait(1)
+    if player ~= LocalPlayer then
+        DrawESP(player)
+    end
+end)
+
+-- Clean up when players leave
+Players.PlayerRemoving:Connect(function(player)
+    if espObjects[player] then
+        for _, obj in pairs(espObjects[player]) do
+            if type(obj) == "table" then
+                for _, line in pairs(obj) do
+                    line:Remove()
+                end
+            else
+                obj:Remove()
+            end
+        end
+        espObjects[player] = nil
+    end
+end)
+
+-- Visuals Tab Buttons
 createToggleButton(VisualsFrame, "Box ESP", 10, function(state) espStates.Box = state end)
 createToggleButton(VisualsFrame, "Tracers", 50, function(state) espStates.Tracer = state end)
 createToggleButton(VisualsFrame, "Name Tags", 90, function(state) espStates.Name = state end)
