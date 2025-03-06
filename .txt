@@ -72,8 +72,8 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle GUI visibility with custom bind (default F)
-local bindKey = Enum.KeyCode.F
+-- Toggle GUI visibility with custom bind (default Q)
+local bindKey = Enum.KeyCode.Q
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == bindKey then
         Frame.Visible = not Frame.Visible
@@ -250,9 +250,46 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
     end)
 end
 
+-- Helper function for text boxes
+local function createTextBox(parent, text, posY, defaultValue, callback)
+    local TextBoxFrame = Instance.new("Frame")
+    TextBoxFrame.Size = UDim2.new(0.9, 0, 0, 40)
+    TextBoxFrame.Position = UDim2.new(0.05, 0, 0, posY)
+    TextBoxFrame.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    TextBoxFrame.Parent = parent
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.3, 0, 1, 0)
+    Label.Position = UDim2.new(0, 0, 0, 0)
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.BackgroundTransparency = 1
+    Label.TextSize = 14
+    Label.Parent = TextBoxFrame
+
+    local TextBox = Instance.new("TextBox")
+    TextBox.Size = UDim2.new(0.6, 0, 0.8, 0)
+    TextBox.Position = UDim2.new(0.35, 0, 0.1, 0)
+    TextBox.Text = tostring(defaultValue)
+    TextBox.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TextBox.TextSize = 14
+    TextBox.Parent = TextBoxFrame
+
+    TextBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            local num = tonumber(TextBox.Text) or defaultValue
+            TextBox.Text = tostring(num)
+            callback(num)
+        end
+    end)
+end
+
 -- Aimbot Tab (Camera Lock-On)
 local targetPlayer = nil
 local aimbotActive = false
+local deadCheckAimbot = false
+local teamCheckAimbot = false
 
 local function getNearestPlayer()
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -260,10 +297,16 @@ local function getNearestPlayer()
     local nearestPlayer = nil
     for _, otherPlayer in pairs(Players:GetPlayers()) do
         if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (LocalPlayer.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if distance < nearestDistance then
-                nearestDistance = distance
-                nearestPlayer = otherPlayer
+            local humanoid = otherPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and (not deadCheckAimbot or humanoid.Health > 0) then
+                local isSameTeam = (LocalPlayer.Team and otherPlayer.Team and LocalPlayer.Team == otherPlayer.Team)
+                if not teamCheckAimbot or not isSameTeam then
+                    local distance = (LocalPlayer.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
+                    if distance < nearestDistance then
+                        nearestDistance = distance
+                        nearestPlayer = otherPlayer
+                    end
+                end
             end
         end
     end
@@ -275,6 +318,14 @@ createToggleButton(AimbotFrame, "Aimbot (Right Click)", 10, function(state)
     if not state then
         RunService:UnbindFromRenderStep("LockOnPlayer")
     end
+end)
+
+createToggleButton(AimbotFrame, "Dead Check", 60, function(state)
+    deadCheckAimbot = state
+end)
+
+createToggleButton(AimbotFrame, "Team Check", 110, function(state)
+    teamCheckAimbot = state
 end)
 
 UserInputService.InputBegan:Connect(function(input)
@@ -301,6 +352,8 @@ end)
 -- Visuals Tab (ESP Features)
 local espStates = {Box = false, Tracer = false, Name = false, Distance = false, Health = false, Skeleton = false}
 local tracerPosition = 1 -- Default to Middle (0 = Bottom, 1 = Middle, 2 = Top)
+local deadCheckVisuals = false
+local teamCheckVisuals = false
 local espConnections = {}
 local espObjects = {}
 
@@ -349,7 +402,9 @@ local function DrawESP(plr)
     local function Update()
         local connection
         connection = RunService.RenderStepped:Connect(function()
-            if not plr.Character or not plr.Character.PrimaryPart or not plr.Character:FindFirstChildOfClass("Humanoid") or plr.Character:FindFirstChildOfClass("Humanoid").Health <= 0 then
+            if not plr.Character or not plr.Character.PrimaryPart or not plr.Character:FindFirstChildOfClass("Humanoid") then return end
+            local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+            if deadCheckVisuals and humanoid and humanoid.Health <= 0 then
                 for _, obj in pairs(objects) do
                     if type(obj) == "table" then
                         for _, line in pairs(obj) do line.Visible = false end
@@ -357,9 +412,16 @@ local function DrawESP(plr)
                         obj.Visible = false
                     end
                 end
-                if not Players:FindFirstChild(plr.Name) and connection then
-                    connection:Disconnect()
-                    espConnections[plr] = nil
+                return
+            end
+            local isSameTeam = (LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team)
+            if teamCheckVisuals and isSameTeam then
+                for _, obj in pairs(objects) do
+                    if type(obj) == "table" then
+                        for _, line in pairs(obj) do line.Visible = false end
+                    else
+                        obj.Visible = false
+                    end
                 end
                 return
             end
@@ -397,9 +459,8 @@ local function DrawESP(plr)
                 else objects.Distance.Visible = false end
                 
                 if espStates.Health then
-                    local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        local hp = hum.Health / hum.MaxHealth
+                    if humanoid then
+                        local hp = humanoid.Health / humanoid.MaxHealth
                         objects.Health.From = Vector2.new(points.BottomRight.X + 5, points.BottomRight.Y)
                         objects.Health.To = Vector2.new(points.BottomRight.X + 5, points.TopRight.Y + ((points.BottomRight.Y - points.TopRight.Y) * (1 - hp)))
                         objects.Health.Color = Color3.fromRGB(0, 255, 0)
@@ -414,9 +475,15 @@ local function DrawESP(plr)
                         tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
                     elseif tracerPosition == 1 then tracerY = Camera.ViewportSize.Y / 2 -- Middle
                         if plr.Character and plr.Character:FindFirstChild("UpperTorso") then
+                            print("Using UpperTorso for", plr.Name)
                             local chestPos = Camera:WorldToViewportPoint(plr.Character.UpperTorso.Position)
                             tracerToX, tracerToY = chestPos.X, chestPos.Y
+                        elseif plr.Character and plr.Character:FindFirstChild("Torso") then
+                            print("Using Torso for", plr.Name)
+                            local chestPos = Camera:WorldToViewportPoint(plr.Character.Torso.Position)
+                            tracerToX, tracerToY = chestPos.X, chestPos.Y
                         else
+                            print("Falling back to BottomRight for", plr.Name)
                             tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
                         end
                     elseif tracerPosition == 2 then tracerY = 0 -- Top
@@ -500,8 +567,14 @@ createToggleButton(VisualsFrame, "Name Tags", 160, function(state) espStates.Nam
 createToggleButton(VisualsFrame, "Distance", 210, function(state) espStates.Distance = state end)
 createToggleButton(VisualsFrame, "Health Bar", 260, function(state) espStates.Health = state end)
 createToggleButton(VisualsFrame, "Skeleton", 310, function(state) espStates.Skeleton = state end)
+createToggleButton(VisualsFrame, "Dead Check", 360, function(state)
+    deadCheckVisuals = state
+end)
+createToggleButton(VisualsFrame, "Team Check", 410, function(state)
+    teamCheckVisuals = state
+end)
 
--- Exploits Tab (Admin Fly, No Clip, Fly Speed Slider)
+-- Exploits Tab (Admin Fly, No Clip, Fly Speed Slider, Spinbot, Loop TP)
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
@@ -510,6 +583,11 @@ local speed = 75
 local controlSpeed = 10000
 local noClipActive = false
 local noClipConnection = nil
+local spinbotActive = false
+local loopTPActive = false
+local tpDistance = 10 -- Default teleport distance in studs
+local deadCheckExploits = false
+local teamCheckExploits = false
 
 -- Admin Fly with Respawn Fix and Speed Slider
 local function setupFly()
@@ -563,6 +641,40 @@ local function toggleFly(state)
     end
 end
 
+-- Spinbot
+local spinbotConnection = nil
+local function toggleSpinbot(state)
+    spinbotActive = state
+    if spinbotActive and rootPart then
+        spinbotConnection = RunService.RenderStepped:Connect(function()
+            if rootPart then
+                rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(5), 0)
+            end
+        end)
+    elseif spinbotConnection then
+        spinbotConnection:Disconnect()
+        spinbotConnection = nil
+    end
+end
+
+-- Loop TP to Player
+local tpConnection = nil
+local function toggleLoopTP(state)
+    loopTPActive = state
+    if loopTPActive and rootPart then
+        tpConnection = RunService.RenderStepped:Connect(function()
+            local nearestPlayer = getNearestPlayer()
+            if nearestPlayer and nearestPlayer.Character and nearestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local targetPos = nearestPlayer.Character.HumanoidRootPart.Position + (LocalPlayer.Character.HumanoidRootPart.Position - nearestPlayer.Character.HumanoidRootPart.Position).Unit * tpDistance
+                rootPart.CFrame = CFrame.new(targetPos)
+            end
+        end)
+    elseif tpConnection then
+        tpConnection:Disconnect()
+        tpConnection = nil
+    end
+end
+
 LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     rootPart = character:WaitForChild("HumanoidRootPart")
@@ -571,7 +683,13 @@ LocalPlayer.CharacterAdded:Connect(function(newCharacter)
         setupFly()
     end
     if noClipActive then
-        toggleNoClip(true) -- Reapply No Clip if active
+        toggleNoClip(true)
+    end
+    if spinbotActive then
+        toggleSpinbot(true)
+    end
+    if loopTPActive then
+        toggleLoopTP(true)
     end
 end)
 
@@ -610,6 +728,18 @@ createSlider(ExploitsFrame, "Fly Speed", 60, 10, 200, 75, function(value)
     print("Fly speed set to:", speed)
 end)
 createToggleButton(ExploitsFrame, "No Clip", 110, toggleNoClip)
+createToggleButton(ExploitsFrame, "Spinbot", 160, toggleSpinbot)
+createToggleButton(ExploitsFrame, "Loop TP to Player", 210, toggleLoopTP)
+createTextBox(ExploitsFrame, "TP Distance", 260, 10, function(value)
+    tpDistance = value
+    print("TP distance set to:", tpDistance)
+end)
+createToggleButton(ExploitsFrame, "Dead Check", 310, function(state)
+    deadCheckExploits = state
+end)
+createToggleButton(ExploitsFrame, "Team Check", 360, function(state)
+    teamCheckExploits = state
+end)
 
 -- Settings Tab (Change Bind with Improved Behavior)
 local bindChangeActive = false
@@ -635,4 +765,4 @@ createTextButton(SettingsFrame, "Change GUI Bind", 10, function()
     end
 end)
 
-print("GUI Loaded! Use the tabs to toggle features. Press F to toggle GUI visibility (or custom bind). Drag with left click.")
+print("GUI Loaded! Use the tabs to toggle features. Press Q to toggle GUI visibility (or custom bind). Drag with left click.")
