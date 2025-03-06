@@ -1,4 +1,4 @@
--- GUI with Aimbot, Visuals, and Exploits
+-- GUI with Visuals, Exploits, and Settings
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
@@ -101,14 +101,13 @@ local function createTab(name, posX, contentFrame)
     
     TabButton.MouseButton1Click:Connect(function()
         print("Tab clicked:", name) -- Debug print to confirm click
-        for _, child in pairs(Frame:GetChildren()) do
-            if child:IsA("ScrollingFrame") and child ~= TabFrame then
-                child.Visible = false
-                print("Hiding:", child.Name) -- Debug print
-            end
+        -- Explicitly set all frames to invisible first
+        for _, frame in pairs({AimbotFrame, VisualsFrame, ExploitsFrame, SettingsFrame}) do
+            frame.Visible = false
+            print("Set", frame.Name, "to invisible") -- Debug print
         end
         contentFrame.Visible = true
-        print("Showing:", contentFrame.Name) -- Debug print
+        print("Set", contentFrame.Name, "to visible") -- Debug print
     end)
 end
 
@@ -238,9 +237,9 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             draggingSlider = false
             local roundedValue = math.round(currentValue)
-            if maxValue == 2 then -- For TP position or tracer position slider
+            if maxValue == 2 then -- For tracer position slider
                 roundedValue = math.clamp(roundedValue, 0, 2)
-                if roundedValue == 0 then Label.Text = name .. ": Top"
+                if roundedValue == 0 then Label.Text = name .. ": Bottom Middle"
                 elseif roundedValue == 1 then Label.Text = name .. ": Behind"
                 else Label.Text = name .. ": Front" end
             else
@@ -260,7 +259,7 @@ local function createSlider(parent, name, posY, minValue, maxValue, defaultValue
             currentValue = minValue + (maxValue - minValue) * relativePos
             SliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
             if maxValue == 2 then
-                if math.round(currentValue) == 0 then Label.Text = name .. ": Top"
+                if math.round(currentValue) == 0 then Label.Text = name .. ": Bottom Middle"
                 elseif math.round(currentValue) == 1 then Label.Text = name .. ": Behind"
                 else Label.Text = name .. ": Front" end
             else
@@ -307,19 +306,11 @@ local function createTextBox(parent, text, posY, defaultValue, callback)
     parent.CanvasSize = UDim2.new(0, 0, 0, posY + 50) -- Update canvas size
 end
 
--- Aimbot Tab (Camera Lock-On with FOV)
+-- Aimbot Tab (Camera Lock-On)
 local targetPlayer = nil
 local aimbotActive = false
 local deadCheckAimbot = false
 local teamCheckAimbot = false
-local aimbotFOVActive = false
-local aimbotFOV = 100
-local aimbotFOVCircle = Drawing.new("Circle")
-aimbotFOVCircle.Color = Color3.fromRGB(255, 255, 255) -- White
-aimbotFOVCircle.Thickness = 2
-aimbotFOVCircle.Filled = false -- Hollow circle
-aimbotFOVCircle.Transparency = 1
-aimbotFOVCircle.Visible = false
 
 local function getNearestPlayer()
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -334,10 +325,7 @@ local function getNearestPlayer()
                 if not teamCheckAimbot or not isSameTeam then
                     local screenPos = Camera:WorldToViewportPoint(otherPlayer.Character.HumanoidRootPart.Position)
                     local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                    if aimbotFOVActive and distance <= aimbotFOV and distance < nearestDistance then
-                        nearestDistance = distance
-                        nearestPlayer = otherPlayer
-                    elseif not aimbotFOVActive and distance < nearestDistance then
+                    if distance < nearestDistance then
                         nearestDistance = distance
                         nearestPlayer = otherPlayer
                     end
@@ -352,7 +340,6 @@ createToggleButton(AimbotFrame, "Aimbot (Right Click)", 10, function(state)
     aimbotActive = state
     if not state then
         RunService:UnbindFromRenderStep("LockOnPlayer")
-        aimbotFOVCircle.Visible = false
     end
 end)
 
@@ -364,28 +351,15 @@ createToggleButton(AimbotFrame, "Team Check", 110, function(state)
     teamCheckAimbot = state
 end)
 
-createToggleButton(AimbotFrame, "FOV Circle", 160, function(state)
-    aimbotFOVActive = state
-    aimbotFOVCircle.Visible = state and aimbotActive
-end)
-
-createSlider(AimbotFrame, "Aimbot FOV", 210, 1, 640, 100, function(value)
-    aimbotFOV = value
-    aimbotFOVCircle.Radius = value
-end)
-
 UserInputService.InputBegan:Connect(function(input)
     if aimbotActive and input.UserInputType == Enum.UserInputType.MouseButton2 then
         targetPlayer = getNearestPlayer()
         if targetPlayer then
             RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    aimbotFOVCircle.Visible = aimbotFOVActive and aimbotActive
-                    aimbotFOVCircle.Position = UserInputService:GetMouseLocation()
                     Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
                 else
                     RunService:UnbindFromRenderStep("LockOnPlayer")
-                    aimbotFOVCircle.Visible = false
                 end
             end)
         end
@@ -395,13 +369,12 @@ end)
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         RunService:UnbindFromRenderStep("LockOnPlayer")
-        aimbotFOVCircle.Visible = false
     end
 end)
 
 -- Visuals Tab (ESP Features)
 local espStates = {Box = false, Tracer = false, Name = false, Distance = false, Health = false, Skeleton = false}
-local tracerPosition = 1 -- Default to Behind (0 = Top, 1 = Behind, 2 = Front)
+local tracerPosition = 1 -- Default to Behind (0 = Bottom Middle, 1 = Behind, 2 = Front)
 local deadCheckVisuals = false
 local teamCheckVisuals = false
 local espConnections = {}
@@ -519,7 +492,7 @@ local function DrawESP(plr)
             if espStates.Tracer then
                 local tracerY = Camera.ViewportSize.Y
                 local tracerToX, tracerToY
-                if tracerPosition == 0 then tracerY = Camera.ViewportSize.Y -- Top
+                if tracerPosition == 0 then tracerY = Camera.ViewportSize.Y -- Bottom Middle
                     tracerToX, tracerToY = points.BottomRight.X, points.BottomRight.Y
                 elseif tracerPosition == 1 then tracerY = Camera.ViewportSize.Y / 2 -- Behind
                     if plr.Character and plr.Character:FindFirstChild("UpperTorso") then
