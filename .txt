@@ -389,13 +389,11 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Visuals Tab (ESP Features with FOV)
+-- Visuals Tab (ESP Features)
 local espStates = {Box = false, Tracer = false, Name = false, Distance = false, Health = false, Skeleton = false}
 local tracerPosition = 1 -- Default to Behind (0 = Top, 1 = Behind, 2 = Front)
 local deadCheckVisuals = false
 local teamCheckVisuals = false
-local fovActive = false
-local fovValue = 70 -- Default FOV (Roblox default is 70)
 local espConnections = {}
 local espObjects = {}
 
@@ -604,22 +602,8 @@ end)
 createToggleButton(VisualsFrame, "Team Check", 410, function(state)
     teamCheckVisuals = state
 end)
-createToggleButton(VisualsFrame, "FOV Toggle", 460, function(state)
-    fovActive = state
-    if fovActive then
-        Camera.FieldOfView = fovValue
-    else
-        Camera.FieldOfView = 70 -- Reset to default
-    end
-end)
-createSlider(VisualsFrame, "FOV", 510, 1, 200, 70, function(value)
-    fovValue = value
-    if fovActive then
-        Camera.FieldOfView = fovValue
-    end
-end)
 
--- Exploits Tab (Admin Fly, No Clip, Fly Speed Slider, Spinbot, Loop TP, Save Last Position)
+-- Exploits Tab (Admin Fly, No Clip, Fly Speed Slider, Save Last Position)
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
@@ -628,11 +612,6 @@ local speed = 75
 local controlSpeed = 10000
 local noClipActive = false
 local noClipConnection = nil
-local spinbotActive = false
-local spinSpeed = 15 -- Default spin speed in degrees
-local loopTPActive = false
-local tpDistance = 10 -- Default teleport distance in studs
-local tpPosition = 1 -- Default to Behind (0 = Top, 1 = Behind, 2 = Front)
 local lastPosition = nil
 local saveLastPosition = false
 local deadCheckExploits = false
@@ -697,99 +676,6 @@ local function toggleFly(state)
     end
 end
 
--- Spinbot with Adjustable Speed
-local spinbotConnection = nil
-local function toggleSpinbot(state)
-    spinbotActive = state
-    if spinbotActive and rootPart then
-        spinbotConnection = RunService.RenderStepped:Connect(function()
-            if rootPart then
-                rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
-            end
-        end)
-    elseif spinbotConnection then
-        spinbotConnection:Disconnect()
-        spinbotConnection = nil
-    end
-end
-
--- Loop TP to Player (Using Provided Script)
-local tpConnection = nil
-local function getNearestEnemy()
-    local nearestDistance = math.huge
-    local nearestEnemy = nil
-    local myRoot = character and character:FindFirstChild("HumanoidRootPart")
-    local myTeam = LocalPlayer.Team
-
-    if not myRoot then
-        print("No root part found for local player")
-        return nil
-    end
-
-    for _, otherPlayer in pairs(Players:GetPlayers()) do
-        if otherPlayer ~= LocalPlayer and 
-           otherPlayer.Team ~= myTeam and -- Ignore teammates
-           otherPlayer.Character and 
-           otherPlayer.Character:FindFirstChild("HumanoidRootPart") and 
-           otherPlayer.Character:FindFirstChildOfClass("Humanoid") and 
-           otherPlayer.Character:FindFirstChildOfClass("Humanoid").Health > 0 -- Ignore dead players
-        then
-            local otherRoot = otherPlayer.Character.HumanoidRootPart
-            local distance = (myRoot.Position - otherRoot.Position).Magnitude
-            print("Checking player:", otherPlayer.Name, "Distance:", distance)
-
-            if distance < nearestDistance then
-                nearestDistance = distance
-                nearestEnemy = otherPlayer
-            end
-        end
-    end
-
-    if nearestEnemy then
-        print("Nearest enemy found:", nearestEnemy.Name)
-    else
-        print("No nearest enemy found")
-    end
-    return nearestEnemy
-end
-
-local function aimlock()
-    if not character or not Camera or not loopTPActive or not rootPart then return end
-
-    local target = getNearestEnemy()
-    if target and target.Character then
-        local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
-        if targetRoot then
-            local lookVector = targetRoot.CFrame.LookVector
-            local offset = tpDistance
-            local tpPos = targetRoot.Position
-            if tpPosition == 0 then -- Top
-                tpPos = tpPos + Vector3.new(0, offset, 0)
-            elseif tpPosition == 1 then -- Behind
-                tpPos = tpPos - lookVector * offset
-            elseif tpPosition == 2 then -- Front
-                tpPos = tpPos + lookVector * offset
-            end
-            rootPart.CFrame = CFrame.new(tpPos)
-            print("Teleported to:", tpPos)
-        else
-            print("No target root found for:", target.Name)
-        end
-    end
-end
-
-local function toggleLoopTP(state)
-    loopTPActive = state
-    if loopTPActive and rootPart then
-        tpConnection = RunService.RenderStepped:Connect(aimlock)
-        print("Loop TP activated")
-    elseif tpConnection then
-        tpConnection:Disconnect()
-        tpConnection = nil
-        print("Loop TP deactivated")
-    end
-end
-
 LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     rootPart = character:WaitForChild("HumanoidRootPart")
@@ -799,12 +685,6 @@ LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     end
     if noClipActive then
         toggleNoClip(true)
-    end
-    if spinbotActive then
-        toggleSpinbot(true)
-    end
-    if loopTPActive then
-        toggleLoopTP(true)
     end
 end)
 
@@ -843,32 +723,20 @@ createSlider(ExploitsFrame, "Fly Speed", 60, 10, 200, 75, function(value)
     print("Fly speed set to:", speed)
 end)
 createToggleButton(ExploitsFrame, "No Clip", 110, toggleNoClip)
-createToggleButton(ExploitsFrame, "Spinbot", 160, toggleSpinbot)
-createTextBox(ExploitsFrame, "Spin Speed", 210, 15, function(value)
-    spinSpeed = value
-    print("Spin speed set to:", spinSpeed)
-end)
-createToggleButton(ExploitsFrame, "Loop TP to Player", 260, toggleLoopTP)
-createTextBox(ExploitsFrame, "TP Distance", 310, 10, function(value)
-    tpDistance = value
-    print("TP distance set to:", tpDistance)
-end)
-createSlider(ExploitsFrame, "TP Position", 360, 0, 2, 1, function(value)
-    tpPosition = value
-    print("TP position set to:", tpPosition)
-end)
-createToggleButton(ExploitsFrame, "Save Last Position", 410, function(state)
-    saveLastPosition = state
-end)
-createToggleButton(ExploitsFrame, "Dead Check", 460, function(state)
+createToggleButton(ExploitsFrame, "Dead Check", 160, function(state)
     deadCheckExploits = state
 end)
-createToggleButton(ExploitsFrame, "Team Check", 510, function(state)
+createToggleButton(ExploitsFrame, "Team Check", 210, function(state)
     teamCheckExploits = state
 end)
+createToggleButton(ExploitsFrame, "Save Last Position", 260, function(state)
+    saveLastPosition = state
+end)
 
--- Settings Tab (Change Bind with Improved Behavior)
+-- Settings Tab (Change Bind and GUI Color)
 local bindChangeActive = false
+local guiColor = Color3.fromRGB(50, 50, 50) -- Default GUI color
+
 createTextButton(SettingsFrame, "Change GUI Bind", 10, function()
     if not bindChangeActive then
         bindChangeActive = true
@@ -888,6 +756,27 @@ createTextButton(SettingsFrame, "Change GUI Bind", 10, function()
                 bindChangeConnection:Disconnect()
             end
         end)
+    end
+end)
+
+createTextBox(SettingsFrame, "GUI Color (R,G,B)", 60, "50,50,50", function(value)
+    local r, g, b = value:match("(%d+),(%d+),(%d+)")
+    if r and g and b then
+        r, g, b = tonumber(r), tonumber(g), tonumber(b)
+        if r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255 then
+            guiColor = Color3.fromRGB(r, g, b)
+            Frame.BackgroundColor3 = guiColor
+            TabFrame.BackgroundColor3 = guiColor:Lerp(Color3.fromRGB(30, 30, 30), 0.5)
+            AimbotFrame.BackgroundColor3 = guiColor
+            VisualsFrame.BackgroundColor3 = guiColor
+            ExploitsFrame.BackgroundColor3 = guiColor
+            SettingsFrame.BackgroundColor3 = guiColor
+            print("GUI color set to:", r, g, b)
+        else
+            print("Invalid RGB values. Use 0-255 for each component.")
+        end
+    else
+        print("Invalid format. Use R,G,B (e.g., 255,0,0)")
     end
 end)
 
