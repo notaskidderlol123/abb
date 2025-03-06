@@ -173,16 +173,64 @@ local function createTextButton(parent, text, posY, callback)
     Button.TextSize = 14
     Button.Parent = parent
     
-    Button.MouseButton1Click:Connect(function()
-        Button.Text = "Change GUI Bind (Press a key)"
-        local bindChangeConnection = UserInputService.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                bindKey = input.KeyCode
-                Button.Text = "Change GUI Bind (Current: " .. bindKey.Name .. ")"
-                print("New GUI bind set to:", bindKey.Name)
-                bindChangeConnection:Disconnect()
-            end
-        end)
+    Button.MouseButton1Click:Connect(callback)
+end
+
+-- Helper function for sliders
+local function createSlider(parent, name, posY, minValue, maxValue, defaultValue, callback)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Size = UDim2.new(0.9, 0, 0, 40)
+    SliderFrame.Position = UDim2.new(0.05, 0, 0, posY)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    SliderFrame.Parent = parent
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.5, 0, 1, 0)
+    Label.Position = UDim2.new(0, 0, 0, 0)
+    Label.Text = name .. ": " .. defaultValue
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.BackgroundTransparency = 1
+    Label.TextSize = 14
+    Label.Parent = SliderFrame
+
+    local SliderButton = Instance.new("TextButton")
+    SliderButton.Size = UDim2.new(0.5, 0, 0.5, 0)
+    SliderButton.Position = UDim2.new(0.5, 0, 0.25, 0)
+    SliderButton.Text = ""
+    SliderButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    SliderButton.Parent = SliderFrame
+
+    local SliderFill = Instance.new("Frame")
+    SliderFill.Size = UDim2.new((defaultValue - minValue) / (maxValue - minValue), 0, 1, 0)
+    SliderFill.Position = UDim2.new(0, 0, 0, 0)
+    SliderFill.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    SliderFill.Parent = SliderButton
+
+    local draggingSlider = false
+    SliderButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingSlider = true
+        end
+    end)
+
+    SliderButton.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingSlider = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = input.Position.X
+            local buttonPos = SliderButton.AbsolutePosition.X
+            local buttonSize = SliderButton.AbsoluteSize.X
+            local relativePos = math.clamp((mousePos - buttonPos) / buttonSize, 0, 1)
+            local value = minValue + (maxValue - minValue) * relativePos
+            value = math.floor(value)
+            SliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
+            Label.Text = name .. ": " .. value
+            callback(value)
+        end
     end)
 end
 
@@ -418,7 +466,7 @@ createToggleButton(VisualsFrame, "Distance", 160, function(state) espStates.Dist
 createToggleButton(VisualsFrame, "Health Bar", 210, function(state) espStates.Health = state end)
 createToggleButton(VisualsFrame, "Skeleton", 260, function(state) espStates.Skeleton = state end)
 
--- Exploits Tab (Admin Fly and No Clip)
+-- Exploits Tab (Admin Fly, No Clip, Fly Speed Slider)
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
@@ -427,7 +475,7 @@ local speed = 75
 local controlSpeed = 10000
 local noClipActive = false
 
--- Admin Fly with Respawn Fix
+-- Admin Fly with Respawn Fix and Speed Slider
 local function setupFly()
     if flying and rootPart and humanoid then
         humanoid.PlatformStand = true
@@ -519,19 +567,30 @@ local function toggleNoClip(state)
 end
 
 createToggleButton(ExploitsFrame, "Admin Fly", 10, toggleFly)
-createToggleButton(ExploitsFrame, "No Clip", 60, toggleNoClip)
+createSlider(ExploitsFrame, "Fly Speed", 60, 10, 200, 75, function(value)
+    speed = value
+    print("Fly speed set to:", speed)
+end)
+createToggleButton(ExploitsFrame, "No Clip", 110, toggleNoClip)
 
--- Settings Tab (Change Bind)
+-- Settings Tab (Change Bind with Improved Behavior)
 local bindChangeActive = false
-createTextButton(SettingsFrame, "Change GUI Bind (Current: " .. bindKey.Name .. ")", 10, function()
-    local button = SettingsFrame:FindFirstChild("Change GUI Bind (Current: " .. bindKey.Name .. ")")
-    if button then
-        button.Text = "Change GUI Bind (Press a key)"
-        local bindChangeConnection = UserInputService.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Keyboard then
+createTextButton(SettingsFrame, "Change GUI Bind", 10, function()
+    if not bindChangeActive then
+        bindChangeActive = true
+        local button = SettingsFrame:FindFirstChild("Change GUI Bind")
+        if button then
+            button.Text = "Change GUI Bind (Press a key)"
+        end
+        local bindChangeConnection
+        bindChangeConnection = UserInputService.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Keyboard and bindChangeActive then
                 bindKey = input.KeyCode
-                button.Text = "Change GUI Bind (Current: " .. bindKey.Name .. ")"
+                if button then
+                    button.Text = "Change GUI Bind (Current: " .. bindKey.Name .. ")"
+                end
                 print("New GUI bind set to:", bindKey.Name)
+                bindChangeActive = false
                 bindChangeConnection:Disconnect()
             end
         end)
