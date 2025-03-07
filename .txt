@@ -394,7 +394,7 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (Modified Fly Section)
+-- Exploits Tab (Modified Fly and NoClip)
 local flyEnabled = false
 local flySpeed = 75
 local controlSpeed = 10000
@@ -474,7 +474,9 @@ local function toggleFly()
     local humanoid = character:WaitForChild("Humanoid")
     
     if flyEnabled then
-        humanoid.PlatformStand = true
+        -- Remove PlatformStand to allow NoClip to work fully
+        humanoid:ChangeState(Enum.HumanoidStateType.Physics) -- Use Physics state for free movement
+        
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
         bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
@@ -514,11 +516,11 @@ local function toggleFly()
                     bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
                     bg.CFrame = cam.CFrame
                 else
-                    bv.Velocity = Vector3.new(0, 0, 0)
+                    bv.Velocity = Vector3.new(0, 0, 0) -- Hover when no input
                 end
                 wait()
             end
-            humanoid.PlatformStand = false
+            -- Cleanup when fly is disabled
             if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
             if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
@@ -531,12 +533,12 @@ FlyToggle.MouseButton1Click:Connect(toggleFly)
 LocalPlayer.CharacterAdded:Connect(function(char)
     if flyEnabled then
         wait(0.1)
-        toggleFly()
-        toggleFly()
+        toggleFly() -- Turn off fly
+        toggleFly() -- Turn it back on with new character
     end
 end)
 
--- NoClip Toggle (unchanged)
+-- NoClip Toggle (unchanged but ensures downward clipping works with Fly)
 local NoClipToggle = Instance.new("TextButton")
 NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
 NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
@@ -563,6 +565,13 @@ local function toggleNoClip()
                 end
             end
             wait()
+        end
+        -- Re-enable collisions when NoClip is turned off
+        local character = getCharacter()
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
         end
     end)
 end
