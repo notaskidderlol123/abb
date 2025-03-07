@@ -1,184 +1,150 @@
--- Services
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+-- Define LocalPlayer
 local Players = game:GetService("Players")
-local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
+-- Create the ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ExternalMenu"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
 
--- GUI Setup
-local gui = Instance.new("ScreenGui")
-gui.Name = "CustomGUI"
-gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+-- Create the main frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 200)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 300)
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BorderSizePixel = 0
-mainFrame.Visible = true
-mainFrame.Parent = gui
+-- Create the top bar (title bar)
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 30)
+TopBar.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
 
-local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 30)
-titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-titleBar.Parent = mainFrame
+-- Title label
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "External Menu Example"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 16
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TopBar
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 1, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Custom GUI - Press Q to Toggle"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 14
-titleLabel.Font = Enum.Font.SourceSans
-titleLabel.Parent = titleBar
+-- Close button (X)
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -30, 0, 0)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 16
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.Parent = TopBar
 
--- GUI Toggle
-local guiVisible = true
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.Q then
-        guiVisible = not guiVisible
-        mainFrame.Visible = guiVisible
-    end
-end)
+-- Create the tab bar (left side)
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(0, 100, 1, -30)
+TabBar.Position = UDim2.new(0, 0, 0, 30)
+TabBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+TabBar.BorderSizePixel = 0
+TabBar.Parent = MainFrame
 
--- Fly Implementation
-local flying = false
-local flySpeed = 75
-local flyForce = 10000
+-- Tab buttons
+local function createTabButton(name, position, targetFrame)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 0, 40)
+    button.Position = position
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    button.BorderSizePixel = 0
+    button.Text = name
+    button.TextColor3 = Color3.fromRGB(200, 200, 200)
+    button.TextSize = 16
+    button.Font = Enum.Font.SourceSans
+    button.Parent = TabBar
 
-local function toggleFly()
-    flying = not flying
-    if flying then
-        humanoid.PlatformStand = true
-        local bv = Instance.new("BodyVelocity")
-        bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(flyForce, flyForce, flyForce)
-        bv.Parent = rootPart
-        
-        local bg = Instance.new("BodyGyro")
-        bg.MaxTorque = Vector3.new(flyForce, flyForce, flyForce)
-        bg.P = 5000
-        bg.D = 500
-        bg.CFrame = rootPart.CFrame
-        bg.Parent = rootPart
-
-        spawn(function()
-            while flying do
-                local cam = workspace.CurrentCamera
-                local move = Vector3.new(0, 0, 0)
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
-
-                if move.Magnitude > 0 then
-                    move = move.Unit * flySpeed
-                    bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
-                    bg.CFrame = cam.CFrame
-                else
-                    bv.Velocity = Vector3.new(0, 0, 0)
-                end
-                wait()
-            end
-        end)
-    else
-        humanoid.PlatformStand = false
-        if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
-        if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
-        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-    end
-end
-
--- Fly Toggle Button
-local flyToggle = Instance.new("TextButton")
-flyToggle.Size = UDim2.new(0, 200, 0, 30)
-flyToggle.Position = UDim2.new(0, 10, 0, 10)
-flyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-flyToggle.Text = "Fly: OFF"
-flyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-flyToggle.TextSize = 14
-flyToggle.Parent = mainFrame
-
-flyToggle.MouseButton1Click:Connect(function()
-    toggleFly()
-    if flying then
-        flyToggle.Text = "Fly: ON"
-        flyToggle.TextColor3 = Color3.fromRGB(0, 255, 0)
-    else
-        flyToggle.Text = "Fly: OFF"
-        flyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    end
-end)
-
--- Aimbot Implementation
-local targetPlayer = nil
-
-local function getNearestPlayer()
-    local nearestDistance = math.huge
-    local nearestPlayer = nil
-
-    for _, otherPlayer in pairs(Players:GetPlayers()) do
-        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (player.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if distance < nearestDistance then
-                nearestDistance = distance
-                nearestPlayer = otherPlayer
+    -- Show/hide frame on click
+    button.MouseButton1Click:Connect(function()
+        for _, child in pairs(MainFrame:GetChildren()) do
+            if child:IsA("Frame") and child.Name:find("TabContent") then
+                child.Visible = false
             end
         end
-    end
-
-    return nearestPlayer
-end
-
-UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        targetPlayer = getNearestPlayer()
-        if targetPlayer then
-            RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
-            end)
-        end
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        RunService:UnbindFromRenderStep("LockOnPlayer")
-    end
-end)
-
--- ESP Toggles (Box, Name, Distance, etc.)
-local espToggles = {
-    {"Box ESP", "Box", 50},
-    {"Name ESP", "Name", 90},
-    {"Distance ESP", "Distance", 130}
-}
-
-local espEnabled = {Box = false, Name = false, Distance = false}
-
-for _, toggleData in pairs(espToggles) do
-    local toggleName, key, yPos = toggleData[1], toggleData[2], toggleData[3]
-    local toggle = Instance.new("TextButton")
-    toggle.Size = UDim2.new(0, 200, 0, 30)
-    toggle.Position = UDim2.new(0, 10, 0, yPos)
-    toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    toggle.Text = toggleName .. ": OFF"
-    toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    toggle.TextSize = 14
-    toggle.Parent = mainFrame
-
-    toggle.MouseButton1Click:Connect(function()
-        espEnabled[key] = not espEnabled[key]
-        toggle.Text = toggleName .. (espEnabled[key] and ": ON" or ": OFF")
-        toggle.TextColor3 = espEnabled[key] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+        targetFrame.Visible = true
     end)
 end
 
-print("Loaded GUI with Fly, Aimbot, and ESP toggles!")
+-- Content area
+local function createTabContent(name)
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Name = name .. "TabContent"
+    contentFrame.Size = UDim2.new(0, 200, 1, -30)
+    contentFrame.Position = UDim2.new(0, 100, 0, 30)
+    contentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    contentFrame.BorderSizePixel = 0
+    contentFrame.Visible = false
+    contentFrame.Parent = MainFrame
+    return contentFrame
+end
+
+-- Create tabs and content
+local aimbotTab = createTabContent("Aimbot")
+local visualsTab = createTabContent("Visuals")
+local exploitsTab = createTabContent("Exploits")
+
+-- Create tab buttons
+createTabButton("Aimbot", UDim2.new(0, 0, 0, 0), aimbotTab)
+createTabButton("Visuals", UDim2.new(0, 0, 0, 40), visualsTab)
+createTabButton("Extras", UDim2.new(0, 0, 0, 80), exploitsTab)
+
+-- Make the first tab visible by default
+aimbotTab.Visible = true
+
+-- Add "Made By" label at the bottom
+local MadeByLabel = Instance.new("TextLabel")
+MadeByLabel.Size = UDim2.new(0, 100, 0, 20)
+MadeByLabel.Position = UDim2.new(0, 0, 1, -20)
+MadeByLabel.BackgroundTransparency = 1
+MadeByLabel.Text = "MADE BY NOOBHACKER#9999"
+MadeByLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+MadeByLabel.TextSize = 12
+MadeByLabel.Font = Enum.Font.SourceSans
+MadeByLabel.Parent = TabBar
+
+-- Example content for Aimbot tab (just placeholders)
+local aimbotLabel = Instance.new("TextLabel")
+aimbotLabel.Size = UDim2.new(1, 0, 0, 30)
+aimbotLabel.Position = UDim2.new(0, 0, 0, 0)
+aimbotLabel.BackgroundTransparency = 1
+aimbotLabel.Text = "--Aimbot--"
+aimbotLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+aimbotLabel.TextSize = 16
+aimbotLabel.Font = Enum.Font.SourceSansBold
+aimbotLabel.Parent = aimbotTab
+
+local function createPlaceholderButton(name, position)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, -10, 0, 30)
+    button.Position = position
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    button.BorderSizePixel = 0
+    button.Text = name
+    button.TextColor3 = Color3.fromRGB(200, 200, 200)
+    button.TextSize = 14
+    button.Font = Enum.Font.SourceSans
+    button.Parent = aimbotTab
+end
+
+createPlaceholderButton("Smoothing Mode", UDim2.new(0, 5, 0, 40))
+createPlaceholderButton("Enable FOV", UDim2.new(0, 5, 0, 80))
+createPlaceholderButton("Visible Check", UDim2.new(0, 5, 0, 120))
+createPlaceholderButton("Team Check", UDim2.new(0, 5, 0, 160))
+
+-- Close button functionality
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
