@@ -211,7 +211,14 @@ local function DrawESP(plr)
                     local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
                     local BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p)
                     local BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
-                    local HeadPos = Camera:WorldToViewportPoint((plr.Character.Head.CFrame * CFrame.new(0, 1.5, 0)).p) -- Above head
+                    -- Use PrimaryPart as a fallback if Head is not available
+                    local headPart = plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart
+                    local headPos, headVis
+                    if headPart then
+                        headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 1.5, 0)).p) -- Above head
+                    else
+                        headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true -- Fallback to PrimaryPart position
+                    end
 
                     if espToggles.Box then
                         drawings.Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
@@ -223,7 +230,7 @@ local function DrawESP(plr)
                         drawings.Box.Visible = false
                     end
 
-                    if espToggles.Name then
+                    if espToggles.Name and headVis then
                         drawings.Name.Position = Vector2.new(TopRight.X, TopRight.Y - 20)
                         drawings.Name.Text = plr.Name
                         drawings.Name.Visible = true
@@ -240,15 +247,15 @@ local function DrawESP(plr)
                         drawings.Distance.Visible = false
                     end
 
-                    if espToggles.HealthBar then
+                    if espToggles.HealthBar and headVis then
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
                             local barWidth = 100
                             local barHeight = 10
-                            local barX = HeadPos.X - barWidth / 2 -- Center above head
-                            drawings.HealthBar.From = Vector2.new(barX, HeadPos.Y - 10) -- Above head
-                            drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), HeadPos.Y - 10)
+                            local barX = headPos.X - barWidth / 2 -- Center above head
+                            drawings.HealthBar.From = Vector2.new(barX, headPos.Y - 10) -- Above head
+                            drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), headPos.Y - 10)
                             drawings.HealthBar.Color = Color3.fromRGB(0, 255, 0)
                             drawings.HealthBar.Thickness = barHeight
                             drawings.HealthBar.Visible = true
@@ -324,16 +331,27 @@ local function DrawESP(plr)
     espPlayers[plr] = drawings
 end
 
+-- Safely apply ESP to all players
 for _, player in pairs(game:GetService("Players"):GetPlayers()) do
     if player ~= LocalPlayer then
-        DrawESP(player)
+        local success, err = pcall(function()
+            DrawESP(player)
+        end)
+        if not success then
+            warn("Failed to apply ESP to player " .. player.Name .. ": " .. err)
+        end
     end
 end
 
 game:GetService("Players").PlayerAdded:Connect(function(player)
     wait(1)
     if player ~= LocalPlayer then
-        DrawESP(player)
+        local success, err = pcall(function()
+            DrawESP(player)
+        end)
+        if not success then
+            warn("Failed to apply ESP to player " .. player.Name .. ": " .. err)
+        end
     end
 end)
 
@@ -403,7 +421,7 @@ FlySpeedSlider.Parent = tabContents["Exploits"]
 local FlySpeedKnob = Instance.new("Frame")
 FlySpeedKnob.Size = UDim2.new(0, 10, 1, 0)
 FlySpeedKnob.Position = UDim2.new((flySpeed - 10) / 190, 0, 0, 0)
-FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
 FlySpeedKnob.BackgroundTransparency = 1 -- Start transparent
 FlySpeedKnob.Parent = FlySpeedSlider
 
