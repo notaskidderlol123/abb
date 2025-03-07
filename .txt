@@ -1,155 +1,184 @@
--- Full GUI Script with Features Requested
--- Features: Fly (with speed slider), No-clip, Infinite Jump, Spinbot, ESP (Individual Toggles), Moveable GUI
-
+-- Services
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
+local Camera = workspace.CurrentCamera
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
 
 -- GUI Setup
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.ResetOnSpawn = false
+local gui = Instance.new("ScreenGui")
+gui.Name = "CustomGUI"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 300, 0, 400)
-MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Active = true
-MainFrame.Draggable = true -- GUI moveable
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 400, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = true
+mainFrame.Parent = gui
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-Title.Text = "Roblox Executor GUI"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+titleBar.Parent = mainFrame
 
--- Fly Toggle
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 1, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Custom GUI - Press Q to Toggle"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 14
+titleLabel.Font = Enum.Font.SourceSans
+titleLabel.Parent = titleBar
+
+-- GUI Toggle
+local guiVisible = true
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.Q then
+        guiVisible = not guiVisible
+        mainFrame.Visible = guiVisible
+    end
+end)
+
+-- Fly Implementation
 local flying = false
-local flySpeed = 50
+local flySpeed = 75
+local flyForce = 10000
 
-local FlyToggle = Instance.new("TextButton", MainFrame)
-FlyToggle.Size = UDim2.new(1, 0, 0, 30)
-FlyToggle.Position = UDim2.new(0, 0, 0, 40)
-FlyToggle.Text = "Fly: OFF"
-FlyToggle.MouseButton1Click:Connect(function()
+local function toggleFly()
     flying = not flying
-    FlyToggle.Text = flying and "Fly: ON" or "Fly: OFF"
     if flying then
-        local bv = Instance.new("BodyVelocity", RootPart)
-        bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        humanoid.PlatformStand = true
+        local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
-        while flying do
-            bv.Velocity = RootPart.CFrame.LookVector * flySpeed
-            wait()
-        end
-        bv:Destroy()
-    end
-end)
+        bv.MaxForce = Vector3.new(flyForce, flyForce, flyForce)
+        bv.Parent = rootPart
+        
+        local bg = Instance.new("BodyGyro")
+        bg.MaxTorque = Vector3.new(flyForce, flyForce, flyForce)
+        bg.P = 5000
+        bg.D = 500
+        bg.CFrame = rootPart.CFrame
+        bg.Parent = rootPart
 
--- Fly Speed Slider
-local SpeedSlider = Instance.new("TextBox", MainFrame)
-SpeedSlider.Size = UDim2.new(1, 0, 0, 30)
-SpeedSlider.Position = UDim2.new(0, 0, 0, 80)
-SpeedSlider.PlaceholderText = "Fly Speed (1-100)"
-SpeedSlider.Text = "50"
-SpeedSlider.FocusLost:Connect(function()
-    local newSpeed = tonumber(SpeedSlider.Text)
-    if newSpeed and newSpeed >= 1 and newSpeed <= 100 then
-        flySpeed = newSpeed
-    end
-end)
+        spawn(function()
+            while flying do
+                local cam = workspace.CurrentCamera
+                local move = Vector3.new(0, 0, 0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
 
--- No-Clip Toggle
-local noclip = false
-local NoclipToggle = Instance.new("TextButton", MainFrame)
-NoclipToggle.Size = UDim2.new(1, 0, 0, 30)
-NoclipToggle.Position = UDim2.new(0, 0, 0, 120)
-NoclipToggle.Text = "No-Clip: OFF"
-NoclipToggle.MouseButton1Click:Connect(function()
-    noclip = not noclip
-    NoclipToggle.Text = noclip and "No-Clip: ON" or "No-Clip: OFF"
-end)
-RunService.Stepped:Connect(function()
-    if noclip then
-        for _, v in pairs(Character:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.CanCollide = false
+                if move.Magnitude > 0 then
+                    move = move.Unit * flySpeed
+                    bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
+                    bg.CFrame = cam.CFrame
+                else
+                    bv.Velocity = Vector3.new(0, 0, 0)
+                end
+                wait()
             end
-        end
+        end)
+    else
+        humanoid.PlatformStand = false
+        if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
+        if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
+        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
     end
-end)
-
--- Infinite Jump
-local InfiniteJumpToggle = Instance.new("TextButton", MainFrame)
-InfiniteJumpToggle.Size = UDim2.new(1, 0, 0, 30)
-InfiniteJumpToggle.Position = UDim2.new(0, 0, 0, 160)
-InfiniteJumpToggle.Text = "Infinite Jump: OFF"
-local infiniteJump = false
-InfiniteJumpToggle.MouseButton1Click:Connect(function()
-    infiniteJump = not infiniteJump
-    InfiniteJumpToggle.Text = infiniteJump and "Infinite Jump: ON" or "Infinite Jump: OFF"
-end)
-UserInputService.JumpRequest:Connect(function()
-    if infiniteJump then
-        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
-
--- Spinbot Toggle
-local SpinbotToggle = Instance.new("TextButton", MainFrame)
-SpinbotToggle.Size = UDim2.new(1, 0, 0, 30)
-SpinbotToggle.Position = UDim2.new(0, 0, 0, 200)
-SpinbotToggle.Text = "Spinbot: OFF"
-local spinbot = false
-SpinbotToggle.MouseButton1Click:Connect(function()
-    spinbot = not spinbot
-    SpinbotToggle.Text = spinbot and "Spinbot: ON" or "Spinbot: OFF"
-end)
-RunService.Heartbeat:Connect(function()
-    if spinbot then
-        RootPart.CFrame = RootPart.CFrame * CFrame.Angles(0, math.rad(10), 0)
-    end
-end)
-
--- ESP (Individual Toggles)
-local ESPFolder = Instance.new("Folder", game.CoreGui)
-ESPFolder.Name = "ESPObjects"
-
-local function createESP(part, color)
-    local highlight = Instance.new("Highlight", ESPFolder)
-    highlight.Adornee = part
-    highlight.FillColor = color
-    highlight.FillTransparency = 0.5
-    return highlight
 end
 
-local ESPEnabled = false
-local ESPToggle = Instance.new("TextButton", MainFrame)
-ESPToggle.Size = UDim2.new(1, 0, 0, 30)
-ESPToggle.Position = UDim2.new(0, 0, 0, 240)
-ESPToggle.Text = "ESP: OFF"
-ESPToggle.MouseButton1Click:Connect(function()
-    ESPEnabled = not ESPEnabled
-    ESPToggle.Text = ESPEnabled and "ESP: ON" or "ESP: OFF"
-    if not ESPEnabled then
-        ESPFolder:ClearAllChildren()
+-- Fly Toggle Button
+local flyToggle = Instance.new("TextButton")
+flyToggle.Size = UDim2.new(0, 200, 0, 30)
+flyToggle.Position = UDim2.new(0, 10, 0, 10)
+flyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+flyToggle.Text = "Fly: OFF"
+flyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+flyToggle.TextSize = 14
+flyToggle.Parent = mainFrame
+
+flyToggle.MouseButton1Click:Connect(function()
+    toggleFly()
+    if flying then
+        flyToggle.Text = "Fly: ON"
+        flyToggle.TextColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        flyToggle.Text = "Fly: OFF"
+        flyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
     end
 end)
-RunService.RenderStepped:Connect(function()
-    if ESPEnabled then
-        ESPFolder:ClearAllChildren()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local part = player.Character:FindFirstChild("HumanoidRootPart")
-                if part then
-                    createESP(part, Color3.fromRGB(255, 0, 0))
-                end
+
+-- Aimbot Implementation
+local targetPlayer = nil
+
+local function getNearestPlayer()
+    local nearestDistance = math.huge
+    local nearestPlayer = nil
+
+    for _, otherPlayer in pairs(Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (player.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if distance < nearestDistance then
+                nearestDistance = distance
+                nearestPlayer = otherPlayer
             end
+        end
+    end
+
+    return nearestPlayer
+end
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        targetPlayer = getNearestPlayer()
+        if targetPlayer then
+            RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+            end)
         end
     end
 end)
 
-print("GUI Loaded Successfully")
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        RunService:UnbindFromRenderStep("LockOnPlayer")
+    end
+end)
+
+-- ESP Toggles (Box, Name, Distance, etc.)
+local espToggles = {
+    {"Box ESP", "Box", 50},
+    {"Name ESP", "Name", 90},
+    {"Distance ESP", "Distance", 130}
+}
+
+local espEnabled = {Box = false, Name = false, Distance = false}
+
+for _, toggleData in pairs(espToggles) do
+    local toggleName, key, yPos = toggleData[1], toggleData[2], toggleData[3]
+    local toggle = Instance.new("TextButton")
+    toggle.Size = UDim2.new(0, 200, 0, 30)
+    toggle.Position = UDim2.new(0, 10, 0, yPos)
+    toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    toggle.Text = toggleName .. ": OFF"
+    toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+    toggle.TextSize = 14
+    toggle.Parent = mainFrame
+
+    toggle.MouseButton1Click:Connect(function()
+        espEnabled[key] = not espEnabled[key]
+        toggle.Text = toggleName .. (espEnabled[key] and ": ON" or ": OFF")
+        toggle.TextColor3 = espEnabled[key] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    end)
+end
+
+print("Loaded GUI with Fly, Aimbot, and ESP toggles!")
