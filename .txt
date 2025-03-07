@@ -87,7 +87,7 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (Updated with New Aimbot V2)
+-- Aimbot Tab (Updated with No Smoothness and FOV Circle)
 local aimbotEnabled = false -- Original aimbot
 local aimbotV2Enabled = false -- New Aimbot V2
 local targetPlayer = nil
@@ -96,8 +96,16 @@ local lockedTarget = nil
 -- Aimbot V2 Configuration
 local aimbotV2Keybind = Enum.KeyCode.E -- Toggle lock with 'E' key
 local aimbotV2FOV = 150 -- Field of View radius (in studs)
-local aimbotV2Sensitivity = 0.2 -- Lower = smoother, higher = faster (0.1 to 1)
 local aimbotV2AimPart = "Head" -- Target part
+
+-- FOV Circle
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 2
+fovCircle.NumSides = 32
+fovCircle.Radius = 0 -- Will be calculated dynamically
+fovCircle.Color = Color3.fromRGB(255, 0, 0)
+fovCircle.Visible = false
+fovCircle.Filled = false
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -165,6 +173,9 @@ AimbotV2Toggle.MouseButton1Click:Connect(function()
     if not aimbotV2Enabled then
         RunService:UnbindFromRenderStep("AimbotV2")
         lockedTarget = nil
+        fovCircle.Visible = false
+    else
+        fovCircle.Visible = true
     end
 end)
 
@@ -173,7 +184,7 @@ UserInputService.InputBegan:Connect(function(input)
     if aimbotEnabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
         local character = getCharacter()
         local rootPart = character:WaitForChild("HumanoidRootPart")
-        targetPlayer = getNearestPlayerInFOV(rootPart) -- Reuse FOV function for consistency
+        targetPlayer = getNearestPlayerInFOV(rootPart)
         if targetPlayer then
             RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -201,13 +212,18 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- New Aimbot V2 Logic
+-- New Aimbot V2 Logic (No Smoothness, with FOV Circle)
 local function aimbotV2()
     if not aimbotV2Enabled then return end
 
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
-    local currentCFrame = Camera.CFrame
+
+    -- Update FOV Circle
+    local screenFOVRadius = math.tan(math.rad(60)) * (Camera.CFrame.Position - Camera.CFrame.Position + Camera.CFrame.LookVector * aimbotV2FOV).Magnitude
+    local screenPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    fovCircle.Position = screenPos
+    fovCircle.Radius = screenFOVRadius * (Camera.ViewportSize.Y / 1080) -- Scale to screen size (assuming 1080p base)
 
     if UserInputService:IsKeyDown(aimbotV2Keybind) and not lockedTarget then
         lockedTarget = getNearestPlayerInFOV(rootPart)
@@ -217,15 +233,12 @@ local function aimbotV2()
 
     if lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild(aimbotV2AimPart) then
         local targetPos = lockedTarget.Character[aimbotV2AimPart].Position
-        local targetCFrame = CFrame.new(currentCFrame.Position, targetPos)
-        Camera.CFrame = currentCFrame:Lerp(targetCFrame, aimbotV2Sensitivity)
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos) -- Instant snap
     elseif not lockedTarget then
-        -- Auto-aim at nearest player within FOV if not locked
         local nearest = getNearestPlayerInFOV(rootPart)
         if nearest and nearest.Character and nearest.Character:FindFirstChild(aimbotV2AimPart) then
             local targetPos = nearest.Character[aimbotV2AimPart].Position
-            local targetCFrame = CFrame.new(currentCFrame.Position, targetPos)
-            Camera.CFrame = currentCFrame:Lerp(targetCFrame, aimbotV2Sensitivity / 2) -- Slower when not locked
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos) -- Instant snap for auto-aim
         end
     end
 end
