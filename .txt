@@ -25,7 +25,7 @@ MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
-MainFrame.Visible = false -- Initially hidden
+-- Removed MainFrame.Visible = false to make GUI active by default
 
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
@@ -239,6 +239,7 @@ local function DrawESP(plr)
                     local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
                     local BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p)
                     local BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
+                    local HeadPos = Camera:WorldToViewportPoint((plr.Character.Head.CFrame * CFrame.new(0, 1.5, 0)).p) -- Above head
 
                     if espToggles.Box then
                         drawings.Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
@@ -271,9 +272,13 @@ local function DrawESP(plr)
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            drawings.HealthBar.From = Vector2.new(BottomRight.X + 5, BottomRight.Y)
-                            drawings.HealthBar.To = Vector2.new(BottomRight.X + 5, TopRight.Y + ((BottomRight.Y - TopRight.Y) * (1 - healthPercent)))
+                            local barWidth = 50 -- Fixed width for the health bar
+                            local barHeight = 5
+                            local barX = HeadPos.X - barWidth / 2 -- Center above head
+                            drawings.HealthBar.From = Vector2.new(barX, HeadPos.Y - 10) -- Above head
+                            drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), HeadPos.Y - 10)
                             drawings.HealthBar.Color = Color3.fromRGB(0, 255, 0)
+                            drawings.HealthBar.Thickness = barHeight
                             drawings.HealthBar.Visible = true
                         end
                     else
