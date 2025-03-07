@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
 -- Aimbot variables
+local player = LocalPlayer
 local isAimbotEnabled = false
 local targetPlayer = nil
 
@@ -36,20 +37,28 @@ local function toggleAimbot(state)
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
             end
         end)
-        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        local inputBeganConnection
+        local inputEndedConnection
+        inputBeganConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if input.UserInputType == Enum.UserInputType.MouseButton2 and not gameProcessed then
                 targetPlayer = getNearestPlayer()
             end
         end)
-        UserInputService.InputEnded:Connect(function(input, gameProcessed)
+        inputEndedConnection = UserInputService.InputEnded:Connect(function(input, gameProcessed)
             if input.UserInputType == Enum.UserInputType.MouseButton2 and not gameProcessed then
                 targetPlayer = nil
             end
         end)
+        -- Store connections to disconnect later
+        toggleAimbot.connections = {inputBeganConnection, inputEndedConnection}
     else
         RunService:UnbindFromRenderStep("LockOnPlayer")
-        UserInputService.InputBegan:DisconnectAll()
-        UserInputService.InputEnded:DisconnectAll()
+        if toggleAimbot.connections then
+            for _, connection in pairs(toggleAimbot.connections) do
+                connection:Disconnect()
+            end
+            toggleAimbot.connections = nil
+        end
         targetPlayer = nil
     end
 end
@@ -189,20 +198,30 @@ toggleButton.MouseButton1Click:Connect(function()
     toggleAimbot(isAimbotEnabled)
 end)
 
--- Add "Made By" label with clickable link
-local MadeByLabel = Instance.new("TextLabel")
-MadeByLabel.Size = UDim2.new(0, 200, 0, 20)
-MadeByLabel.Position = UDim2.new(0, 100, 1, -20)
-MadeByLabel.BackgroundTransparency = 1
-MadeByLabel.Text = "https://discord.gg/vSt4E2KcKC"
-MadeByLabel.TextColor3 = Color3.fromRGB(0, 120, 215) -- Blue color for link
-MadeByLabel.TextSize = 12
-MadeByLabel.Font = Enum.Font.SourceSans
-MadeByLabel.Parent = MainFrame
+-- Update CanvasSize of ScrollingFrame for Aimbot tab
+aimbotTab.CanvasSize = UDim2.new(0, 0, 0, toggleButton.Size.Y.Offset + 10)
+
+-- Add "Made By" link as a TextButton (clickable)
+local MadeByButton = Instance.new("TextButton")
+MadeByButton.Size = UDim2.new(0, 200, 0, 20)
+MadeByButton.Position = UDim2.new(0, 100, 1, -20)
+MadeByButton.BackgroundTransparency = 1
+MadeByButton.Text = "https://discord.gg/vSt4E2KcKC"
+MadeByButton.TextColor3 = Color3.fromRGB(0, 120, 215) -- Blue color for link
+MadeByButton.TextSize = 12
+MadeByButton.Font = Enum.Font.SourceSans
+MadeByButton.Parent = MainFrame
 
 -- Make the link clickable (open in browser)
-MadeByLabel.MouseButton1Click:Connect(function()
-    game:GetService("HttpService"):GetAsync("https://discord.gg/vSt4E2KcKC", true)
+MadeByButton.MouseButton1Click:Connect(function()
+    -- Executors typically support request functions; this may vary by executor
+    local success, err = pcall(function()
+        local HttpService = game:GetService("HttpService")
+        HttpService:GetAsync("https://discord.gg/vSt4E2KcKC", true)
+    end)
+    if not success then
+        warn("Failed to open Discord link: " .. tostring(err))
+    end
 end)
 
 -- Close button functionality
