@@ -87,7 +87,7 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (Updated with No Smoothness and FOV Circle)
+-- Aimbot Tab (Updated with FOV Slider, Infinite Range, and Player Lock)
 local aimbotEnabled = false -- Original aimbot
 local aimbotV2Enabled = false -- New Aimbot V2
 local targetPlayer = nil
@@ -95,7 +95,7 @@ local lockedTarget = nil
 
 -- Aimbot V2 Configuration
 local aimbotV2Keybind = Enum.KeyCode.E -- Toggle lock with 'E' key
-local aimbotV2FOV = 150 -- Field of View radius (in studs)
+local aimbotV2FOV = 150 -- Initial FOV radius (adjustable via slider)
 local aimbotV2AimPart = "Head" -- Target part
 
 -- FOV Circle
@@ -131,8 +131,60 @@ AimbotV2Toggle.Font = Enum.Font.SourceSans
 AimbotV2Toggle.TextSize = 16
 AimbotV2Toggle.Parent = tabContents["Aimbot"]
 
+-- FOV Slider Setup
+local FOVLabel = Instance.new("TextLabel")
+FOVLabel.Size = UDim2.new(0, 100, 0, 20)
+FOVLabel.Position = UDim2.new(0, 120, 0, 50)
+FOVLabel.Text = "FOV: " .. aimbotV2FOV
+FOVLabel.BackgroundTransparency = 1
+FOVLabel.TextTransparency = 1
+FOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+FOVLabel.Font = Enum.Font.SourceSans
+FOVLabel.TextSize = 16
+FOVLabel.Parent = tabContents["Aimbot"]
+
+local FOVSlider = Instance.new("TextButton")
+FOVSlider.Size = UDim2.new(0, 200, 0, 20)
+FOVSlider.Position = UDim2.new(0, 120, 0, 70)
+FOVSlider.Text = ""
+FOVSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+FOVSlider.BackgroundTransparency = 1
+FOVSlider.Parent = tabContents["Aimbot"]
+
+local FOVKnob = Instance.new("Frame")
+FOVKnob.Size = UDim2.new(0, 10, 1, 0)
+FOVKnob.Position = UDim2.new((aimbotV2FOV - 50) / 450, 0, 0, 0) -- 50 to 500 range
+FOVKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+FOVKnob.BackgroundTransparency = 1
+FOVKnob.Parent = FOVSlider
+
+local draggingFOVSlider = false
+FOVSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingFOVSlider = true
+    end
+end)
+
+FOVSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingFOVSlider = false
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if draggingFOVSlider then
+        local mouseX = UserInputService:GetMouseLocation().X
+        local sliderPos = FOVSlider.AbsolutePosition.X
+        local sliderWidth = FOVSlider.AbsoluteSize.X
+        local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
+        FOVKnob.Position = UDim2.new(newPos, 0, 0, 0)
+        aimbotV2FOV = math.floor(50 + (newPos * 450)) -- 50 to 500 range
+        FOVLabel.Text = "FOV: " .. aimbotV2FOV
+    end
+end)
+
 local function getNearestPlayerInFOV(rootPart)
-    local nearestDistance = aimbotV2FOV
+    local nearestDistance = math.huge -- Infinite range
     local nearestPlayer = nil
     local cameraPos = Camera.CFrame.Position
     local cameraLook = Camera.CFrame.LookVector
@@ -144,7 +196,7 @@ local function getNearestPlayerInFOV(rootPart)
             local distance = vectorToTarget.Magnitude
             local angle = math.deg(math.acos(cameraLook:Dot(vectorToTarget.Unit)))
 
-            if distance <= aimbotV2FOV and angle <= 60 then -- 60-degree cone check
+            if angle <= 60 then -- 60-degree cone check, no distance limit
                 if distance < nearestDistance then
                     nearestDistance = distance
                     nearestPlayer = otherPlayer
@@ -212,18 +264,18 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- New Aimbot V2 Logic (No Smoothness, with FOV Circle)
+-- New Aimbot V2 Logic (Infinite Range, Player Lock, FOV Slider)
 local function aimbotV2()
     if not aimbotV2Enabled then return end
 
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
 
-    -- Update FOV Circle
+    -- Update FOV Circle (visual only, no range limit for targeting)
     local screenFOVRadius = math.tan(math.rad(60)) * (Camera.CFrame.Position - Camera.CFrame.Position + Camera.CFrame.LookVector * aimbotV2FOV).Magnitude
     local screenPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     fovCircle.Position = screenPos
-    fovCircle.Radius = screenFOVRadius * (Camera.ViewportSize.Y / 1080) -- Scale to screen size (assuming 1080p base)
+    fovCircle.Radius = screenFOVRadius * (Camera.ViewportSize.Y / 1080) -- Scale to screen size
 
     if UserInputService:IsKeyDown(aimbotV2Keybind) and not lockedTarget then
         lockedTarget = getNearestPlayerInFOV(rootPart)
@@ -231,15 +283,14 @@ local function aimbotV2()
         lockedTarget = nil
     end
 
-    if lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild(aimbotV2AimPart) then
-        local targetPos = lockedTarget.Character[aimbotV2AimPart].Position
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos) -- Instant snap
-    elseif not lockedTarget then
-        local nearest = getNearestPlayerInFOV(rootPart)
-        if nearest and nearest.Character and nearest.Character:FindFirstChild(aimbotV2AimPart) then
-            local targetPos = nearest.Character[aimbotV2AimPart].Position
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos) -- Instant snap for auto-aim
-        end
+    local target = lockedTarget or getNearestPlayerInFOV(rootPart)
+    if target and target.Character and target.Character:FindFirstChild(aimbotV2AimPart) then
+        local targetPos = target.Character[aimbotV2AimPart].Position
+        -- Lock camera
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+        -- Lock player orientation
+        local lookAtCFrame = CFrame.new(rootPart.Position, targetPos)
+        rootPart.CFrame = CFrame.new(rootPart.Position, Vector3.new(lookAtCFrame.X, rootPart.Position.Y, lookAtCFrame.Z)) -- Keep Y level to avoid tilting
     end
 end
 
@@ -299,7 +350,7 @@ local function DrawESP(plr)
         {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
         {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
         {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"}
+        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightUpperArm", "RightHand"}
     }
     for _, pair in ipairs(bones) do
         local line = Drawing.new("Line")
