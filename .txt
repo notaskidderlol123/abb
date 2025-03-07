@@ -1,13 +1,17 @@
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
 local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
+local LocalPlayer = game.Players.LocalPlayer or game.Players.PlayerAdded:Wait()
+
+-- Wait for character to load
+local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
 
 -- GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 300)
@@ -115,9 +119,9 @@ AimbotToggle.Parent = tabContents["Aimbot"]
 local function getNearestPlayer()
     local nearestDistance = math.huge
     local nearestPlayer = nil
-    for _, otherPlayer in pairs(Players:GetPlayers()) do
+    for _, otherPlayer in pairs(game.Players:GetPlayers()) do
         if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (LocalPlayer.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
+            local distance = (rootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
             if distance < nearestDistance then
                 nearestDistance = distance
                 nearestPlayer = otherPlayer
@@ -214,7 +218,7 @@ local function DrawESP(plr)
     local function Update()
         local connection
         connection = RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+            if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
                 local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
                 if vis then
                     local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
@@ -241,7 +245,7 @@ local function DrawESP(plr)
                     end
 
                     if espToggles.Distance then
-                        local playerDistance = (LocalPlayer.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+                        local playerDistance = (rootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
                         drawings.Distance.Position = Vector2.new(BottomRight.X, BottomRight.Y + 5)
                         drawings.Distance.Text = tostring(math.floor(playerDistance)) .. "m"
                         drawings.Distance.Visible = true
@@ -309,7 +313,7 @@ local function DrawESP(plr)
                         drawing.Visible = false
                     end
                 end
-                if not Players:FindFirstChild(plr.Name) then
+                if not game.Players:FindFirstChild(plr.Name) then
                     connection:Disconnect()
                 end
             end
@@ -319,13 +323,13 @@ local function DrawESP(plr)
     espPlayers[plr] = drawings
 end
 
-for _, player in pairs(Players:GetPlayers()) do
+for _, player in pairs(game.Players:GetPlayers()) do
     if player ~= LocalPlayer then
         DrawESP(player)
     end
 end
 
-Players.PlayerAdded:Connect(function(player)
+game.Players.PlayerAdded:Connect(function(player)
     wait(1)
     if player ~= LocalPlayer then
         DrawESP(player)
@@ -355,9 +359,6 @@ end
 
 -- Exploits Tab (Fly Feature)
 local flyEnabled = false
-local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
 local speed = 75
 local controlSpeed = 10000
 
