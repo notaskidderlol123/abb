@@ -25,7 +25,6 @@ MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
--- Removed MainFrame.Visible = false to make GUI active by default
 
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
@@ -180,6 +179,7 @@ local espToggles = {
     Tracer = true, -- Enabled by default
     Skeleton = false
 }
+local fovValue = Camera.FieldOfView -- Default FOV
 
 local espPlayers = {}
 local function DrawESP(plr)
@@ -207,7 +207,7 @@ local function DrawESP(plr)
     drawings.Distance.Outline = true
     drawings.Distance.Visible = false
 
-    drawings.HealthBar.Thickness = 3
+    drawings.HealthBar.Thickness = 7 -- Increased thickness for bigger health bar
     drawings.HealthBar.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
@@ -272,8 +272,8 @@ local function DrawESP(plr)
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            local barWidth = 50 -- Fixed width for the health bar
-                            local barHeight = 5
+                            local barWidth = 100 -- Increased width for bigger health bar
+                            local barHeight = 10 -- Increased thickness for bigger health bar
                             local barX = HeadPos.X - barWidth / 2 -- Center above head
                             drawings.HealthBar.From = Vector2.new(barX, HeadPos.Y - 10) -- Above head
                             drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), HeadPos.Y - 10)
@@ -386,12 +386,63 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (Fly, NoClip, Infinite Jump)
+-- FOV Changer
+local FovLabel = Instance.new("TextLabel")
+FovLabel.Size = UDim2.new(0, 100, 0, 20)
+FovLabel.Position = UDim2.new(0, 10, 0, yOffset)
+FovLabel.Text = "FOV: " .. math.floor(fovValue)
+FovLabel.BackgroundTransparency = 1
+FovLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+FovLabel.Font = Enum.Font.SourceSans
+FovLabel.TextSize = 16
+FovLabel.Parent = tabContents["Visuals"]
+
+local FovSlider = Instance.new("TextButton")
+FovSlider.Size = UDim2.new(0, 200, 0, 20)
+FovSlider.Position = UDim2.new(0, 10, 0, yOffset + 20)
+FovSlider.Text = ""
+FovSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+FovSlider.Parent = tabContents["Visuals"]
+
+local FovKnob = Instance.new("Frame")
+FovKnob.Size = UDim2.new(0, 10, 1, 0)
+FovKnob.Position = UDim2.new((fovValue - 70) / 130, 0, 0, 0) -- Range: 70 to 200
+FovKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+FovKnob.Parent = FovSlider
+
+local draggingFov = false
+FovSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingFov = true
+    end
+end)
+
+FovSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingFov = false
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if draggingFov then
+        local mouseX = UserInputService:GetMouseLocation().X
+        local sliderPos = FovSlider.AbsolutePosition.X
+        local sliderWidth = FovSlider.AbsoluteSize.X
+        local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
+        FovKnob.Position = UDim2.new(newPos, 0, 0, 0)
+        fovValue = math.floor(70 + (newPos * 130)) -- Range: 70 to 200
+        FovLabel.Text = "FOV: " .. fovValue
+        Camera.FieldOfView = fovValue
+    end
+end)
+
+-- Exploits Tab (Fly, NoClip, Infinite Jump, Spinbot)
 local flyEnabled = false
 local flySpeed = 75 -- Default fly speed
 local controlSpeed = 10000
 local noClipEnabled = false
 local infiniteJumpEnabled = false
+local spinbotEnabled = false
 
 -- Fly Toggle
 local FlyToggle = Instance.new("TextButton")
@@ -561,6 +612,38 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     infiniteJumpEnabled = not infiniteJumpEnabled
     InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
+-- Spinbot Toggle
+local SpinbotToggle = Instance.new("TextButton")
+SpinbotToggle.Size = UDim2.new(0, 100, 0, 30)
+SpinbotToggle.Position = UDim2.new(0, 10, 0, 180)
+SpinbotToggle.Text = "Spinbot: OFF"
+SpinbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SpinbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+SpinbotToggle.Font = Enum.Font.SourceSans
+SpinbotToggle.TextSize = 16
+SpinbotToggle.Parent = tabContents["Exploits"]
+
+local spinSpeed = 100 -- Adjustable spin speed
+local spinConnection
+SpinbotToggle.MouseButton1Click:Connect(function()
+    spinbotEnabled = not spinbotEnabled
+    SpinbotToggle.Text = "Spinbot: " .. (spinbotEnabled and "ON" or "OFF")
+    SpinbotToggle.TextColor3 = spinbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    
+    if spinbotEnabled then
+        spinConnection = RunService.RenderStepped:Connect(function()
+            if spinbotEnabled then
+                local newCFrame = Camera.CFrame * CFrame.Angles(0, math.rad(spinSpeed) * wait(), 0)
+                Camera.CFrame = newCFrame
+            end
+        end)
+    else
+        if spinConnection then
+            spinConnection:Disconnect()
+        end
+    end
 end)
 
 -- Initialize first tab
