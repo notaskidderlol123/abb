@@ -10,10 +10,22 @@ while not game:GetService("Players").LocalPlayer do
 end
 LocalPlayer = game:GetService("Players").LocalPlayer
 
--- Wait for character to load
-local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
+-- Initialize character and update on respawn
+local function updateCharacter()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local humanoid = character:WaitForChild("Humanoid")
+    return character, rootPart, humanoid
+end
+
+local character, rootPart, humanoid = updateCharacter()
+
+-- Handle character respawn
+LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+    wait(0.1) -- Wait for character to fully load
+    character, rootPart, humanoid = updateCharacter()
+    showGuiAfterRespawn() -- Re-show GUI after respawn
+end)
 
 -- GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
@@ -103,6 +115,7 @@ AimbotToggle.TextSize = 16
 AimbotToggle.Parent = tabContents["Aimbot"]
 
 local function getNearestPlayer()
+    if not rootPart or not humanoid then return nil end
     local nearestDistance = math.huge
     local nearestPlayer = nil
     for _, otherPlayer in pairs(game:GetService("Players"):GetPlayers()) do
@@ -123,17 +136,27 @@ AimbotToggle.MouseButton1Click:Connect(function()
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     if not aimbotEnabled then
         RunService:UnbindFromRenderStep("LockOnPlayer")
+    elseif rootPart and humanoid then
+        updateAimbot()
     end
 end)
 
-UserInputService.InputBegan:Connect(function(input)
-    if aimbotEnabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
+local function updateAimbot()
+    if aimbotEnabled and rootPart and humanoid then
         targetPlayer = getNearestPlayer()
         if targetPlayer then
             RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+                if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+                end
             end)
         end
+    end
+end
+
+UserInputService.InputBegan:Connect(function(input)
+    if aimbotEnabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        updateAimbot()
     end
 end)
 
@@ -211,13 +234,12 @@ local function DrawESP(plr)
                     local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
                     local BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p)
                     local BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
-                    -- Use PrimaryPart as a fallback if Head is not available
                     local headPart = plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart
                     local headPos, headVis
                     if headPart then
-                        headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 1.5, 0)).p) -- Above head
+                        headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 1.5, 0)).p)
                     else
-                        headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true -- Fallback to PrimaryPart position
+                        headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true
                     end
 
                     if espToggles.Box then
@@ -253,8 +275,8 @@ local function DrawESP(plr)
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
                             local barWidth = 100
                             local barHeight = 10
-                            local barX = headPos.X - barWidth / 2 -- Center above head
-                            drawings.HealthBar.From = Vector2.new(barX, headPos.Y - 10) -- Above head
+                            local barX = headPos.X - barWidth / 2
+                            drawings.HealthBar.From = Vector2.new(barX, headPos.Y - 10)
                             drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), headPos.Y - 10)
                             drawings.HealthBar.Color = Color3.fromRGB(0, 255, 0)
                             drawings.HealthBar.Thickness = barHeight
@@ -265,12 +287,12 @@ local function DrawESP(plr)
                     end
 
                     if espToggles.Tracer then
-                        local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso") -- Fallback to Torso for R6
+                        local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso")
                         if chest then
                             local chestPos, chestVis = Camera:WorldToViewportPoint(chest.Position)
                             if chestVis then
-                                drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) -- Center of screen
-                                drawings.Tracer.To = Vector2.new(chestPos.X, chestPos.Y) -- Player's chest
+                                drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                                drawings.Tracer.To = Vector2.new(chestPos.X, chestPos.Y)
                                 drawings.Tracer.Visible = true
                             else
                                 drawings.Tracer.Visible = false
@@ -331,7 +353,6 @@ local function DrawESP(plr)
     espPlayers[plr] = drawings
 end
 
--- Safely apply ESP to all players
 for _, player in pairs(game:GetService("Players"):GetPlayers()) do
     if player ~= LocalPlayer then
         local success, err = pcall(function()
@@ -455,7 +476,7 @@ local function toggleFly()
     FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
     FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     
-    if flyEnabled then
+    if flyEnabled and rootPart and humanoid then
         humanoid.PlatformStand = true
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
@@ -481,7 +502,7 @@ local function toggleFly()
                 if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
                 
                 if move.Magnitude > 0 then
-                    move = move.Unit * flySpeed -- Use dynamic flySpeed
+                    move = move.Unit * flySpeed
                     bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
                     bg.CFrame = cam.CFrame
                 else
@@ -489,11 +510,15 @@ local function toggleFly()
                 end
                 wait()
             end
+            if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
+            if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
         end)
     else
         humanoid.PlatformStand = false
-        if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
-        if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
+        if rootPart then
+            if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
+            if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
+        end
         humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
     end
 end
@@ -518,7 +543,7 @@ local function toggleNoClip()
     NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
     NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     
-    if noClipEnabled then
+    if noClipEnabled and character then
         RunService.Stepped:Connect(function()
             if noClipEnabled and character then
                 for _, part in pairs(character:GetDescendants()) do
@@ -529,9 +554,11 @@ local function toggleNoClip()
             end
         end)
     else
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
             end
         end
     end
@@ -570,6 +597,11 @@ local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirectio
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local scaleInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
 local scaleOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+
+local function showGuiAfterRespawn()
+    wait(0.5) -- Wait for respawn to stabilize
+    animateGui(true) -- Re-show GUI after respawn
+end
 
 local function animateGui(isVisible)
     if isVisible == isGuiVisible then return end
