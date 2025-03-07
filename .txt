@@ -2,6 +2,58 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
+-- Services for aimbot functionality
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+-- Aimbot variables
+local isAimbotEnabled = false
+local targetPlayer = nil
+
+-- Aimbot logic
+local function getNearestPlayer()
+    local nearestDistance = math.huge
+    local nearestPlayer = nil
+
+    for _, otherPlayer in pairs(Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (player.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if distance < nearestDistance then
+                nearestDistance = distance
+                nearestPlayer = otherPlayer
+            end
+        end
+    end
+
+    return nearestPlayer
+end
+
+local function toggleAimbot(state)
+    if state then
+        RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+            end
+        end)
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if input.UserInputType == Enum.UserInputType.MouseButton2 and not gameProcessed then
+                targetPlayer = getNearestPlayer()
+            end
+        end)
+        UserInputService.InputEnded:Connect(function(input, gameProcessed)
+            if input.UserInputType == Enum.UserInputType.MouseButton2 and not gameProcessed then
+                targetPlayer = nil
+            end
+        end)
+    else
+        RunService:UnbindFromRenderStep("LockOnPlayer")
+        UserInputService.InputBegan:DisconnectAll()
+        UserInputService.InputEnded:DisconnectAll()
+        targetPlayer = nil
+    end
+end
+
 -- Create the ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ExternalMenu"
@@ -95,7 +147,7 @@ local function createTabContent(name)
     scrollingFrame.Position = UDim2.new(0, 5, 0, 5)
     scrollingFrame.BackgroundTransparency = 1
     scrollingFrame.ScrollBarThickness = 8
-    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0) -- Adjust dynamically later
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
     scrollingFrame.Parent = contentFrame
 
@@ -119,65 +171,23 @@ createTabButton("Extras", UDim2.new(0, 0, 0, 80), exploitsTab.Parent)
 -- Make the first tab visible by default
 aimbotTab.Parent.Visible = true
 
--- Add Aimbot script content to Aimbot tab
-local aimbotCode = [[
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local Camera = workspace.CurrentCamera
+-- Add toggle button for Aimbot
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(1, -10, 0, 30)
+toggleButton.Position = UDim2.new(0, 5, 0, 5)
+toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+toggleButton.BorderSizePixel = 0
+toggleButton.Text = "Toggle Aimbot (Off)"
+toggleButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+toggleButton.TextSize = 14
+toggleButton.Font = Enum.Font.SourceSans
+toggleButton.Parent = aimbotTab
 
-local player = Players.LocalPlayer
-local targetPlayer = nil
-
-local function getNearestPlayer()
-    local nearestDistance = math.huge
-    local nearestPlayer = nil
-
-    for _, otherPlayer in pairs(Players:GetPlayers()) do
-        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (player.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if distance < nearestDistance then
-                nearestDistance = distance
-                nearestPlayer = otherPlayer
-            end
-        end
-    end
-
-    return nearestPlayer
-end
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Right Click
-        targetPlayer = getNearestPlayer()
-
-        if targetPlayer then
-            RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
-            end)
-        end
-    end
+toggleButton.MouseButton1Click:Connect(function()
+    isAimbotEnabled = not isAimbotEnabled
+    toggleButton.Text = "Toggle Aimbot (" .. (isAimbotEnabled and "On" or "Off") .. ")"
+    toggleAimbot(isAimbotEnabled)
 end)
-
-UserInputService.InputEnded:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        RunService:UnbindFromRenderStep("LockOnPlayer")
-    end
-end)
-]]
-
-local codeLabel = Instance.new("TextLabel")
-codeLabel.Size = UDim2.new(1, -20, 0, 0) -- Dynamic height based on content
-codeLabel.BackgroundTransparency = 1
-codeLabel.Text = aimbotCode
-codeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-codeLabel.TextSize = 12
-codeLabel.Font = Enum.Font.SourceSans
-codeLabel.TextWrapped = true
-codeLabel.Parent = aimbotTab
-codeLabel.Size = UDim2.new(1, -20, 0, codeLabel.TextBounds.Y + 10) -- Adjust height based on text
-
--- Update CanvasSize of ScrollingFrame
-aimbotTab.CanvasSize = UDim2.new(0, 0, 0, codeLabel.TextBounds.Y + 20)
 
 -- Add "Made By" label with clickable link
 local MadeByLabel = Instance.new("TextLabel")
