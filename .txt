@@ -87,21 +87,17 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (Updated with Debug and Fallback)
+-- Aimbot Tab (Updated with New Aimbot V2)
 local aimbotEnabled = false -- Original aimbot
-local aimbotV2Enabled = false -- Aimbot V2
+local aimbotV2Enabled = false -- New Aimbot V2
 local targetPlayer = nil
 local lockedTarget = nil
 
 -- Aimbot V2 Configuration
-local aimbotKeybind = Enum.UserInputType.MouseButton2 -- Right-click by default
-local aimbotStickyAimEnabled = true
-local aimbotAimPart = "Head"
-local aimbotPredictionEnabled = true
-local aimbotPredictionStrengthX = 1
-local aimbotPredictionStrengthY = 1
-local aimbotSmoothnessEnabled = true
-local aimbotSmoothness = 5
+local aimbotV2Keybind = Enum.KeyCode.E -- Toggle lock with 'E' key
+local aimbotV2FOV = 150 -- Field of View radius (in studs)
+local aimbotV2Sensitivity = 0.2 -- Lower = smoother, higher = faster (0.1 to 1)
+local aimbotV2AimPart = "Head" -- Target part
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -127,15 +123,24 @@ AimbotV2Toggle.Font = Enum.Font.SourceSans
 AimbotV2Toggle.TextSize = 16
 AimbotV2Toggle.Parent = tabContents["Aimbot"]
 
-local function getNearestPlayer(rootPart)
-    local nearestDistance = math.huge
+local function getNearestPlayerInFOV(rootPart)
+    local nearestDistance = aimbotV2FOV
     local nearestPlayer = nil
+    local cameraPos = Camera.CFrame.Position
+    local cameraLook = Camera.CFrame.LookVector
+
     for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
-        if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (rootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if distance < nearestDistance then
-                nearestDistance = distance
-                nearestPlayer = otherPlayer
+        if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild(aimbotV2AimPart) then
+            local targetPart = otherPlayer.Character[aimbotV2AimPart]
+            local vectorToTarget = (targetPart.Position - cameraPos)
+            local distance = vectorToTarget.Magnitude
+            local angle = math.deg(math.acos(cameraLook:Dot(vectorToTarget.Unit)))
+
+            if distance <= aimbotV2FOV and angle <= 60 then -- 60-degree cone check
+                if distance < nearestDistance then
+                    nearestDistance = distance
+                    nearestPlayer = otherPlayer
+                end
             end
         end
     end
@@ -160,9 +165,6 @@ AimbotV2Toggle.MouseButton1Click:Connect(function()
     if not aimbotV2Enabled then
         RunService:UnbindFromRenderStep("AimbotV2")
         lockedTarget = nil
-        print("Aimbot V2 Disabled")
-    else
-        print("Aimbot V2 Enabled")
     end
 end)
 
@@ -171,7 +173,7 @@ UserInputService.InputBegan:Connect(function(input)
     if aimbotEnabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
         local character = getCharacter()
         local rootPart = character:WaitForChild("HumanoidRootPart")
-        targetPlayer = getNearestPlayer(rootPart)
+        targetPlayer = getNearestPlayerInFOV(rootPart) -- Reuse FOV function for consistency
         if targetPlayer then
             RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -199,80 +201,36 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Aimbot V2 Logic with Debug and Fallback
+-- New Aimbot V2 Logic
 local function aimbotV2()
-    if not aimbotV2Enabled or not aimbotKeybind then
-        return
-    end
+    if not aimbotV2Enabled then return end
 
-    -- Check keybind state
-    local isKeyDown = (aimbotKeybind == Enum.UserInputType.MouseButton2 and UserInputService:IsMouseButtonPressed(aimbotKeybind)) or
-                     (aimbotKeybind ~= Enum.UserInputType.MouseButton2 and UserInputService:IsKeyDown(aimbotKeybind))
-    if not isKeyDown then
-        lockedTarget = nil
-        print("Aimbot V2: Keybind released, target unlocked")
-        return
-    end
-
-    local camera = workspace.CurrentCamera
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
+    local currentCFrame = Camera.CFrame
 
-    if not lockedTarget or not lockedTarget.Character or not lockedTarget.Character:FindFirstChild(aimbotAimPart) then
-        lockedTarget = getNearestPlayer(rootPart)
-        if lockedTarget then
-            print("Aimbot V2: Locked onto " .. lockedTarget.Name)
-        else
-            print("Aimbot V2: No valid target found")
-            return
-        end
+    if UserInputService:IsKeyDown(aimbotV2Keybind) and not lockedTarget then
+        lockedTarget = getNearestPlayerInFOV(rootPart)
+    elseif not UserInputService:IsKeyDown(aimbotV2Keybind) then
+        lockedTarget = nil
     end
 
-    if lockedTarget.Character and lockedTarget.Character:FindFirstChild(aimbotAimPart) then
-        local part = lockedTarget.Character[aimbotAimPart]
-        local predictedPosition = part.Position
-        if aimbotPredictionEnabled then
-            local velocity = lockedTarget.Character.HumanoidRootPart.Velocity
-            predictedPosition = part.Position + Vector3.new(
-                velocity.X * aimbotPredictionStrengthX * 0.1,
-                velocity.Y * aimbotPredictionStrengthY * 0.1,
-                0
-            )
-        end
-        local screenPos, onScreen = camera:WorldToViewportPoint(predictedPosition)
-        if not onScreen then
-            print("Aimbot V2: Target off-screen")
-            return
-        end
-
-        local target = Vector2.new(screenPos.X, screenPos.Y)
-        local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-        local move = target - screenCenter
-
-        -- Try mousemoverel first
-        local success, err = pcall(function()
-            if aimbotSmoothnessEnabled then
-                local moveStep = move / (aimbotSmoothness + 1)
-                mousemoverel(moveStep.X, moveStep.Y)
-            else
-                mousemoverel(move.X, move.Y)
-            end
-        end)
-
-        if not success then
-            print("Aimbot V2: mousemoverel failed (" .. err .. "), using camera fallback")
-            -- Fallback to camera-based aiming if mousemoverel isn’t supported
-            local currentCFrame = camera.CFrame
-            local lookAtCFrame = CFrame.new(currentCFrame.Position, predictedPosition)
-            camera.CFrame = aimbotSmoothnessEnabled and currentCFrame:Lerp(lookAtCFrame, 1 / (aimbotSmoothness + 1)) or lookAtCFrame
-        else
-            print("Aimbot V2: Successfully moved mouse to target")
+    if lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild(aimbotV2AimPart) then
+        local targetPos = lockedTarget.Character[aimbotV2AimPart].Position
+        local targetCFrame = CFrame.new(currentCFrame.Position, targetPos)
+        Camera.CFrame = currentCFrame:Lerp(targetCFrame, aimbotV2Sensitivity)
+    elseif not lockedTarget then
+        -- Auto-aim at nearest player within FOV if not locked
+        local nearest = getNearestPlayerInFOV(rootPart)
+        if nearest and nearest.Character and nearest.Character:FindFirstChild(aimbotV2AimPart) then
+            local targetPos = nearest.Character[aimbotV2AimPart].Position
+            local targetCFrame = CFrame.new(currentCFrame.Position, targetPos)
+            Camera.CFrame = currentCFrame:Lerp(targetCFrame, aimbotV2Sensitivity / 2) -- Slower when not locked
         end
     end
 end
 
--- Bind Aimbot V2 to RenderStep
-RunService:BindToRenderStep("AimbotV2", Enum.RenderPriority.Input.Value + 1, function()
+RunService:BindToRenderStep("AimbotV2", Enum.RenderPriority.Camera.Value + 1, function()
     if aimbotV2Enabled then
         aimbotV2()
     end
