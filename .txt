@@ -1,7 +1,13 @@
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
-local LocalPlayer = game.Players.LocalPlayer or game.Players.PlayerAdded:Wait()
+
+-- Safely get LocalPlayer with a wait loop
+local LocalPlayer
+while not game:GetService("Players").LocalPlayer do
+    wait(0.1)
+end
+LocalPlayer = game:GetService("Players").LocalPlayer
 
 -- Wait for character to load
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -127,7 +133,7 @@ AimbotToggle.Parent = tabContents["Aimbot"]
 local function getNearestPlayer()
     local nearestDistance = math.huge
     local nearestPlayer = nil
-    for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+    for _, otherPlayer in pairs(game:GetService("Players"):GetPlayers()) do
         if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local distance = (rootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
             if distance < nearestDistance then
@@ -171,7 +177,7 @@ local espToggles = {
     Name = false,
     Distance = false,
     HealthBar = false,
-    Tracer = false,
+    Tracer = true, -- Enabled by default
     Skeleton = false
 }
 
@@ -275,7 +281,7 @@ local function DrawESP(plr)
                     end
 
                     if espToggles.Tracer then
-                        local chest = plr.Character:FindFirstChild("UpperTorso")
+                        local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso") -- Fallback to Torso for R6
                         if chest then
                             local chestPos, chestVis = Camera:WorldToViewportPoint(chest.Position)
                             if chestVis then
@@ -331,7 +337,7 @@ local function DrawESP(plr)
                         drawing.Visible = false
                     end
                 end
-                if not game.Players:FindFirstChild(plr.Name) then
+                if not game:GetService("Players"):FindFirstChild(plr.Name) then
                     connection:Disconnect()
                 end
             end
@@ -341,13 +347,13 @@ local function DrawESP(plr)
     espPlayers[plr] = drawings
 end
 
-for _, player in pairs(game.Players:GetPlayers()) do
+for _, player in pairs(game:GetService("Players"):GetPlayers()) do
     if player ~= LocalPlayer then
         DrawESP(player)
     end
 end
 
-game.Players.PlayerAdded:Connect(function(player)
+game:GetService("Players").PlayerAdded:Connect(function(player)
     wait(1)
     if player ~= LocalPlayer then
         DrawESP(player)
@@ -356,13 +362,13 @@ end)
 
 -- Visuals Tab GUI
 local yOffset = 10
-for feature, _ in pairs(espToggles) do
+for feature, enabled in pairs(espToggles) do
     local Toggle = Instance.new("TextButton")
     Toggle.Size = UDim2.new(0, 100, 0, 30)
     Toggle.Position = UDim2.new(0, 10, 0, yOffset)
-    Toggle.Text = feature .. ": OFF"
+    Toggle.Text = feature .. ": " .. (enabled and "ON" or "OFF")
     Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    Toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+    Toggle.TextColor3 = enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     Toggle.Font = Enum.Font.SourceSans
     Toggle.TextSize = 16
     Toggle.Parent = tabContents["Visuals"]
@@ -375,11 +381,14 @@ for feature, _ in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (Fly Feature)
+-- Exploits Tab (Fly, NoClip, Infinite Jump)
 local flyEnabled = false
-local speed = 75
+local flySpeed = 75 -- Default fly speed
 local controlSpeed = 10000
+local noClipEnabled = false
+local infiniteJumpEnabled = false
 
+-- Fly Toggle
 local FlyToggle = Instance.new("TextButton")
 FlyToggle.Size = UDim2.new(0, 100, 0, 30)
 FlyToggle.Position = UDim2.new(0, 10, 0, 10)
@@ -389,6 +398,55 @@ FlyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 FlyToggle.Font = Enum.Font.SourceSans
 FlyToggle.TextSize = 16
 FlyToggle.Parent = tabContents["Exploits"]
+
+-- Fly Speed Slider
+local FlySpeedLabel = Instance.new("TextLabel")
+FlySpeedLabel.Size = UDim2.new(0, 100, 0, 20)
+FlySpeedLabel.Position = UDim2.new(0, 10, 0, 50)
+FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
+FlySpeedLabel.BackgroundTransparency = 1
+FlySpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlySpeedLabel.Font = Enum.Font.SourceSans
+FlySpeedLabel.TextSize = 16
+FlySpeedLabel.Parent = tabContents["Exploits"]
+
+local FlySpeedSlider = Instance.new("TextButton")
+FlySpeedSlider.Size = UDim2.new(0, 200, 0, 20)
+FlySpeedSlider.Position = UDim2.new(0, 10, 0, 70)
+FlySpeedSlider.Text = ""
+FlySpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+FlySpeedSlider.Parent = tabContents["Exploits"]
+
+local FlySpeedKnob = Instance.new("Frame")
+FlySpeedKnob.Size = UDim2.new(0, 10, 1, 0)
+FlySpeedKnob.Position = UDim2.new((flySpeed - 10) / 190, 0, 0, 0)
+FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+FlySpeedKnob.Parent = FlySpeedSlider
+
+local draggingSlider = false
+FlySpeedSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = true
+    end
+end)
+
+FlySpeedSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = false
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if draggingSlider then
+        local mouseX = UserInputService:GetMouseLocation().X
+        local sliderPos = FlySpeedSlider.AbsolutePosition.X
+        local sliderWidth = FlySpeedSlider.AbsoluteSize.X
+        local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
+        FlySpeedKnob.Position = UDim2.new(newPos, 0, 0, 0)
+        flySpeed = math.floor(10 + (newPos * 190)) -- Range: 10 to 200
+        FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
+    end
+end)
 
 local function toggleFly()
     flyEnabled = not flyEnabled
@@ -421,7 +479,7 @@ local function toggleFly()
                 if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
                 
                 if move.Magnitude > 0 then
-                    move = move.Unit * speed
+                    move = move.Unit * flySpeed -- Use dynamic flySpeed
                     bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
                     bg.CFrame = cam.CFrame
                 else
@@ -439,6 +497,66 @@ local function toggleFly()
 end
 
 FlyToggle.MouseButton1Click:Connect(toggleFly)
+
+-- NoClip Toggle
+local NoClipToggle = Instance.new("TextButton")
+NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
+NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
+NoClipToggle.Text = "NoClip: OFF"
+NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+NoClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+NoClipToggle.Font = Enum.Font.SourceSans
+NoClipToggle.TextSize = 16
+NoClipToggle.Parent = tabContents["Exploits"]
+
+local function toggleNoClip()
+    noClipEnabled = not noClipEnabled
+    NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
+    NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    
+    if noClipEnabled then
+        RunService.Stepped:Connect(function()
+            if noClipEnabled and character then
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    else
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+NoClipToggle.MouseButton1Click:Connect(toggleNoClip)
+
+-- Infinite Jump Toggle
+local InfiniteJumpToggle = Instance.new("TextButton")
+InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
+InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 140)
+InfiniteJumpToggle.Text = "Inf Jump: OFF"
+InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+InfiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+InfiniteJumpToggle.Font = Enum.Font.SourceSans
+InfiniteJumpToggle.TextSize = 16
+InfiniteJumpToggle.Parent = tabContents["Exploits"]
+
+UserInputService.JumpRequest:Connect(function()
+    if infiniteJumpEnabled and humanoid then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+InfiniteJumpToggle.MouseButton1Click:Connect(function()
+    infiniteJumpEnabled = not infiniteJumpEnabled
+    InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
+    InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
 
 -- Initialize first tab
 tabContents["Aimbot"].Visible = true
