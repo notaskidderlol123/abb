@@ -10,28 +10,30 @@ while not game:GetService("Players").LocalPlayer do
 end
 LocalPlayer = game:GetService("Players").LocalPlayer
 
--- Wait for character to load
-local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
+-- Function to get character safely
+local function getCharacter()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
 
 -- GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false -- Prevents GUI from resetting on death
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 300)
 MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-MainFrame.BackgroundTransparency = 1 -- Start transparent for animation
+MainFrame.BackgroundTransparency = 1
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
+-- Rest of the GUI setup remains the same until the features...
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
 TabFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-TabFrame.BackgroundTransparency = 1 -- Start transparent
+TabFrame.BackgroundTransparency = 1
 TabFrame.BorderSizePixel = 0
 TabFrame.Parent = MainFrame
 
@@ -39,11 +41,10 @@ local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, 0, 1, -30)
 ContentFrame.Position = UDim2.new(0, 0, 0, 30)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ContentFrame.BackgroundTransparency = 1 -- Start transparent
+ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.Parent = MainFrame
 
--- Tab Buttons
 local tabs = {"Aimbot", "Visuals", "Exploits"}
 local currentTab = nil
 local tabContents = {}
@@ -55,8 +56,8 @@ for i, tabName in ipairs(tabs) do
     TabButton.Text = tabName
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    TabButton.BackgroundTransparency = 1 -- Start transparent
-    TabButton.TextTransparency = 1 -- Start transparent
+    TabButton.BackgroundTransparency = 1
+    TabButton.TextTransparency = 1
     TabButton.BorderSizePixel = 0
     TabButton.Font = Enum.Font.SourceSans
     TabButton.TextSize = 18
@@ -95,14 +96,14 @@ AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
 AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
 AimbotToggle.Text = "Aimbot: OFF"
 AimbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimbotToggle.BackgroundTransparency = 1 -- Start transparent
-AimbotToggle.TextTransparency = 1 -- Start transparent
+AimbotToggle.BackgroundTransparency = 1
+AimbotToggle.TextTransparency = 1
 AimbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 AimbotToggle.Font = Enum.Font.SourceSans
 AimbotToggle.TextSize = 16
 AimbotToggle.Parent = tabContents["Aimbot"]
 
-local function getNearestPlayer()
+local function getNearestPlayer(rootPart)
     local nearestDistance = math.huge
     local nearestPlayer = nil
     for _, otherPlayer in pairs(game:GetService("Players"):GetPlayers()) do
@@ -126,12 +127,30 @@ AimbotToggle.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Update character references on respawn
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local rootPart = char:WaitForChild("HumanoidRootPart")
+    local humanoid = char:WaitForChild("Humanoid")
+    
+    if aimbotEnabled and targetPlayer then
+        RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+            end
+        end)
+    end
+end)
+
 UserInputService.InputBegan:Connect(function(input)
     if aimbotEnabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
-        targetPlayer = getNearestPlayer()
+        local character = getCharacter()
+        local rootPart = character:WaitForChild("HumanoidRootPart")
+        targetPlayer = getNearestPlayer(rootPart)
         if targetPlayer then
             RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+                end
             end)
         end
     end
@@ -149,7 +168,7 @@ local espToggles = {
     Name = false,
     Distance = false,
     HealthBar = false,
-    Tracer = true, -- Enabled by default
+    Tracer = true,
     Skeleton = false
 }
 
@@ -164,6 +183,7 @@ local function DrawESP(plr)
         Skeleton = {}
     }
     
+    -- Rest of DrawESP setup remains the same...
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
     drawings.Box.Thickness = 1
     drawings.Box.Transparency = 1
@@ -203,21 +223,23 @@ local function DrawESP(plr)
 
     local function Update()
         local connection
+        local character = getCharacter()
+        local rootPart = character:WaitForChild("HumanoidRootPart")
         connection = RunService.RenderStepped:Connect(function()
             if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                -- Rest of Update function remains the same...
                 local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
                 if vis then
                     local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
                     local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
                     local BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p)
                     local BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
-                    -- Use PrimaryPart as a fallback if Head is not available
                     local headPart = plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart
                     local headPos, headVis
                     if headPart then
-                        headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 1.5, 0)).p) -- Above head
+                        headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 1.5, 0)).p)
                     else
-                        headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true -- Fallback to PrimaryPart position
+                        headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true
                     end
 
                     if espToggles.Box then
@@ -253,8 +275,8 @@ local function DrawESP(plr)
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
                             local barWidth = 100
                             local barHeight = 10
-                            local barX = headPos.X - barWidth / 2 -- Center above head
-                            drawings.HealthBar.From = Vector2.new(barX, headPos.Y - 10) -- Above head
+                            local barX = headPos.X - barWidth / 2
+                            drawings.HealthBar.From = Vector2.new(barX, headPos.Y - 10)
                             drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), headPos.Y - 10)
                             drawings.HealthBar.Color = Color3.fromRGB(0, 255, 0)
                             drawings.HealthBar.Thickness = barHeight
@@ -265,12 +287,12 @@ local function DrawESP(plr)
                     end
 
                     if espToggles.Tracer then
-                        local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso") -- Fallback to Torso for R6
+                        local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso")
                         if chest then
                             local chestPos, chestVis = Camera:WorldToViewportPoint(chest.Position)
                             if chestVis then
-                                drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) -- Center of screen
-                                drawings.Tracer.To = Vector2.new(chestPos.X, chestPos.Y) -- Player's chest
+                                drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                                drawings.Tracer.To = Vector2.new(chestPos.X, chestPos.Y)
                                 drawings.Tracer.Visible = true
                             else
                                 drawings.Tracer.Visible = false
@@ -331,7 +353,6 @@ local function DrawESP(plr)
     espPlayers[plr] = drawings
 end
 
--- Safely apply ESP to all players
 for _, player in pairs(game:GetService("Players"):GetPlayers()) do
     if player ~= LocalPlayer then
         local success, err = pcall(function()
@@ -355,7 +376,7 @@ game:GetService("Players").PlayerAdded:Connect(function(player)
     end
 end)
 
--- Visuals Tab GUI
+-- Visuals Tab GUI remains the same...
 local yOffset = 10
 for feature, enabled in pairs(espToggles) do
     local Toggle = Instance.new("TextButton")
@@ -363,8 +384,8 @@ for feature, enabled in pairs(espToggles) do
     Toggle.Position = UDim2.new(0, 10, 0, yOffset)
     Toggle.Text = feature .. ": " .. (enabled and "ON" or "OFF")
     Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    Toggle.BackgroundTransparency = 1 -- Start transparent
-    Toggle.TextTransparency = 1 -- Start transparent
+    Toggle.BackgroundTransparency = 1
+    Toggle.TextTransparency = 1
     Toggle.TextColor3 = enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     Toggle.Font = Enum.Font.SourceSans
     Toggle.TextSize = 16
@@ -378,33 +399,32 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (Fly, NoClip, Infinite Jump)
+-- Exploits Tab
 local flyEnabled = false
-local flySpeed = 75 -- Default fly speed
+local flySpeed = 75
 local controlSpeed = 10000
 local noClipEnabled = false
 local infiniteJumpEnabled = false
 
--- Fly Toggle
 local FlyToggle = Instance.new("TextButton")
 FlyToggle.Size = UDim2.new(0, 100, 0, 30)
 FlyToggle.Position = UDim2.new(0, 10, 0, 10)
 FlyToggle.Text = "Fly: OFF"
 FlyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-FlyToggle.BackgroundTransparency = 1 -- Start transparent
-FlyToggle.TextTransparency = 1 -- Start transparent
+FlyToggle.BackgroundTransparency = 1
+FlyToggle.TextTransparency = 1
 FlyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 FlyToggle.Font = Enum.Font.SourceSans
 FlyToggle.TextSize = 16
 FlyToggle.Parent = tabContents["Exploits"]
 
--- Fly Speed Slider
+-- Fly Speed Slider remains the same...
 local FlySpeedLabel = Instance.new("TextLabel")
 FlySpeedLabel.Size = UDim2.new(0, 100, 0, 20)
 FlySpeedLabel.Position = UDim2.new(0, 10, 0, 50)
 FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
 FlySpeedLabel.BackgroundTransparency = 1
-FlySpeedLabel.TextTransparency = 1 -- Start transparent
+FlySpeedLabel.TextTransparency = 1
 FlySpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlySpeedLabel.Font = Enum.Font.SourceSans
 FlySpeedLabel.TextSize = 16
@@ -415,14 +435,14 @@ FlySpeedSlider.Size = UDim2.new(0, 200, 0, 20)
 FlySpeedSlider.Position = UDim2.new(0, 10, 0, 70)
 FlySpeedSlider.Text = ""
 FlySpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-FlySpeedSlider.BackgroundTransparency = 1 -- Start transparent
+FlySpeedSlider.BackgroundTransparency = 1
 FlySpeedSlider.Parent = tabContents["Exploits"]
 
 local FlySpeedKnob = Instance.new("Frame")
 FlySpeedKnob.Size = UDim2.new(0, 10, 1, 0)
 FlySpeedKnob.Position = UDim2.new((flySpeed - 10) / 190, 0, 0, 0)
 FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
-FlySpeedKnob.BackgroundTransparency = 1 -- Start transparent
+FlySpeedKnob.BackgroundTransparency = 1
 FlySpeedKnob.Parent = FlySpeedSlider
 
 local draggingSlider = false
@@ -445,7 +465,7 @@ RunService.RenderStepped:Connect(function()
         local sliderWidth = FlySpeedSlider.AbsoluteSize.X
         local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
         FlySpeedKnob.Position = UDim2.new(newPos, 0, 0, 0)
-        flySpeed = math.floor(10 + (newPos * 190)) -- Range: 10 to 200
+        flySpeed = math.floor(10 + (newPos * 190))
         FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
     end
 end)
@@ -454,6 +474,10 @@ local function toggleFly()
     flyEnabled = not flyEnabled
     FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
     FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    
+    local character = getCharacter()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local humanoid = character:WaitForChild("Humanoid")
     
     if flyEnabled then
         humanoid.PlatformStand = true
@@ -470,7 +494,10 @@ local function toggleFly()
         bg.Parent = rootPart
         
         spawn(function()
-            while flyEnabled and rootPart and humanoid do
+            while flyEnabled do
+                local char = getCharacter()
+                local root = char:WaitForChild("HumanoidRootPart")
+                local hum = char:WaitForChild("Humanoid")
                 local cam = workspace.CurrentCamera
                 local move = Vector3.new(0, 0, 0)
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
@@ -481,7 +508,7 @@ local function toggleFly()
                 if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
                 
                 if move.Magnitude > 0 then
-                    move = move.Unit * flySpeed -- Use dynamic flySpeed
+                    move = move.Unit * flySpeed
                     bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
                     bg.CFrame = cam.CFrame
                 else
@@ -489,16 +516,23 @@ local function toggleFly()
                 end
                 wait()
             end
+            humanoid.PlatformStand = false
+            if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
+            if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
         end)
-    else
-        humanoid.PlatformStand = false
-        if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
-        if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
-        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
     end
 end
 
 FlyToggle.MouseButton1Click:Connect(toggleFly)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if flyEnabled then
+        wait(0.1) -- Small delay to ensure character is fully loaded
+        toggleFly() -- Turn off fly
+        toggleFly() -- Turn it back on with new character
+    end
+end)
 
 -- NoClip Toggle
 local NoClipToggle = Instance.new("TextButton")
@@ -506,8 +540,8 @@ NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
 NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
 NoClipToggle.Text = "NoClip: OFF"
 NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-NoClipToggle.BackgroundTransparency = 1 -- Start transparent
-NoClipToggle.TextTransparency = 1 -- Start transparent
+NoClipToggle.BackgroundTransparency = 1
+NoClipToggle.TextTransparency = 1
 NoClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 NoClipToggle.Font = Enum.Font.SourceSans
 NoClipToggle.TextSize = 16
@@ -518,23 +552,17 @@ local function toggleNoClip()
     NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
     NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     
-    if noClipEnabled then
-        RunService.Stepped:Connect(function()
-            if noClipEnabled and character then
-                for _, part in pairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
-                    end
+    spawn(function()
+        while noClipEnabled do
+            local character = getCharacter()
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
                 end
             end
-        end)
-    else
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
+            wait()
         end
-    end
+    end)
 end
 
 NoClipToggle.MouseButton1Click:Connect(toggleNoClip)
@@ -545,15 +573,17 @@ InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
 InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 140)
 InfiniteJumpToggle.Text = "Inf Jump: OFF"
 InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-InfiniteJumpToggle.BackgroundTransparency = 1 -- Start transparent
-InfiniteJumpToggle.TextTransparency = 1 -- Start transparent
+InfiniteJumpToggle.BackgroundTransparency = 1
+InfiniteJumpToggle.TextTransparency = 1
 InfiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 InfiniteJumpToggle.Font = Enum.Font.SourceSans
 InfiniteJumpToggle.TextSize = 16
 InfiniteJumpToggle.Parent = tabContents["Exploits"]
 
 UserInputService.JumpRequest:Connect(function()
-    if infiniteJumpEnabled and humanoid then
+    if infiniteJumpEnabled then
+        local character = getCharacter()
+        local humanoid = character:WaitForChild("Humanoid")
         humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
     end
 end)
@@ -565,7 +595,7 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
 end)
 
 -- GUI Animation Setup
-local isGuiVisible = true -- GUI starts visible
+local isGuiVisible = false -- Start as false since we'll show it immediately
 local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local scaleInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
@@ -577,12 +607,10 @@ local function animateGui(isVisible)
 
     if isVisible then
         MainFrame.Visible = true
-        -- Fade in
         local fadeIn = TweenService:Create(MainFrame, fadeInInfo, {BackgroundTransparency = 0})
         local fadeInTab = TweenService:Create(TabFrame, fadeInInfo, {BackgroundTransparency = 0})
         local fadeInContent = TweenService:Create(ContentFrame, fadeInInfo, {BackgroundTransparency = 0})
-        -- Scale in
-        MainFrame.Size = UDim2.new(0, 400, 0, 0) -- Start small
+        MainFrame.Size = UDim2.new(0, 400, 0, 0)
         local scaleIn = TweenService:Create(MainFrame, scaleInInfo, {Size = UDim2.new(0, 400, 0, 300)})
 
         fadeIn:Play()
@@ -590,7 +618,6 @@ local function animateGui(isVisible)
         fadeInContent:Play()
         scaleIn:Play()
 
-        -- Animate tab buttons
         for _, button in pairs(TabFrame:GetChildren()) do
             if button:IsA("TextButton") then
                 button.TextTransparency = 1
@@ -599,7 +626,6 @@ local function animateGui(isVisible)
             end
         end
 
-        -- Animate content elements
         if tabContents then
             for _, tabContent in pairs(tabContents) do
                 for _, child in pairs(tabContent:GetChildren()) do
@@ -615,15 +641,11 @@ local function animateGui(isVisible)
                     end
                 end
             end
-        else
-            warn("tabContents is nil in animateGui")
         end
     else
-        -- Fade out
         local fadeOut = TweenService:Create(MainFrame, fadeOutInfo, {BackgroundTransparency = 1})
         local fadeOutTab = TweenService:Create(TabFrame, fadeOutInfo, {BackgroundTransparency = 1})
         local fadeOutContent = TweenService:Create(ContentFrame, fadeOutInfo, {BackgroundTransparency = 1})
-        -- Scale out
         local scaleOut = TweenService:Create(MainFrame, scaleOutInfo, {Size = UDim2.new(0, 400, 0, 0)})
 
         fadeOut:Play()
@@ -631,7 +653,6 @@ local function animateGui(isVisible)
         fadeOutContent:Play()
         scaleOut:Play()
 
-        -- Animate tab buttons
         for _, button in pairs(TabFrame:GetChildren()) do
             if button:IsA("TextButton") then
                 local fadeOutText = TweenService:Create(button, fadeOutInfo, {TextTransparency = 1})
@@ -639,7 +660,6 @@ local function animateGui(isVisible)
             end
         end
 
-        -- Animate content elements
         if tabContents then
             for _, tabContent in pairs(tabContents) do
                 for _, child in pairs(tabContent:GetChildren()) do
@@ -653,25 +673,21 @@ local function animateGui(isVisible)
                     end
                 end
             end
-        else
-            warn("tabContents is nil in animateGui")
         end
 
-        -- Hide after animation
         scaleOut.Completed:Connect(function()
             MainFrame.Visible = false
         end)
     end
 end
 
--- Toggle GUI with Q
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Q then
         animateGui(not isGuiVisible)
     end
 end)
 
--- Dragging Functionality
+-- Dragging Functionality remains the same...
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -704,6 +720,8 @@ tabContents["Aimbot"].Visible = true
 TabFrame:GetChildren()[1].BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 currentTab = "Aimbot"
 
--- Delay the initial animation to ensure GUI setup is complete
-wait(1) -- Increased delay to 1 second
-animateGui(true)
+-- Show GUI immediately upon injection
+spawn(function()
+    wait(0.1) -- Small delay to ensure everything is initialized
+    animateGui(true)
+end)
