@@ -20,11 +20,34 @@ end
 
 local character, rootPart, humanoid = updateCharacter()
 
--- Handle character respawn
+-- Handle character respawn and death
+local isDead = false
 LocalPlayer.CharacterAdded:Connect(function(newCharacter)
-    wait(0.1) -- Wait for character to fully load
+    wait(1) -- Increased delay to ensure character is fully loaded
     character, rootPart, humanoid = updateCharacter()
-    showGuiAfterRespawn() -- Re-show GUI after respawn
+    isDead = false
+    if not isGuiVisible then
+        animateGui(true) -- Re-show GUI after respawn
+    end
+    -- Reapply Aimbot and Exploits after respawn
+    if aimbotEnabled then
+        updateAimbot()
+    end
+    if flyEnabled then
+        toggleFly()
+    end
+    if noClipEnabled then
+        toggleNoClip()
+    end
+end)
+
+-- Detect death via Humanoid
+humanoid.HealthChanged:Connect(function(health)
+    if health <= 0 and not isDead then
+        isDead = true
+        -- Optional: Hide GUI on death if desired
+        -- animateGui(false)
+    end
 end)
 
 -- GUI Setup
@@ -130,17 +153,6 @@ local function getNearestPlayer()
     return nearestPlayer
 end
 
-AimbotToggle.MouseButton1Click:Connect(function()
-    aimbotEnabled = not aimbotEnabled
-    AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
-    AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    if not aimbotEnabled then
-        RunService:UnbindFromRenderStep("LockOnPlayer")
-    elseif rootPart and humanoid then
-        updateAimbot()
-    end
-end)
-
 local function updateAimbot()
     if aimbotEnabled and rootPart and humanoid then
         targetPlayer = getNearestPlayer()
@@ -151,8 +163,17 @@ local function updateAimbot()
                 end
             end)
         end
+    else
+        RunService:UnbindFromRenderStep("LockOnPlayer")
     end
 end
+
+AimbotToggle.MouseButton1Click:Connect(function()
+    aimbotEnabled = not aimbotEnabled
+    AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+    AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    updateAimbot()
+end)
 
 UserInputService.InputBegan:Connect(function(input)
     if aimbotEnabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
@@ -597,11 +618,6 @@ local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirectio
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local scaleInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
 local scaleOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-
-local function showGuiAfterRespawn()
-    wait(0.5) -- Wait for respawn to stabilize
-    animateGui(true) -- Re-show GUI after respawn
-end
 
 local function animateGui(isVisible)
     if isVisible == isGuiVisible then return end
