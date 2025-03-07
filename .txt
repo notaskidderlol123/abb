@@ -19,6 +19,7 @@ MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
+MainFrame.Visible = false -- Initially hidden
 
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
@@ -32,6 +33,13 @@ ContentFrame.Position = UDim2.new(0, 0, 0, 30)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 ContentFrame.BorderSizePixel = 0
 ContentFrame.Parent = MainFrame
+
+-- Toggle GUI with Q
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Q then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
 
 -- Tab Buttons
 local tabs = {"Aimbot", "Visuals", "Exploits"}
@@ -267,9 +275,19 @@ local function DrawESP(plr)
                     end
 
                     if espToggles.Tracer then
-                        drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                        drawings.Tracer.To = Vector2.new(BottomRight.X, BottomRight.Y)
-                        drawings.Tracer.Visible = true
+                        local chest = plr.Character:FindFirstChild("UpperTorso")
+                        if chest then
+                            local chestPos, chestVis = Camera:WorldToViewportPoint(chest.Position)
+                            if chestVis then
+                                drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) -- Center of screen
+                                drawings.Tracer.To = Vector2.new(chestPos.X, chestPos.Y) -- Player's chest
+                                drawings.Tracer.Visible = true
+                            else
+                                drawings.Tracer.Visible = false
+                            end
+                        else
+                            drawings.Tracer.Visible = false
+                        end
                     else
                         drawings.Tracer.Visible = false
                     end
