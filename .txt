@@ -15,12 +15,12 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 300)
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+mainFrame.Size = UDim2.new(0, 400, 0, 350)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -175)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
-mainFrame.Draggable = true -- Allow dragging
+mainFrame.Draggable = true
 mainFrame.Visible = true
 mainFrame.Parent = gui
 
@@ -56,17 +56,15 @@ local function toggleFly()
     flying = not flying
     if flying then
         humanoid.PlatformStand = true
-        local bv = Instance.new("BodyVelocity")
+        local bv = Instance.new("BodyVelocity", rootPart)
         bv.Velocity = Vector3.new(0, 0, 0)
         bv.MaxForce = Vector3.new(flyForce, flyForce, flyForce)
-        bv.Parent = rootPart
-        
-        local bg = Instance.new("BodyGyro")
+
+        local bg = Instance.new("BodyGyro", rootPart)
         bg.MaxTorque = Vector3.new(flyForce, flyForce, flyForce)
         bg.P = 5000
         bg.D = 500
         bg.CFrame = rootPart.CFrame
-        bg.Parent = rootPart
 
         RunService.RenderStepped:Connect(function()
             if not flying then return end
@@ -88,21 +86,19 @@ local function toggleFly()
         end)
     else
         humanoid.PlatformStand = false
-        if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
-        if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
+        rootPart:FindFirstChild("BodyVelocity"):Destroy()
+        rootPart:FindFirstChild("BodyGyro"):Destroy()
         humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
     end
 end
 
--- Fly Toggle Button
-local flyToggle = Instance.new("TextButton")
+local flyToggle = Instance.new("TextButton", mainFrame)
 flyToggle.Size = UDim2.new(0, 200, 0, 30)
 flyToggle.Position = UDim2.new(0, 10, 0, 10)
 flyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 flyToggle.Text = "Fly: OFF"
 flyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 flyToggle.TextSize = 14
-flyToggle.Parent = mainFrame
 
 flyToggle.MouseButton1Click:Connect(function()
     toggleFly()
@@ -110,50 +106,48 @@ flyToggle.MouseButton1Click:Connect(function()
     flyToggle.TextColor3 = flying and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
--- Fly Speed Slider
-local flySpeedSlider = Instance.new("TextButton")
-flySpeedSlider.Size = UDim2.new(0, 200, 0, 30)
-flySpeedSlider.Position = UDim2.new(0, 10, 0, 50)
-flySpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-flySpeedSlider.Text = "Fly Speed: " .. flySpeed
-flySpeedSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
-flySpeedSlider.TextSize = 14
-flySpeedSlider.Parent = mainFrame
+-- Infinite Jump
+local infiniteJump = false
+local infiniteJumpToggle = Instance.new("TextButton", mainFrame)
+infiniteJumpToggle.Size = UDim2.new(0, 200, 0, 30)
+infiniteJumpToggle.Position = UDim2.new(0, 10, 0, 50)
+infiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+infiniteJumpToggle.Text = "Infinite Jump: OFF"
+infiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+infiniteJumpToggle.TextSize = 14
 
-flySpeedSlider.MouseButton1Click:Connect(function()
-    flySpeed = (flySpeed % 100) + 1
-    flySpeedSlider.Text = "Fly Speed: " .. flySpeed
+UserInputService.JumpRequest:Connect(function()
+    if infiniteJump then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
 end)
 
--- No-Clip Implementation
-local noClip = false
-local function toggleNoClip()
-    noClip = not noClip
-    RunService.Stepped:Connect(function()
-        if noClip then
-            for _, part in pairs(character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-    end)
-end
-
--- No-Clip Toggle Button
-local noClipToggle = Instance.new("TextButton")
-noClipToggle.Size = UDim2.new(0, 200, 0, 30)
-noClipToggle.Position = UDim2.new(0, 10, 0, 90)
-noClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-noClipToggle.Text = "No-Clip: OFF"
-noClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-noClipToggle.TextSize = 14
-noClipToggle.Parent = mainFrame
-
-noClipToggle.MouseButton1Click:Connect(function()
-    toggleNoClip()
-    noClipToggle.Text = noClip and "No-Clip: ON" or "No-Clip: OFF"
-    noClipToggle.TextColor3 = noClip and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+infiniteJumpToggle.MouseButton1Click:Connect(function()
+    infiniteJump = not infiniteJump
+    infiniteJumpToggle.Text = infiniteJump and "Infinite Jump: ON" or "Infinite Jump: OFF"
+    infiniteJumpToggle.TextColor3 = infiniteJump and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
-print("Optimized GUI loaded with Fly, Speed Slider, and No-Clip Toggle!")
+-- Spinbot
+local spinbotEnabled = false
+local spinbotToggle = Instance.new("TextButton", mainFrame)
+spinbotToggle.Size = UDim2.new(0, 200, 0, 30)
+spinbotToggle.Position = UDim2.new(0, 10, 0, 90)
+spinbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+spinbotToggle.Text = "Spinbot: OFF"
+spinbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+spinbotToggle.TextSize = 14
+
+RunService.RenderStepped:Connect(function()
+    if spinbotEnabled then
+        rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(25), 0)
+    end
+end)
+
+spinbotToggle.MouseButton1Click:Connect(function()
+    spinbotEnabled = not spinbotEnabled
+    spinbotToggle.Text = spinbotEnabled and "Spinbot: ON" or "Spinbot: OFF"
+    spinbotToggle.TextColor3 = spinbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
+print("Fully optimized GUI loaded with all features!")
