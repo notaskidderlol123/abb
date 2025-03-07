@@ -78,7 +78,7 @@ local function createTabButton(name, position, targetFrame)
     end)
 end
 
--- Content area
+-- Content area with ScrollingFrame
 local function createTabContent(name)
     local contentFrame = Instance.new("Frame")
     contentFrame.Name = name .. "TabContent"
@@ -88,7 +88,22 @@ local function createTabContent(name)
     contentFrame.BorderSizePixel = 0
     contentFrame.Visible = false
     contentFrame.Parent = MainFrame
-    return contentFrame
+
+    -- Add ScrollingFrame
+    local scrollingFrame = Instance.new("ScrollingFrame")
+    scrollingFrame.Size = UDim2.new(1, -10, 1, -10)
+    scrollingFrame.Position = UDim2.new(0, 5, 0, 5)
+    scrollingFrame.BackgroundTransparency = 1
+    scrollingFrame.ScrollBarThickness = 8
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0) -- Adjust dynamically later
+    scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+    scrollingFrame.Parent = contentFrame
+
+    local uiListLayout = Instance.new("UIListLayout")
+    uiListLayout.Padding = UDim.new(0, 5)
+    uiListLayout.Parent = scrollingFrame
+
+    return scrollingFrame
 end
 
 -- Create tabs and content
@@ -97,52 +112,88 @@ local visualsTab = createTabContent("Visuals")
 local exploitsTab = createTabContent("Exploits")
 
 -- Create tab buttons
-createTabButton("Aimbot", UDim2.new(0, 0, 0, 0), aimbotTab)
-createTabButton("Visuals", UDim2.new(0, 0, 0, 40), visualsTab)
-createTabButton("Extras", UDim2.new(0, 0, 0, 80), exploitsTab)
+createTabButton("Aimbot", UDim2.new(0, 0, 0, 0), aimbotTab.Parent)
+createTabButton("Visuals", UDim2.new(0, 0, 0, 40), visualsTab.Parent)
+createTabButton("Extras", UDim2.new(0, 0, 0, 80), exploitsTab.Parent)
 
 -- Make the first tab visible by default
-aimbotTab.Visible = true
+aimbotTab.Parent.Visible = true
 
--- Add "Made By" label at the bottom
-local MadeByLabel = Instance.new("TextLabel")
-MadeByLabel.Size = UDim2.new(0, 100, 0, 20)
-MadeByLabel.Position = UDim2.new(0, 0, 1, -20)
-MadeByLabel.BackgroundTransparency = 1
-MadeByLabel.Text = "MADE BY NOOBHACKER#9999"
-MadeByLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-MadeByLabel.TextSize = 12
-MadeByLabel.Font = Enum.Font.SourceSans
-MadeByLabel.Parent = TabBar
+-- Add Aimbot script content to Aimbot tab
+local aimbotCode = [[
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Camera = workspace.CurrentCamera
 
--- Example content for Aimbot tab (just placeholders)
-local aimbotLabel = Instance.new("TextLabel")
-aimbotLabel.Size = UDim2.new(1, 0, 0, 30)
-aimbotLabel.Position = UDim2.new(0, 0, 0, 0)
-aimbotLabel.BackgroundTransparency = 1
-aimbotLabel.Text = "--Aimbot--"
-aimbotLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-aimbotLabel.TextSize = 16
-aimbotLabel.Font = Enum.Font.SourceSansBold
-aimbotLabel.Parent = aimbotTab
+local player = Players.LocalPlayer
+local targetPlayer = nil
 
-local function createPlaceholderButton(name, position)
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, -10, 0, 30)
-    button.Position = position
-    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    button.BorderSizePixel = 0
-    button.Text = name
-    button.TextColor3 = Color3.fromRGB(200, 200, 200)
-    button.TextSize = 14
-    button.Font = Enum.Font.SourceSans
-    button.Parent = aimbotTab
+local function getNearestPlayer()
+    local nearestDistance = math.huge
+    local nearestPlayer = nil
+
+    for _, otherPlayer in pairs(Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (player.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if distance < nearestDistance then
+                nearestDistance = distance
+                nearestPlayer = otherPlayer
+            end
+        end
+    end
+
+    return nearestPlayer
 end
 
-createPlaceholderButton("Smoothing Mode", UDim2.new(0, 5, 0, 40))
-createPlaceholderButton("Enable FOV", UDim2.new(0, 5, 0, 80))
-createPlaceholderButton("Visible Check", UDim2.new(0, 5, 0, 120))
-createPlaceholderButton("Team Check", UDim2.new(0, 5, 0, 160))
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Right Click
+        targetPlayer = getNearestPlayer()
+
+        if targetPlayer then
+            RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+            end)
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        RunService:UnbindFromRenderStep("LockOnPlayer")
+    end
+end)
+]]
+
+local codeLabel = Instance.new("TextLabel")
+codeLabel.Size = UDim2.new(1, -20, 0, 0) -- Dynamic height based on content
+codeLabel.BackgroundTransparency = 1
+codeLabel.Text = aimbotCode
+codeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+codeLabel.TextSize = 12
+codeLabel.Font = Enum.Font.SourceSans
+codeLabel.TextWrapped = true
+codeLabel.Parent = aimbotTab
+codeLabel.Size = UDim2.new(1, -20, 0, codeLabel.TextBounds.Y + 10) -- Adjust height based on text
+
+-- Update CanvasSize of ScrollingFrame
+aimbotTab.CanvasSize = UDim2.new(0, 0, 0, codeLabel.TextBounds.Y + 20)
+
+-- Add "Made By" label with clickable link
+local MadeByLabel = Instance.new("TextLabel")
+MadeByLabel.Size = UDim2.new(0, 200, 0, 20)
+MadeByLabel.Position = UDim2.new(0, 100, 1, -20)
+MadeByLabel.BackgroundTransparency = 1
+MadeByLabel.Text = "https://discord.gg/vSt4E2KcKC"
+MadeByLabel.TextColor3 = Color3.fromRGB(0, 120, 215) -- Blue color for link
+MadeByLabel.TextSize = 12
+MadeByLabel.Font = Enum.Font.SourceSans
+MadeByLabel.Parent = MainFrame
+
+-- Make the link clickable (open in browser)
+MadeByLabel.MouseButton1Click:Connect(function()
+    game:GetService("HttpService"):GetAsync("https://discord.gg/vSt4E2KcKC", true)
+end)
 
 -- Close button functionality
 CloseButton.MouseButton1Click:Connect(function()
