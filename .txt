@@ -1,5 +1,6 @@
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 
 -- Safely get LocalPlayer with a wait loop
@@ -23,12 +24,14 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 300)
 MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.BackgroundTransparency = 1 -- Start transparent for animation
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
 TabFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+TabFrame.BackgroundTransparency = 1 -- Start transparent
 TabFrame.BorderSizePixel = 0
 TabFrame.Parent = MainFrame
 
@@ -36,13 +39,106 @@ local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, 0, 1, -30)
 ContentFrame.Position = UDim2.new(0, 0, 0, 30)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ContentFrame.BackgroundTransparency = 1 -- Start transparent
 ContentFrame.BorderSizePixel = 0
 ContentFrame.Parent = MainFrame
+
+-- GUI Animation Setup
+local isGuiVisible = true -- GUI starts visible
+local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local scaleInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
+local scaleOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+
+local function animateGui(showVisible)
+    if isVisible == isGuiVisible then return end
+    isGuiVisible = isVisible
+
+    if isVisible then
+        MainFrame.Visible = true
+        -- Fade in
+        local fadeIn = TweenService:Create(MainFrame, fadeInInfo, {BackgroundTransparency = 0})
+        local fadeInTab = TweenService:Create(TabFrame, fadeInInfo, {BackgroundTransparency = 0})
+        local fadeInContent = TweenService:Create(ContentFrame, fadeInInfo, {BackgroundTransparency = 0})
+        -- Scale in
+        MainFrame.Size = UDim2.new(0, 400, 0, 0) -- Start small
+        local scaleIn = TweenService:Create(MainFrame, scaleInInfo, {Size = UDim2.new(0, 400, 0, 300)})
+
+        fadeIn:Play()
+        fadeInTab:Play()
+        fadeInContent:Play()
+        scaleIn:Play()
+
+        -- Animate tab buttons
+        for _, button in pairs(TabFrame:GetChildren()) do
+            if button:IsA("TextButton") then
+                button.TextTransparency = 1
+                local fadeInText = TweenService:Create(button, fadeInInfo, {TextTransparency = 0})
+                fadeInText:Play()
+            end
+        end
+
+        -- Animate content elements
+        for _, tabContent in pairs(tabContents) do
+            for _, child in pairs(tabContent:GetChildren()) do
+                if child:IsA("TextButton") or child:IsA("TextLabel") then
+                    child.TextTransparency = 1
+                    local fadeInChild = TweenService:Create(child, fadeInInfo, {TextTransparency = 0})
+                    fadeInChild:Play()
+                end
+                if child:IsA("TextButton") then
+                    child.BackgroundTransparency = 1
+                    local fadeInBg = TweenService:Create(child, fadeInInfo, {BackgroundTransparency = 0})
+                    fadeInBg:Play()
+                end
+            end
+        end
+    else
+        -- Fade out
+        local fadeOut = TweenService:Create(MainFrame, fadeOutInfo, {BackgroundTransparency = 1})
+        local fadeOutTab = TweenService:Create(TabFrame, fadeOutInfo, {BackgroundTransparency = 1})
+        local fadeOutContent = TweenService:Create(ContentFrame, fadeOutInfo, {BackgroundTransparency = 1})
+        -- Scale out
+        local scaleOut = TweenService:Create(MainFrame, scaleOutInfo, {Size = UDim2.new(0, 400, 0, 0)})
+
+        fadeOut:Play()
+        fadeOutTab:Play()
+        fadeOutContent:Play()
+        scaleOut:Play()
+
+        -- Animate tab buttons
+        for _, button in pairs(TabFrame:GetChildren()) do
+            if button:IsA("TextButton") then
+                local fadeOutText = TweenService:Create(button, fadeOutInfo, {TextTransparency = 1})
+                fadeOutText:Play()
+            end
+        end
+
+        -- Animate content elements
+        for _, tabContent in pairs(tabContents) do
+            for _, child in pairs(tabContent:GetChildren()) do
+                if child:IsA("TextButton") or child:IsA("TextLabel") then
+                    local fadeOutChild = TweenService:Create(child, fadeOutInfo, {TextTransparency = 1})
+                    fadeOutChild:Play()
+                end
+                if child:IsA("TextButton") then
+                    local fadeOutBg = TweenService:Create(child, fadeOutInfo, {BackgroundTransparency = 1})
+                    fadeOutBg:Play()
+                end
+            end
+        end
+
+        -- Hide after animation
+        scaleOut.Completed:Connect(function()
+            MainFrame.Visible = false
+        end)
+    end
+end
 
 -- Toggle GUI with Q
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Q then
-        MainFrame.Visible = not MainFrame.Visible
+        animateGui(not isGuiVisible)
     end
 end)
 
@@ -58,6 +154,8 @@ for i, tabName in ipairs(tabs) do
     TabButton.Text = tabName
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    TabButton.BackgroundTransparency = 1 -- Start transparent
+    TabButton.TextTransparency = 1 -- Start transparent
     TabButton.BorderSizePixel = 0
     TabButton.Font = Enum.Font.SourceSans
     TabButton.TextSize = 18
@@ -124,6 +222,8 @@ AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
 AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
 AimbotToggle.Text = "Aimbot: OFF"
 AimbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+AimbotToggle.BackgroundTransparency = 1 -- Start transparent
+AimbotToggle.TextTransparency = 1 -- Start transparent
 AimbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 AimbotToggle.Font = Enum.Font.SourceSans
 AimbotToggle.TextSize = 16
@@ -179,7 +279,6 @@ local espToggles = {
     Tracer = true, -- Enabled by default
     Skeleton = false
 }
-local fovValue = Camera.FieldOfView -- Default FOV
 
 local espPlayers = {}
 local function DrawESP(plr)
@@ -207,7 +306,7 @@ local function DrawESP(plr)
     drawings.Distance.Outline = true
     drawings.Distance.Visible = false
 
-    drawings.HealthBar.Thickness = 7 -- Increased thickness for bigger health bar
+    drawings.HealthBar.Thickness = 7
     drawings.HealthBar.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
@@ -272,8 +371,8 @@ local function DrawESP(plr)
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            local barWidth = 100 -- Increased width for bigger health bar
-                            local barHeight = 10 -- Increased thickness for bigger health bar
+                            local barWidth = 100
+                            local barHeight = 10
                             local barX = HeadPos.X - barWidth / 2 -- Center above head
                             drawings.HealthBar.From = Vector2.new(barX, HeadPos.Y - 10) -- Above head
                             drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), HeadPos.Y - 10)
@@ -373,6 +472,8 @@ for feature, enabled in pairs(espToggles) do
     Toggle.Position = UDim2.new(0, 10, 0, yOffset)
     Toggle.Text = feature .. ": " .. (enabled and "ON" or "OFF")
     Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Toggle.BackgroundTransparency = 1 -- Start transparent
+    Toggle.TextTransparency = 1 -- Start transparent
     Toggle.TextColor3 = enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     Toggle.Font = Enum.Font.SourceSans
     Toggle.TextSize = 16
@@ -386,63 +487,12 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- FOV Changer
-local FovLabel = Instance.new("TextLabel")
-FovLabel.Size = UDim2.new(0, 100, 0, 20)
-FovLabel.Position = UDim2.new(0, 10, 0, yOffset)
-FovLabel.Text = "FOV: " .. math.floor(fovValue)
-FovLabel.BackgroundTransparency = 1
-FovLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-FovLabel.Font = Enum.Font.SourceSans
-FovLabel.TextSize = 16
-FovLabel.Parent = tabContents["Visuals"]
-
-local FovSlider = Instance.new("TextButton")
-FovSlider.Size = UDim2.new(0, 200, 0, 20)
-FovSlider.Position = UDim2.new(0, 10, 0, yOffset + 20)
-FovSlider.Text = ""
-FovSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-FovSlider.Parent = tabContents["Visuals"]
-
-local FovKnob = Instance.new("Frame")
-FovKnob.Size = UDim2.new(0, 10, 1, 0)
-FovKnob.Position = UDim2.new((fovValue - 70) / 130, 0, 0, 0) -- Range: 70 to 200
-FovKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-FovKnob.Parent = FovSlider
-
-local draggingFov = false
-FovSlider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingFov = true
-    end
-end)
-
-FovSlider.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingFov = false
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if draggingFov then
-        local mouseX = UserInputService:GetMouseLocation().X
-        local sliderPos = FovSlider.AbsolutePosition.X
-        local sliderWidth = FovSlider.AbsoluteSize.X
-        local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
-        FovKnob.Position = UDim2.new(newPos, 0, 0, 0)
-        fovValue = math.floor(70 + (newPos * 130)) -- Range: 70 to 200
-        FovLabel.Text = "FOV: " .. fovValue
-        Camera.FieldOfView = fovValue
-    end
-end)
-
--- Exploits Tab (Fly, NoClip, Infinite Jump, Spinbot)
+-- Exploits Tab (Fly, NoClip, Infinite Jump)
 local flyEnabled = false
 local flySpeed = 75 -- Default fly speed
 local controlSpeed = 10000
 local noClipEnabled = false
 local infiniteJumpEnabled = false
-local spinbotEnabled = false
 
 -- Fly Toggle
 local FlyToggle = Instance.new("TextButton")
@@ -450,6 +500,8 @@ FlyToggle.Size = UDim2.new(0, 100, 0, 30)
 FlyToggle.Position = UDim2.new(0, 10, 0, 10)
 FlyToggle.Text = "Fly: OFF"
 FlyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+FlyToggle.BackgroundTransparency = 1 -- Start transparent
+FlyToggle.TextTransparency = 1 -- Start transparent
 FlyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 FlyToggle.Font = Enum.Font.SourceSans
 FlyToggle.TextSize = 16
@@ -461,6 +513,7 @@ FlySpeedLabel.Size = UDim2.new(0, 100, 0, 20)
 FlySpeedLabel.Position = UDim2.new(0, 10, 0, 50)
 FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
 FlySpeedLabel.BackgroundTransparency = 1
+FlySpeedLabel.TextTransparency = 1 -- Start transparent
 FlySpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlySpeedLabel.Font = Enum.Font.SourceSans
 FlySpeedLabel.TextSize = 16
@@ -471,12 +524,14 @@ FlySpeedSlider.Size = UDim2.new(0, 200, 0, 20)
 FlySpeedSlider.Position = UDim2.new(0, 10, 0, 70)
 FlySpeedSlider.Text = ""
 FlySpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+FlySpeedSlider.BackgroundTransparency = 1 -- Start transparent
 FlySpeedSlider.Parent = tabContents["Exploits"]
 
 local FlySpeedKnob = Instance.new("Frame")
 FlySpeedKnob.Size = UDim2.new(0, 10, 1, 0)
 FlySpeedKnob.Position = UDim2.new((flySpeed - 10) / 190, 0, 0, 0)
 FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+FlySpeedKnob.BackgroundTransparency = 1 -- Start transparent
 FlySpeedKnob.Parent = FlySpeedSlider
 
 local draggingSlider = false
@@ -560,6 +615,8 @@ NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
 NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
 NoClipToggle.Text = "NoClip: OFF"
 NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+NoClipToggle.BackgroundTransparency = 1 -- Start transparent
+NoClipToggle.TextTransparency = 1 -- Start transparent
 NoClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 NoClipToggle.Font = Enum.Font.SourceSans
 NoClipToggle.TextSize = 16
@@ -597,6 +654,8 @@ InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
 InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 140)
 InfiniteJumpToggle.Text = "Inf Jump: OFF"
 InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+InfiniteJumpToggle.BackgroundTransparency = 1 -- Start transparent
+InfiniteJumpToggle.TextTransparency = 1 -- Start transparent
 InfiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 InfiniteJumpToggle.Font = Enum.Font.SourceSans
 InfiniteJumpToggle.TextSize = 16
@@ -614,39 +673,10 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
--- Spinbot Toggle
-local SpinbotToggle = Instance.new("TextButton")
-SpinbotToggle.Size = UDim2.new(0, 100, 0, 30)
-SpinbotToggle.Position = UDim2.new(0, 10, 0, 180)
-SpinbotToggle.Text = "Spinbot: OFF"
-SpinbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-SpinbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-SpinbotToggle.Font = Enum.Font.SourceSans
-SpinbotToggle.TextSize = 16
-SpinbotToggle.Parent = tabContents["Exploits"]
-
-local spinSpeed = 100 -- Adjustable spin speed
-local spinConnection
-SpinbotToggle.MouseButton1Click:Connect(function()
-    spinbotEnabled = not spinbotEnabled
-    SpinbotToggle.Text = "Spinbot: " .. (spinbotEnabled and "ON" or "OFF")
-    SpinbotToggle.TextColor3 = spinbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    
-    if spinbotEnabled then
-        spinConnection = RunService.RenderStepped:Connect(function()
-            if spinbotEnabled then
-                local newCFrame = Camera.CFrame * CFrame.Angles(0, math.rad(spinSpeed) * wait(), 0)
-                Camera.CFrame = newCFrame
-            end
-        end)
-    else
-        if spinConnection then
-            spinConnection:Disconnect()
-        end
-    end
-end)
-
 -- Initialize first tab
 tabContents["Aimbot"].Visible = true
 TabFrame:GetChildren()[1].BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 currentTab = "Aimbot"
+
+-- Trigger initial animation
+animateGui(true)
