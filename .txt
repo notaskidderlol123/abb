@@ -16,7 +16,7 @@ local function getCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
--- GUI Setup (unchanged)
+-- GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -45,14 +45,14 @@ ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.Parent = MainFrame
 
-local tabs = {"Aimbot", "Visuals", "Exploits"}
+local tabs = {"Visuals", "Exploits"}
 local currentTab = nil
 local tabContents = {}
 
 for i, tabName in ipairs(tabs) do
     local TabButton = Instance.new("TextButton")
-    TabButton.Size = UDim2.new(0, 133, 1, 0)
-    TabButton.Position = UDim2.new(0, (i-1) * 133, 0, 0)
+    TabButton.Size = UDim2.new(0, 200, 1, 0)
+    TabButton.Position = UDim2.new(0, (i-1) * 200, 0, 0)
     TabButton.Text = tabName
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
@@ -87,246 +87,15 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (Updated with Fixes)
-local aimbotEnabled = false -- Original aimbot
-local aimbotV2Enabled = false -- New Aimbot V2
-local targetPlayer = nil
-local lockedTarget = nil
-
--- Aimbot V2 Configuration
-local aimbotV2Keybind = Enum.KeyCode.E -- Toggle lock with 'E' key
-local aimbotV2FOV = 150 -- Initial FOV radius (adjustable via slider)
-local aimbotV2AimPart = "Head" -- Target part
-
--- FOV Circle
-local fovCircle = Drawing.new("Circle")
-fovCircle.Thickness = 2
-fovCircle.NumSides = 32
-fovCircle.Radius = 0 -- Will be calculated dynamically
-fovCircle.Color = Color3.fromRGB(255, 0, 0)
-fovCircle.Visible = false
-fovCircle.Filled = false
-
-local AimbotToggle = Instance.new("TextButton")
-AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
-AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
-AimbotToggle.Text = "Aimbot: OFF"
-AimbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimbotToggle.BackgroundTransparency = 1
-AimbotToggle.TextTransparency = 1
-AimbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-AimbotToggle.Font = Enum.Font.SourceSans
-AimbotToggle.TextSize = 16
-AimbotToggle.Parent = tabContents["Aimbot"]
-
-local AimbotV2Toggle = Instance.new("TextButton")
-AimbotV2Toggle.Size = UDim2.new(0, 100, 0, 30)
-AimbotV2Toggle.Position = UDim2.new(0, 120, 0, 10)
-AimbotV2Toggle.Text = "Aimbot V2: OFF"
-AimbotV2Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimbotV2Toggle.BackgroundTransparency = 1
-AimbotV2Toggle.TextTransparency = 1
-AimbotV2Toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-AimbotV2Toggle.Font = Enum.Font.SourceSans
-AimbotV2Toggle.TextSize = 16
-AimbotV2Toggle.Parent = tabContents["Aimbot"]
-
--- FOV Slider Setup
-local FOVLabel = Instance.new("TextLabel")
-FOVLabel.Size = UDim2.new(0, 100, 0, 20)
-FOVLabel.Position = UDim2.new(0, 120, 0, 50)
-FOVLabel.Text = "FOV: " .. aimbotV2FOV
-FOVLabel.BackgroundTransparency = 1
-FOVLabel.TextTransparency = 1
-FOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-FOVLabel.Font = Enum.Font.SourceSans
-FOVLabel.TextSize = 16
-FOVLabel.Parent = tabContents["Aimbot"]
-
-local FOVSlider = Instance.new("TextButton")
-FOVSlider.Size = UDim2.new(0, 200, 0, 20)
-FOVSlider.Position = UDim2.new(0, 120, 0, 70)
-FOVSlider.Text = ""
-FOVSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-FOVSlider.BackgroundTransparency = 1
-FOVSlider.Parent = tabContents["Aimbot"]
-
-local FOVKnob = Instance.new("Frame")
-FOVKnob.Size = UDim2.new(0, 10, 1, 0)
-FOVKnob.Position = UDim2.new((aimbotV2FOV - 50) / 450, 0, 0, 0) -- 50 to 500 range
-FOVKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-FOVKnob.BackgroundTransparency = 1
-FOVKnob.Parent = FOVSlider
-
-local draggingFOVSlider = false
-FOVSlider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingFOVSlider = true
-    end
-end)
-
-FOVSlider.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingFOVSlider = false
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if draggingFOVSlider then
-        local mouseX = UserInputService:GetMouseLocation().X
-        local sliderPos = FOVSlider.AbsolutePosition.X
-        local sliderWidth = FOVSlider.AbsoluteSize.X
-        local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
-        FOVKnob.Position = UDim2.new(newPos, 0, 0, 0)
-        aimbotV2FOV = math.floor(50 + (newPos * 450)) -- 50 to 500 range
-        FOVLabel.Text = "FOV: " .. aimbotV2FOV
-    end
-end)
-
-local function getNearestPlayerInFOV(rootPart)
-    local nearestDistance = math.huge -- Infinite range
-    local nearestPlayer = nil
-    local cameraPos = Camera.CFrame.Position
-    local cameraLook = Camera.CFrame.LookVector
-
-    for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
-        if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild(aimbotV2AimPart) then
-            local targetPart = otherPlayer.Character[aimbotV2AimPart]
-            local vectorToTarget = (targetPart.Position - cameraPos)
-            local distance = vectorToTarget.Magnitude
-            local angle = math.deg(math.acos(cameraLook:Dot(vectorToTarget.Unit)))
-
-            if angle <= 60 and distance < 10000 then -- 60-degree cone, 10k stud cap to prevent extreme cases
-                if distance < nearestDistance then
-                    nearestDistance = distance
-                    nearestPlayer = otherPlayer
-                end
-            end
-        end
-    end
-    return nearestPlayer
-end
-
--- Original Aimbot Toggle
-AimbotToggle.MouseButton1Click:Connect(function()
-    aimbotEnabled = not aimbotEnabled
-    AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
-    AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    if not aimbotEnabled then
-        RunService:UnbindFromRenderStep("LockOnPlayer")
-    end
-end)
-
--- Aimbot V2 Toggle
-AimbotV2Toggle.MouseButton1Click:Connect(function()
-    aimbotV2Enabled = not aimbotV2Enabled
-    AimbotV2Toggle.Text = "Aimbot V2: " .. (aimbotV2Enabled and "ON" or "OFF")
-    AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    if not aimbotV2Enabled then
-        RunService:UnbindFromRenderStep("AimbotV2")
-        lockedTarget = nil
-        fovCircle.Visible = false
-    else
-        fovCircle.Visible = true
-    end
-end)
-
--- Original Aimbot Logic
-UserInputService.InputBegan:Connect(function(input)
-    if aimbotEnabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
-        local character = getCharacter()
-        local rootPart = character:WaitForChild("HumanoidRootPart")
-        targetPlayer = getNearestPlayerInFOV(rootPart)
-        if targetPlayer then
-            RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
-                end
-            end)
-        end
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        RunService:UnbindFromRenderStep("LockOnPlayer")
-    end
-end)
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    local rootPart = char:WaitForChild("HumanoidRootPart")
-    if aimbotEnabled and targetPlayer then
-        RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
-            end
-        end)
-    end
-end)
-
--- New Aimbot V2 Logic (Fixed)
-local function aimbotV2()
-    if not aimbotV2Enabled then return end
-
-    local character = getCharacter()
-    if not character then return end -- Safety check
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end -- Safety check
-
-    -- Update FOV Circle (visual only)
-    local screenFOVRadius = math.tan(math.rad(60)) * (Camera.CFrame.Position - Camera.CFrame.Position + Camera.CFrame.LookVector * aimbotV2FOV).Magnitude
-    local screenPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    fovCircle.Position = screenPos
-    fovCircle.Radius = screenFOVRadius * (Camera.ViewportSize.Y / 1080) -- Scale to screen size
-
-    if UserInputService:IsKeyDown(aimbotV2Keybind) and not lockedTarget then
-        lockedTarget = getNearestPlayerInFOV(rootPart)
-    elseif not UserInputService:IsKeyDown(aimbotV2Keybind) then
-        lockedTarget = nil
-    end
-
-    local target = lockedTarget or getNearestPlayerInFOV(rootPart)
-    if target and target.Character and target.Character:FindFirstChild(aimbotV2AimPart) then
-        local targetPos = target.Character[aimbotV2AimPart].Position
-        -- Validate positions to prevent NaN or extreme values
-        if targetPos.Magnitude > 10000 or targetPos.X ~= targetPos.X then -- Check for NaN or extreme distance
-            return
-        end
-
-        -- Lock camera
-        local newCameraCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-        if newCameraCFrame.Position.Magnitude < 10000 then -- Ensure camera stays within bounds
-            Camera.CFrame = newCameraCFrame
-        end
-
-        -- Lock player orientation
-        local lookAtCFrame = CFrame.new(rootPart.Position, targetPos)
-        local safeCFrame = CFrame.new(rootPart.Position, Vector3.new(lookAtCFrame.X, rootPart.Position.Y, lookAtCFrame.Z))
-        if safeCFrame.Position.Magnitude < 10000 then -- Ensure character stays within bounds
-            rootPart.CFrame = safeCFrame
-        end
-    end
-end
-
-RunService:BindToRenderStep("AimbotV2", Enum.RenderPriority.Camera.Value + 1, function()
-    if aimbotV2Enabled then
-        local success, err = pcall(aimbotV2)
-        if not success then
-            warn("Aimbot V2 Error: " .. err) -- Debug output
-        end
-    end
-end)
-
--- Rest of the script (Visuals, Exploits, GUI Animation) remains unchanged...
-
--- Visuals Tab (unchanged)
+-- Visuals Tab
 local espToggles = {
     Box = false,
     Name = false,
     Distance = false,
     HealthBar = false,
     Tracer = true,
-    Skeleton = false
+    Skeleton = false,
+    Box3D = false -- Added 3D ESP toggle
 }
 
 local espPlayers = {}
@@ -337,9 +106,11 @@ local function DrawESP(plr)
         Distance = Drawing.new("Text"),
         HealthBar = Drawing.new("Line"),
         Tracer = Drawing.new("Line"),
-        Skeleton = {}
+        Skeleton = {},
+        Box3D = {} -- Table for 3D box lines
     }
     
+    -- Normal 2D Box
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
     drawings.Box.Thickness = 1
     drawings.Box.Transparency = 1
@@ -355,19 +126,20 @@ local function DrawESP(plr)
     drawings.Distance.Outline = true
     drawings.Distance.Visible = false
 
-    drawings.HealthBar.Thickness = 7
+    drawings.HealthBar.Thickness = 12 -- Increased from 7 to 12 for thicker health bar
     drawings.HealthBar.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
 
+    -- Skeleton Bones
     local bones = {
         {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
         {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
         {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
         {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"}
+        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightUpperArm", "RightHand"}
     }
     for _, pair in ipairs(bones) do
         local line = Drawing.new("Line")
@@ -375,6 +147,20 @@ local function DrawESP(plr)
         line.Thickness = 2
         line.Visible = false
         drawings.Skeleton[pair[1] .. pair[2]] = line
+    end
+
+    -- 3D Box (12 lines for a full cube)
+    local box3DIndices = {
+        {1, 2}, {2, 3}, {3, 4}, {4, 1}, -- Front face
+        {5, 6}, {6, 7}, {7, 8}, {8, 5}, -- Back face
+        {1, 5}, {2, 6}, {3, 7}, {4, 8}  -- Connecting edges
+    }
+    for i, edge in ipairs(box3DIndices) do
+        local line = Drawing.new("Line")
+        line.Color = Color3.fromRGB(0, 255, 255) -- Cyan for 3D box
+        line.Thickness = 1
+        line.Visible = false
+        drawings.Box3D[i] = line
     end
 
     local function Update()
@@ -385,6 +171,7 @@ local function DrawESP(plr)
             if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
                 local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
                 if vis then
+                    -- Normal 2D Box
                     local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
                     local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
                     local BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p)
@@ -429,12 +216,11 @@ local function DrawESP(plr)
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
                             local barWidth = 100
-                            local barHeight = 10
+                            local barHeight = 12 -- Matches thickness
                             local barX = headPos.X - barWidth / 2
                             drawings.HealthBar.From = Vector2.new(barX, headPos.Y - 10)
                             drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), headPos.Y - 10)
                             drawings.HealthBar.Color = Color3.fromRGB(0, 255, 0)
-                            drawings.HealthBar.Thickness = barHeight
                             drawings.HealthBar.Visible = true
                         end
                     else
@@ -478,6 +264,45 @@ local function DrawESP(plr)
                         end
                     else
                         for _, line in pairs(drawings.Skeleton) do
+                            line.Visible = false
+                        end
+                    end
+
+                    -- 3D Box ESP
+                    if espToggles.Box3D then
+                        local size = plr.Character:GetExtentsSize() * 1.1 -- Slightly larger than character
+                        local cf = plr.Character.PrimaryPart.CFrame
+                        local corners = {
+                            cf * CFrame.new(-size.X/2,  size.Y/2, -size.Z/2), -- 1: Top-left-front
+                            cf * CFrame.new( size.X/2,  size.Y/2, -size.Z/2), -- 2: Top-right-front
+                            cf * CFrame.new( size.X/2, -size.Y/2, -size.Z/2), -- 3: Bottom-right-front
+                            cf * CFrame.new(-size.X/2, -size.Y/2, -size.Z/2), -- 4: Bottom-left-front
+                            cf * CFrame.new(-size.X/2,  size.Y/2,  size.Z/2), -- 5: Top-left-back
+                            cf * CFrame.new( size.X/2,  size.Y/2,  size.Z/2), -- 6: Top-right-back
+                            cf * CFrame.new( size.X/2, -size.Y/2,  size.Z/2), -- 7: Bottom-right-back
+                            cf * CFrame.new(-size.X/2, -size.Y/2,  size.Z/2)  -- 8: Bottom-left-back
+                        }
+                        local screenCorners = {}
+                        local allVisible = true
+                        for i, corner in ipairs(corners) do
+                            local screenPos, vis = Camera:WorldToViewportPoint(corner.p)
+                            screenCorners[i] = Vector2.new(screenPos.X, screenPos.Y)
+                            if not vis then allVisible = false end
+                        end
+                        if allVisible then
+                            for i, edge in ipairs(box3DIndices) do
+                                local line = drawings.Box3D[i]
+                                line.From = screenCorners[edge[1]]
+                                line.To = screenCorners[edge[2]]
+                                line.Visible = true
+                            end
+                        else
+                            for _, line in ipairs(drawings.Box3D) do
+                                line.Visible = false
+                            end
+                        end
+                    else
+                        for _, line in ipairs(drawings.Box3D) do
                             line.Visible = false
                         end
                     end
@@ -553,7 +378,7 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (unchanged)
+-- Exploits Tab
 local flyEnabled = false
 local flySpeed = 75
 local controlSpeed = 10000
@@ -750,7 +575,7 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
--- GUI Animation Setup (unchanged)
+-- GUI Animation Setup
 local isGuiVisible = false
 local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -870,9 +695,9 @@ RunService.Stepped:Connect(function()
     end
 end)
 
-tabContents["Aimbot"].Visible = true
+tabContents["Visuals"].Visible = true
 TabFrame:GetChildren()[1].BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-currentTab = "Aimbot"
+currentTab = "Visuals"
 
 spawn(function()
     wait(0.1)
