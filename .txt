@@ -87,21 +87,21 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (Updated with Aimbot V2)
+-- Aimbot Tab (Updated with Debug and Fallback)
 local aimbotEnabled = false -- Original aimbot
-local aimbotV2Enabled = false -- New Aimbot V2
+local aimbotV2Enabled = false -- Aimbot V2
 local targetPlayer = nil
-local lockedTarget = nil -- For Aimbot V2 sticky aim
+local lockedTarget = nil
 
 -- Aimbot V2 Configuration
-local aimbotKeybind = Enum.UserInputType.MouseButton2 -- Default keybind for Aimbot V2
+local aimbotKeybind = Enum.UserInputType.MouseButton2 -- Right-click by default
 local aimbotStickyAimEnabled = true
-local aimbotAimPart = "Head" -- Target part for Aimbot V2
+local aimbotAimPart = "Head"
 local aimbotPredictionEnabled = true
-local aimbotPredictionStrengthX = 1 -- Horizontal prediction strength
-local aimbotPredictionStrengthY = 1 -- Vertical prediction strength
+local aimbotPredictionStrengthX = 1
+local aimbotPredictionStrengthY = 1
 local aimbotSmoothnessEnabled = true
-local aimbotSmoothness = 5 -- Higher value = smoother (slower) movement
+local aimbotSmoothness = 5
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -117,7 +117,7 @@ AimbotToggle.Parent = tabContents["Aimbot"]
 
 local AimbotV2Toggle = Instance.new("TextButton")
 AimbotV2Toggle.Size = UDim2.new(0, 100, 0, 30)
-AimbotV2Toggle.Position = UDim2.new(0, 120, 0, 10) -- Positioned next to original aimbot toggle
+AimbotV2Toggle.Position = UDim2.new(0, 120, 0, 10)
 AimbotV2Toggle.Text = "Aimbot V2: OFF"
 AimbotV2Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 AimbotV2Toggle.BackgroundTransparency = 1
@@ -160,6 +160,9 @@ AimbotV2Toggle.MouseButton1Click:Connect(function()
     if not aimbotV2Enabled then
         RunService:UnbindFromRenderStep("AimbotV2")
         lockedTarget = nil
+        print("Aimbot V2 Disabled")
+    else
+        print("Aimbot V2 Enabled")
     end
 end)
 
@@ -196,69 +199,86 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Aimbot V2 Logic
+-- Aimbot V2 Logic with Debug and Fallback
 local function aimbotV2()
     if not aimbotV2Enabled or not aimbotKeybind then
         return
     end
 
     -- Check keybind state
-    if aimbotKeybind == Enum.UserInputType.MouseButton2 then
-        if not UserInputService:IsMouseButtonPressed(aimbotKeybind) then
-            lockedTarget = nil
-            return
-        end
-    else
-        if not UserInputService:IsKeyDown(aimbotKeybind) then
-            lockedTarget = nil
+    local isKeyDown = (aimbotKeybind == Enum.UserInputType.MouseButton2 and UserInputService:IsMouseButtonPressed(aimbotKeybind)) or
+                     (aimbotKeybind ~= Enum.UserInputType.MouseButton2 and UserInputService:IsKeyDown(aimbotKeybind))
+    if not isKeyDown then
+        lockedTarget = nil
+        print("Aimbot V2: Keybind released, target unlocked")
+        return
+    end
+
+    local camera = workspace.CurrentCamera
+    local character = getCharacter()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+
+    if not lockedTarget or not lockedTarget.Character or not lockedTarget.Character:FindFirstChild(aimbotAimPart) then
+        lockedTarget = getNearestPlayer(rootPart)
+        if lockedTarget then
+            print("Aimbot V2: Locked onto " .. lockedTarget.Name)
+        else
+            print("Aimbot V2: No valid target found")
             return
         end
     end
 
-    local camera = workspace.CurrentCamera
-    local mouse = LocalPlayer:GetMouse()
+    if lockedTarget.Character and lockedTarget.Character:FindFirstChild(aimbotAimPart) then
+        local part = lockedTarget.Character[aimbotAimPart]
+        local predictedPosition = part.Position
+        if aimbotPredictionEnabled then
+            local velocity = lockedTarget.Character.HumanoidRootPart.Velocity
+            predictedPosition = part.Position + Vector3.new(
+                velocity.X * aimbotPredictionStrengthX * 0.1,
+                velocity.Y * aimbotPredictionStrengthY * 0.1,
+                0
+            )
+        end
+        local screenPos, onScreen = camera:WorldToViewportPoint(predictedPosition)
+        if not onScreen then
+            print("Aimbot V2: Target off-screen")
+            return
+        end
 
-    if lockedTarget and aimbotStickyAimEnabled then
-        if lockedTarget.Character and lockedTarget.Character:FindFirstChild(aimbotAimPart) then
-            local part = lockedTarget.Character[aimbotAimPart]
-            local predictedPosition = part.Position
-            if aimbotPredictionEnabled then
-                local velocity = lockedTarget.Character.HumanoidRootPart.Velocity
-                predictedPosition = part.Position + Vector3.new(
-                    velocity.X * aimbotPredictionStrengthX * 0.1,
-                    velocity.Y * aimbotPredictionStrengthY * 0.1,
-                    0
-                )
-            end
-            local screenPos = camera:WorldToViewportPoint(predictedPosition)
-            local target = Vector2.new(screenPos.X, screenPos.Y)
-            local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-            local move = target - screenCenter
+        local target = Vector2.new(screenPos.X, screenPos.Y)
+        local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+        local move = target - screenCenter
 
+        -- Try mousemoverel first
+        local success, err = pcall(function()
             if aimbotSmoothnessEnabled then
                 local moveStep = move / (aimbotSmoothness + 1)
                 mousemoverel(moveStep.X, moveStep.Y)
             else
                 mousemoverel(move.X, move.Y)
             end
-            return
+        end)
+
+        if not success then
+            print("Aimbot V2: mousemoverel failed (" .. err .. "), using camera fallback")
+            -- Fallback to camera-based aiming if mousemoverel isn’t supported
+            local currentCFrame = camera.CFrame
+            local lookAtCFrame = CFrame.new(currentCFrame.Position, predictedPosition)
+            camera.CFrame = aimbotSmoothnessEnabled and currentCFrame:Lerp(lookAtCFrame, 1 / (aimbotSmoothness + 1)) or lookAtCFrame
         else
-            lockedTarget = nil
+            print("Aimbot V2: Successfully moved mouse to target")
         end
     end
-
-    -- Find a new target if not locked
-    local character = getCharacter()
-    local rootPart = character:WaitForChild("HumanoidRootPart")
-    lockedTarget = getNearestPlayer(rootPart)
 end
 
--- Bind Aimbot V2 to RenderStep when enabled
-RunService.RenderStepped:Connect(function()
+-- Bind Aimbot V2 to RenderStep
+RunService:BindToRenderStep("AimbotV2", Enum.RenderPriority.Input.Value + 1, function()
     if aimbotV2Enabled then
         aimbotV2()
     end
 end)
+
+-- Rest of the script (Visuals, Exploits, GUI Animation) remains unchanged...
 
 -- Visuals Tab (unchanged)
 local espToggles = {
