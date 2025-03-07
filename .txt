@@ -15,11 +15,11 @@ local function getCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
--- GUI Setup
+-- GUI Setup (unchanged)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ResetOnSpawn = false -- Prevents GUI from resetting on death
+ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 300)
@@ -29,7 +29,6 @@ MainFrame.BackgroundTransparency = 1
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
--- Rest of the GUI setup remains the same until the features...
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
 TabFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
@@ -87,7 +86,7 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab
+-- Aimbot Tab (unchanged)
 local aimbotEnabled = false
 local targetPlayer = nil
 
@@ -127,7 +126,6 @@ AimbotToggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Update character references on respawn
 LocalPlayer.CharacterAdded:Connect(function(char)
     local rootPart = char:WaitForChild("HumanoidRootPart")
     local humanoid = char:WaitForChild("Humanoid")
@@ -162,7 +160,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Visuals Tab (ESP Features)
+-- Visuals Tab (ESP Features) - unchanged
 local espToggles = {
     Box = false,
     Name = false,
@@ -183,7 +181,6 @@ local function DrawESP(plr)
         Skeleton = {}
     }
     
-    -- Rest of DrawESP setup remains the same...
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
     drawings.Box.Thickness = 1
     drawings.Box.Transparency = 1
@@ -227,7 +224,6 @@ local function DrawESP(plr)
         local rootPart = character:WaitForChild("HumanoidRootPart")
         connection = RunService.RenderStepped:Connect(function()
             if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                -- Rest of Update function remains the same...
                 local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
                 if vis then
                     local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
@@ -376,7 +372,6 @@ game:GetService("Players").PlayerAdded:Connect(function(player)
     end
 end)
 
--- Visuals Tab GUI remains the same...
 local yOffset = 10
 for feature, enabled in pairs(espToggles) do
     local Toggle = Instance.new("TextButton")
@@ -399,7 +394,7 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab
+-- Exploits Tab (Modified Fly Section)
 local flyEnabled = false
 local flySpeed = 75
 local controlSpeed = 10000
@@ -418,7 +413,6 @@ FlyToggle.Font = Enum.Font.SourceSans
 FlyToggle.TextSize = 16
 FlyToggle.Parent = tabContents["Exploits"]
 
--- Fly Speed Slider remains the same...
 local FlySpeedLabel = Instance.new("TextLabel")
 FlySpeedLabel.Size = UDim2.new(0, 100, 0, 20)
 FlySpeedLabel.Position = UDim2.new(0, 10, 0, 50)
@@ -500,12 +494,20 @@ local function toggleFly()
                 local hum = char:WaitForChild("Humanoid")
                 local cam = workspace.CurrentCamera
                 local move = Vector3.new(0, 0, 0)
+                
+                -- Horizontal movement
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
+                
+                -- Vertical movement with Space (up) and Shift (down)
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then 
+                    move = move + Vector3.new(0, 1, 0) -- Go up
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then 
+                    move = move + Vector3.new(0, -1, 0) -- Go down
+                end
                 
                 if move.Magnitude > 0 then
                     move = move.Unit * flySpeed
@@ -528,13 +530,13 @@ FlyToggle.MouseButton1Click:Connect(toggleFly)
 
 LocalPlayer.CharacterAdded:Connect(function(char)
     if flyEnabled then
-        wait(0.1) -- Small delay to ensure character is fully loaded
-        toggleFly() -- Turn off fly
-        toggleFly() -- Turn it back on with new character
+        wait(0.1)
+        toggleFly()
+        toggleFly()
     end
 end)
 
--- NoClip Toggle
+-- NoClip Toggle (unchanged)
 local NoClipToggle = Instance.new("TextButton")
 NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
 NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
@@ -567,7 +569,7 @@ end
 
 NoClipToggle.MouseButton1Click:Connect(toggleNoClip)
 
--- Infinite Jump Toggle
+-- Infinite Jump Toggle (unchanged)
 local InfiniteJumpToggle = Instance.new("TextButton")
 InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
 InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 140)
@@ -594,8 +596,8 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
--- GUI Animation Setup
-local isGuiVisible = false -- Start as false since we'll show it immediately
+-- GUI Animation Setup (unchanged)
+local isGuiVisible = false
 local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local scaleInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
@@ -687,7 +689,6 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
--- Dragging Functionality remains the same...
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -715,13 +716,11 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Initialize first tab
 tabContents["Aimbot"].Visible = true
 TabFrame:GetChildren()[1].BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 currentTab = "Aimbot"
 
--- Show GUI immediately upon injection
 spawn(function()
-    wait(0.1) -- Small delay to ensure everything is initialized
+    wait(0.1)
     animateGui(true)
 end)
