@@ -2,13 +2,14 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
+local PlayersService = game:GetService("Players")
 
 -- Safely get LocalPlayer with a wait loop
 local LocalPlayer
-while not game:GetService("Players").LocalPlayer do
+while not PlayersService.LocalPlayer do
     wait(0.1)
 end
-LocalPlayer = game:GetService("Players").LocalPlayer
+LocalPlayer = PlayersService.LocalPlayer
 
 -- Function to get character safely
 local function getCharacter()
@@ -86,9 +87,21 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (unchanged)
-local aimbotEnabled = false
+-- Aimbot Tab (Updated with Aimbot V2)
+local aimbotEnabled = false -- Original aimbot
+local aimbotV2Enabled = false -- New Aimbot V2
 local targetPlayer = nil
+local lockedTarget = nil -- For Aimbot V2 sticky aim
+
+-- Aimbot V2 Configuration
+local aimbotKeybind = Enum.UserInputType.MouseButton2 -- Default keybind for Aimbot V2
+local aimbotStickyAimEnabled = true
+local aimbotAimPart = "Head" -- Target part for Aimbot V2
+local aimbotPredictionEnabled = true
+local aimbotPredictionStrengthX = 1 -- Horizontal prediction strength
+local aimbotPredictionStrengthY = 1 -- Vertical prediction strength
+local aimbotSmoothnessEnabled = true
+local aimbotSmoothness = 5 -- Higher value = smoother (slower) movement
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -102,10 +115,22 @@ AimbotToggle.Font = Enum.Font.SourceSans
 AimbotToggle.TextSize = 16
 AimbotToggle.Parent = tabContents["Aimbot"]
 
+local AimbotV2Toggle = Instance.new("TextButton")
+AimbotV2Toggle.Size = UDim2.new(0, 100, 0, 30)
+AimbotV2Toggle.Position = UDim2.new(0, 120, 0, 10) -- Positioned next to original aimbot toggle
+AimbotV2Toggle.Text = "Aimbot V2: OFF"
+AimbotV2Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+AimbotV2Toggle.BackgroundTransparency = 1
+AimbotV2Toggle.TextTransparency = 1
+AimbotV2Toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+AimbotV2Toggle.Font = Enum.Font.SourceSans
+AimbotV2Toggle.TextSize = 16
+AimbotV2Toggle.Parent = tabContents["Aimbot"]
+
 local function getNearestPlayer(rootPart)
     local nearestDistance = math.huge
     local nearestPlayer = nil
-    for _, otherPlayer in pairs(game:GetService("Players"):GetPlayers()) do
+    for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
         if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local distance = (rootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
             if distance < nearestDistance then
@@ -117,6 +142,7 @@ local function getNearestPlayer(rootPart)
     return nearestPlayer
 end
 
+-- Original Aimbot Toggle
 AimbotToggle.MouseButton1Click:Connect(function()
     aimbotEnabled = not aimbotEnabled
     AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
@@ -126,19 +152,18 @@ AimbotToggle.MouseButton1Click:Connect(function()
     end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function(char)
-    local rootPart = char:WaitForChild("HumanoidRootPart")
-    local humanoid = char:WaitForChild("Humanoid")
-    
-    if aimbotEnabled and targetPlayer then
-        RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
-            end
-        end)
+-- Aimbot V2 Toggle
+AimbotV2Toggle.MouseButton1Click:Connect(function()
+    aimbotV2Enabled = not aimbotV2Enabled
+    AimbotV2Toggle.Text = "Aimbot V2: " .. (aimbotV2Enabled and "ON" or "OFF")
+    AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    if not aimbotV2Enabled then
+        RunService:UnbindFromRenderStep("AimbotV2")
+        lockedTarget = nil
     end
 end)
 
+-- Original Aimbot Logic
 UserInputService.InputBegan:Connect(function(input)
     if aimbotEnabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
         local character = getCharacter()
@@ -160,7 +185,82 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Visuals Tab (ESP Features) - unchanged
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local rootPart = char:WaitForChild("HumanoidRootPart")
+    if aimbotEnabled and targetPlayer then
+        RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character.HumanoidRootPart.Position)
+            end
+        end)
+    end
+end)
+
+-- Aimbot V2 Logic
+local function aimbotV2()
+    if not aimbotV2Enabled or not aimbotKeybind then
+        return
+    end
+
+    -- Check keybind state
+    if aimbotKeybind == Enum.UserInputType.MouseButton2 then
+        if not UserInputService:IsMouseButtonPressed(aimbotKeybind) then
+            lockedTarget = nil
+            return
+        end
+    else
+        if not UserInputService:IsKeyDown(aimbotKeybind) then
+            lockedTarget = nil
+            return
+        end
+    end
+
+    local camera = workspace.CurrentCamera
+    local mouse = LocalPlayer:GetMouse()
+
+    if lockedTarget and aimbotStickyAimEnabled then
+        if lockedTarget.Character and lockedTarget.Character:FindFirstChild(aimbotAimPart) then
+            local part = lockedTarget.Character[aimbotAimPart]
+            local predictedPosition = part.Position
+            if aimbotPredictionEnabled then
+                local velocity = lockedTarget.Character.HumanoidRootPart.Velocity
+                predictedPosition = part.Position + Vector3.new(
+                    velocity.X * aimbotPredictionStrengthX * 0.1,
+                    velocity.Y * aimbotPredictionStrengthY * 0.1,
+                    0
+                )
+            end
+            local screenPos = camera:WorldToViewportPoint(predictedPosition)
+            local target = Vector2.new(screenPos.X, screenPos.Y)
+            local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+            local move = target - screenCenter
+
+            if aimbotSmoothnessEnabled then
+                local moveStep = move / (aimbotSmoothness + 1)
+                mousemoverel(moveStep.X, moveStep.Y)
+            else
+                mousemoverel(move.X, move.Y)
+            end
+            return
+        else
+            lockedTarget = nil
+        end
+    end
+
+    -- Find a new target if not locked
+    local character = getCharacter()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    lockedTarget = getNearestPlayer(rootPart)
+end
+
+-- Bind Aimbot V2 to RenderStep when enabled
+RunService.RenderStepped:Connect(function()
+    if aimbotV2Enabled then
+        aimbotV2()
+    end
+end)
+
+-- Visuals Tab (unchanged)
 local espToggles = {
     Box = false,
     Name = false,
@@ -339,7 +439,7 @@ local function DrawESP(plr)
                         drawing.Visible = false
                     end
                 end
-                if not game:GetService("Players"):FindFirstChild(plr.Name) then
+                if not PlayersService:FindFirstChild(plr.Name) then
                     connection:Disconnect()
                 end
             end
@@ -349,7 +449,7 @@ local function DrawESP(plr)
     espPlayers[plr] = drawings
 end
 
-for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+for _, player in pairs(PlayersService:GetPlayers()) do
     if player ~= LocalPlayer then
         local success, err = pcall(function()
             DrawESP(player)
@@ -360,7 +460,7 @@ for _, player in pairs(game:GetService("Players"):GetPlayers()) do
     end
 end
 
-game:GetService("Players").PlayerAdded:Connect(function(player)
+PlayersService.PlayerAdded:Connect(function(player)
     wait(1)
     if player ~= LocalPlayer then
         local success, err = pcall(function()
@@ -394,7 +494,7 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (Modified Fly and NoClip)
+-- Exploits Tab (unchanged)
 local flyEnabled = false
 local flySpeed = 75
 local controlSpeed = 10000
@@ -474,9 +574,7 @@ local function toggleFly()
     local humanoid = character:WaitForChild("Humanoid")
     
     if flyEnabled then
-        -- Remove PlatformStand to allow NoClip to work fully
-        humanoid:ChangeState(Enum.HumanoidStateType.Physics) -- Use Physics state for free movement
-        
+        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
         bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
@@ -496,31 +594,22 @@ local function toggleFly()
                 local hum = char:WaitForChild("Humanoid")
                 local cam = workspace.CurrentCamera
                 local move = Vector3.new(0, 0, 0)
-                
-                -- Horizontal movement
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
-                
-                -- Vertical movement with Space (up) and Shift (down)
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then 
-                    move = move + Vector3.new(0, 1, 0) -- Go up
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then 
-                    move = move + Vector3.new(0, -1, 0) -- Go down
-                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then move = move + Vector3.new(0, -1, 0) end
                 
                 if move.Magnitude > 0 then
                     move = move.Unit * flySpeed
                     bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
                     bg.CFrame = cam.CFrame
                 else
-                    bv.Velocity = Vector3.new(0, 0, 0) -- Hover when no input
+                    bv.Velocity = Vector3.new(0, 0, 0)
                 end
                 wait()
             end
-            -- Cleanup when fly is disabled
             if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
             if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
@@ -533,12 +622,11 @@ FlyToggle.MouseButton1Click:Connect(toggleFly)
 LocalPlayer.CharacterAdded:Connect(function(char)
     if flyEnabled then
         wait(0.1)
-        toggleFly() -- Turn off fly
-        toggleFly() -- Turn it back on with new character
+        toggleFly()
+        toggleFly()
     end
 end)
 
--- NoClip Toggle (unchanged but ensures downward clipping works with Fly)
 local NoClipToggle = Instance.new("TextButton")
 NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
 NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
@@ -566,7 +654,6 @@ local function toggleNoClip()
             end
             wait()
         end
-        -- Re-enable collisions when NoClip is turned off
         local character = getCharacter()
         for _, part in pairs(character:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -578,7 +665,6 @@ end
 
 NoClipToggle.MouseButton1Click:Connect(toggleNoClip)
 
--- Infinite Jump Toggle (unchanged)
 local InfiniteJumpToggle = Instance.new("TextButton")
 InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
 InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 140)
