@@ -87,7 +87,7 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (Updated with FOV Slider, Infinite Range, and Player Lock)
+-- Aimbot Tab (Updated with Fixes)
 local aimbotEnabled = false -- Original aimbot
 local aimbotV2Enabled = false -- New Aimbot V2
 local targetPlayer = nil
@@ -196,7 +196,7 @@ local function getNearestPlayerInFOV(rootPart)
             local distance = vectorToTarget.Magnitude
             local angle = math.deg(math.acos(cameraLook:Dot(vectorToTarget.Unit)))
 
-            if angle <= 60 then -- 60-degree cone check, no distance limit
+            if angle <= 60 and distance < 10000 then -- 60-degree cone, 10k stud cap to prevent extreme cases
                 if distance < nearestDistance then
                     nearestDistance = distance
                     nearestPlayer = otherPlayer
@@ -264,14 +264,16 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- New Aimbot V2 Logic (Infinite Range, Player Lock, FOV Slider)
+-- New Aimbot V2 Logic (Fixed)
 local function aimbotV2()
     if not aimbotV2Enabled then return end
 
     local character = getCharacter()
-    local rootPart = character:WaitForChild("HumanoidRootPart")
+    if not character then return end -- Safety check
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end -- Safety check
 
-    -- Update FOV Circle (visual only, no range limit for targeting)
+    -- Update FOV Circle (visual only)
     local screenFOVRadius = math.tan(math.rad(60)) * (Camera.CFrame.Position - Camera.CFrame.Position + Camera.CFrame.LookVector * aimbotV2FOV).Magnitude
     local screenPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     fovCircle.Position = screenPos
@@ -286,17 +288,32 @@ local function aimbotV2()
     local target = lockedTarget or getNearestPlayerInFOV(rootPart)
     if target and target.Character and target.Character:FindFirstChild(aimbotV2AimPart) then
         local targetPos = target.Character[aimbotV2AimPart].Position
+        -- Validate positions to prevent NaN or extreme values
+        if targetPos.Magnitude > 10000 or targetPos.X ~= targetPos.X then -- Check for NaN or extreme distance
+            return
+        end
+
         -- Lock camera
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+        local newCameraCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+        if newCameraCFrame.Position.Magnitude < 10000 then -- Ensure camera stays within bounds
+            Camera.CFrame = newCameraCFrame
+        end
+
         -- Lock player orientation
         local lookAtCFrame = CFrame.new(rootPart.Position, targetPos)
-        rootPart.CFrame = CFrame.new(rootPart.Position, Vector3.new(lookAtCFrame.X, rootPart.Position.Y, lookAtCFrame.Z)) -- Keep Y level to avoid tilting
+        local safeCFrame = CFrame.new(rootPart.Position, Vector3.new(lookAtCFrame.X, rootPart.Position.Y, lookAtCFrame.Z))
+        if safeCFrame.Position.Magnitude < 10000 then -- Ensure character stays within bounds
+            rootPart.CFrame = safeCFrame
+        end
     end
 end
 
 RunService:BindToRenderStep("AimbotV2", Enum.RenderPriority.Camera.Value + 1, function()
     if aimbotV2Enabled then
-        aimbotV2()
+        local success, err = pcall(aimbotV2)
+        if not success then
+            warn("Aimbot V2 Error: " .. err) -- Debug output
+        end
     end
 end)
 
@@ -350,7 +367,7 @@ local function DrawESP(plr)
         {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
         {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
         {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightUpperArm", "RightHand"}
+        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"}
     }
     for _, pair in ipairs(bones) do
         local line = Drawing.new("Line")
