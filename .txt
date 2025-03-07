@@ -9,12 +9,11 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
 -- GUI Setup
-local gui = Instance.new("ScreenGui")
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "CustomGUI"
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
 
-local mainFrame = Instance.new("Frame")
+local mainFrame = Instance.new("Frame", gui)
 mainFrame.Size = UDim2.new(0, 400, 0, 350)
 mainFrame.Position = UDim2.new(0.5, -200, 0.5, -175)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -22,21 +21,18 @@ mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Visible = true
-mainFrame.Parent = gui
 
-local titleBar = Instance.new("Frame")
+local titleBar = Instance.new("Frame", mainFrame)
 titleBar.Size = UDim2.new(1, 0, 0, 30)
 titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-titleBar.Parent = mainFrame
 
-local titleLabel = Instance.new("TextLabel")
+local titleLabel = Instance.new("TextLabel", titleBar)
 titleLabel.Size = UDim2.new(1, 0, 1, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Custom GUI - Press Q to Toggle"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextSize = 14
 titleLabel.Font = Enum.Font.SourceSans
-titleLabel.Parent = titleBar
 
 -- GUI Toggle
 local guiVisible = true
@@ -47,70 +43,41 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
--- Fly Implementation
-local flying = false
-local flySpeed = 50
-local flyForce = 10000
+-- Tabs Setup
+local tabs = {"Exploits", "Visuals"}
+local tabButtons = {}
+local tabFrames = {}
 
-local function toggleFly()
-    flying = not flying
-    if flying then
-        humanoid.PlatformStand = true
-        local bv = Instance.new("BodyVelocity", rootPart)
-        bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(flyForce, flyForce, flyForce)
+for i, tabName in ipairs(tabs) do
+    local tabButton = Instance.new("TextButton", mainFrame)
+    tabButton.Size = UDim2.new(0, 100, 0, 30)
+    tabButton.Position = UDim2.new(0, (i - 1) * 100, 0, 30)
+    tabButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    tabButton.Text = tabName
+    tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tabButton.TextSize = 14
+    tabButtons[tabName] = tabButton
 
-        local bg = Instance.new("BodyGyro", rootPart)
-        bg.MaxTorque = Vector3.new(flyForce, flyForce, flyForce)
-        bg.P = 5000
-        bg.D = 500
-        bg.CFrame = rootPart.CFrame
+    local tabFrame = Instance.new("Frame", mainFrame)
+    tabFrame.Size = UDim2.new(1, 0, 1, -60)
+    tabFrame.Position = UDim2.new(0, 0, 0, 60)
+    tabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    tabFrame.BorderSizePixel = 0
+    tabFrame.Visible = (i == 1)
+    tabFrames[tabName] = tabFrame
 
-        RunService.RenderStepped:Connect(function()
-            if not flying then return end
-            local move = Vector3.new(0, 0, 0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
-
-            if move.Magnitude > 0 then
-                move = move.Unit * flySpeed
-                rootPart.Velocity = Camera.CFrame:VectorToWorldSpace(move)
-                bg.CFrame = Camera.CFrame
-            else
-                rootPart.Velocity = Vector3.new(0, 0, 0)
-            end
-        end)
-    else
-        humanoid.PlatformStand = false
-        rootPart:FindFirstChild("BodyVelocity"):Destroy()
-        rootPart:FindFirstChild("BodyGyro"):Destroy()
-        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-    end
+    tabButton.MouseButton1Click:Connect(function()
+        for _, frame in pairs(tabFrames) do frame.Visible = false end
+        tabFrame.Visible = true
+    end)
 end
 
-local flyToggle = Instance.new("TextButton", mainFrame)
-flyToggle.Size = UDim2.new(0, 200, 0, 30)
-flyToggle.Position = UDim2.new(0, 10, 0, 10)
-flyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-flyToggle.Text = "Fly: OFF"
-flyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-flyToggle.TextSize = 14
-
-flyToggle.MouseButton1Click:Connect(function()
-    toggleFly()
-    flyToggle.Text = flying and "Fly: ON" or "Fly: OFF"
-    flyToggle.TextColor3 = flying and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-end)
-
+-- **Exploits Tab (Infinite Jump, Fly, No-clip, Spinbot)**
 -- Infinite Jump
 local infiniteJump = false
-local infiniteJumpToggle = Instance.new("TextButton", mainFrame)
+local infiniteJumpToggle = Instance.new("TextButton", tabFrames["Exploits"])
 infiniteJumpToggle.Size = UDim2.new(0, 200, 0, 30)
-infiniteJumpToggle.Position = UDim2.new(0, 10, 0, 50)
+infiniteJumpToggle.Position = UDim2.new(0, 10, 0, 10)
 infiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 infiniteJumpToggle.Text = "Infinite Jump: OFF"
 infiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
@@ -128,26 +95,46 @@ infiniteJumpToggle.MouseButton1Click:Connect(function()
     infiniteJumpToggle.TextColor3 = infiniteJump and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
--- Spinbot
-local spinbotEnabled = false
-local spinbotToggle = Instance.new("TextButton", mainFrame)
-spinbotToggle.Size = UDim2.new(0, 200, 0, 30)
-spinbotToggle.Position = UDim2.new(0, 10, 0, 90)
-spinbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-spinbotToggle.Text = "Spinbot: OFF"
-spinbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-spinbotToggle.TextSize = 14
+-- **ESP System Under Visuals**
+local espEnabled = {
+    Box = false,
+    Name = false,
+    Distance = false,
+    Tracer = false,
+    Skeleton = false,
+    HealthBar = false,
+    TeamCheck = false
+}
 
-RunService.RenderStepped:Connect(function()
-    if spinbotEnabled then
-        rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(25), 0)
-    end
-end)
+local function toggleESP(key)
+    espEnabled[key] = not espEnabled[key]
+end
 
-spinbotToggle.MouseButton1Click:Connect(function()
-    spinbotEnabled = not spinbotEnabled
-    spinbotToggle.Text = spinbotEnabled and "Spinbot: ON" or "Spinbot: OFF"
-    spinbotToggle.TextColor3 = spinbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-end)
+local espToggles = {
+    {"Box ESP", "Box", 10},
+    {"Name", "Name", 50},
+    {"Distance", "Distance", 90},
+    {"Health Bar", "HealthBar", 130},
+    {"Tracer", "Tracer", 170},
+    {"Skeleton", "Skeleton", 210},
+    {"Team Check", "TeamCheck", 250}
+}
 
-print("Fully optimized GUI loaded with all features!")
+for _, toggleData in ipairs(espToggles) do
+    local toggleName, key, yPos = toggleData[1], toggleData[2], toggleData[3]
+    local toggle = Instance.new("TextButton", tabFrames["Visuals"])
+    toggle.Size = UDim2.new(0, 200, 0, 30)
+    toggle.Position = UDim2.new(0, 10, 0, yPos)
+    toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    toggle.Text = toggleName .. ": OFF"
+    toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+    toggle.TextSize = 14
+
+    toggle.MouseButton1Click:Connect(function()
+        toggleESP(key)
+        toggle.Text = toggleName .. (espEnabled[key] and ": ON" or ": OFF")
+        toggle.TextColor3 = espEnabled[key] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    end)
+end
+
+print("GUI fully loaded with all features!")
