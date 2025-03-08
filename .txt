@@ -23,7 +23,7 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 400, 0, 300)
+MainFrame.Size = UDim2.new(0, 400, 0, 400) -- Increased height to accommodate more options
 MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MainFrame.BackgroundTransparency = 1
@@ -264,12 +264,12 @@ end)
 local espToggles = {
     Box = false,
     Name = false,
-    Speed = false, -- Replaced Distance with Speed
+    Speed = false,
     HealthBar = false,
     Tracer = true,
     Skeleton = false,
     Box3D = false,
-    Outline = false -- Added Outline ESP
+    Normal = false -- Renamed Outline to Normal
 }
 
 local espPlayers = {}
@@ -278,13 +278,13 @@ local function DrawESP(plr)
     local drawings = {
         Box = Drawing.new("Quad"),
         Name = Drawing.new("Text"),
-        Speed = Drawing.new("Text"), -- Replaced Distance with Speed
+        Speed = Drawing.new("Text"),
         HealthText = Drawing.new("Text"),
-        HealthBar = Drawing.new("Square"), -- Changed to Square for box-style health bar
+        HealthBar = Drawing.new("Square"),
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {},
-        Outline = Drawing.new("Quad") -- Added Outline
+        Normal = {} -- Changed to table to hold multiple lines for highlighting
     }
     
     -- Configure drawings
@@ -310,19 +310,13 @@ local function DrawESP(plr)
     drawings.HealthText.Visible = false
 
     -- Health Bar (Box style)
-    drawings.HealthBar.Thickness = 0 -- No outline for the box
-    drawings.HealthBar.Size = Vector2.new(60, 10) -- Width 60, Height 10 for a thicker box
+    drawings.HealthBar.Thickness = 0
+    drawings.HealthBar.Size = Vector2.new(60, 10)
     drawings.HealthBar.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
-
-    -- Outline (Thick border around player)
-    drawings.Outline.Color = Color3.fromRGB(255, 0, 0) -- Red outline
-    drawings.Outline.Thickness = 2
-    drawings.Outline.Transparency = 1
-    drawings.Outline.Visible = false
 
     -- Skeleton bones
     local bones = {
@@ -352,6 +346,21 @@ local function DrawESP(plr)
         line.Thickness = 1
         line.Visible = false
         drawings.Box3D[i] = line
+    end
+
+    -- Normal ESP (Highlight effect using lines on major parts)
+    local highlightParts = {"Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg"}
+    for _, partName in ipairs(highlightParts) do
+        local lineTop = Drawing.new("Line")
+        local lineBottom = Drawing.new("Line")
+        local lineLeft = Drawing.new("Line")
+        local lineRight = Drawing.new("Line")
+        for _, line in ipairs({lineTop, lineBottom, lineLeft, lineRight}) do
+            line.Color = Color3.fromRGB(255, 0, 0) -- Red highlight
+            line.Thickness = 2
+            line.Visible = false
+        end
+        drawings.Normal[partName] = {Top = lineTop, Bottom = lineBottom, Left = lineLeft, Right = lineRight}
     end
 
     local function Update()
@@ -401,8 +410,8 @@ local function DrawESP(plr)
                         if not lastPositions[plr] then lastPositions[plr] = currentPos end
                         local lastPos = lastPositions[plr]
                         local delta = (currentPos - lastPos).Magnitude
-                        local speed = delta / RunService.RenderStepped:Wait() -- Speed in studs per second
-                        drawings.Speed.Position = Vector2.new(headPos.X, headPos.Y + 10) -- Below the name
+                        local speed = delta / RunService.RenderStepped:Wait()
+                        drawings.Speed.Position = Vector2.new(headPos.X, headPos.Y + 10)
                         drawings.Speed.Text = string.format("Speed: %.1f", speed)
                         lastPositions[plr] = currentPos
                         drawings.Speed.Visible = true
@@ -416,7 +425,7 @@ local function DrawESP(plr)
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
                             local barWidth = 60
-                            local barHeight = 10 -- Increased height for thicker box
+                            local barHeight = 10
                             local barX = headPos.X - (barWidth / 2)
                             local barY = headPos.Y - 30
 
@@ -430,7 +439,7 @@ local function DrawESP(plr)
                             -- Health Bar (Box)
                             drawings.HealthBar.Position = Vector2.new(barX, barY)
                             drawings.HealthBar.Size = Vector2.new(barWidth * healthPercent, barHeight)
-                            drawings.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0) -- Green to red
+                            drawings.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0)
                             drawings.HealthBar.Visible = true
                         end
                     else
@@ -466,7 +475,7 @@ local function DrawESP(plr)
                                 local screenP1, vis1 = Camera:WorldToViewportPoint(p1.Position)
                                 local screenP2, vis2 = Camera:WorldToViewportPoint(p2.Position)
                                 if vis1 and vis2 then
-                                    local boneLine = drawings.Skeleton[pair[1] .. pair[2]]
+                                    local boneLine = drawings.Skeleton[part[1] .. pair[2]]
                                     boneLine.From = Vector2.new(screenP1.X, screenP1.Y)
                                     boneLine.To = Vector2.new(screenP2.X, screenP2.Y)
                                     boneLine.Visible = true
@@ -520,39 +529,64 @@ local function DrawESP(plr)
                         end
                     end
 
-                    -- Outline ESP
-                    if espToggles.Outline then
-                        local size = plr.Character:GetExtentsSize() * 1.1
-                        local cf = plr.Character.PrimaryPart.CFrame
-                        local corners = {
-                            cf * CFrame.new(-size.X/2 - 0.5, size.Y/2 + 0.5, 0), -- Top Left (offset outward)
-                            cf * CFrame.new(size.X/2 + 0.5, size.Y/2 + 0.5, 0),  -- Top Right
-                            cf * CFrame.new(size.X/2 + 0.5, -size.Y/2 - 0.5, 0), -- Bottom Right
-                            cf * CFrame.new(-size.X/2 - 0.5, -size.Y/2 - 0.5, 0) -- Bottom Left
-                        }
-                        local screenCorners = {}
-                        local allVisible = true
-                        for i, corner in ipairs(corners) do
-                            local screenPos, vis = Camera:WorldToViewportPoint(corner.p)
-                            screenCorners[i] = Vector2.new(screenPos.X, screenPos.Y)
-                            if not vis then allVisible = false end
-                        end
-                        if allVisible then
-                            drawings.Outline.PointA = screenCorners[1]
-                            drawings.Outline.PointB = screenCorners[2]
-                            drawings.Outline.PointC = screenCorners[3]
-                            drawings.Outline.PointD = screenCorners[4]
-                            drawings.Outline.Visible = true
-                        else
-                            drawings.Outline.Visible = false
+                    -- Normal ESP (Highlight player in red)
+                    if espToggles.Normal then
+                        for _, partName in ipairs(highlightParts) do
+                            local part = plr.Character:FindFirstChild(partName)
+                            if part then
+                                local size = part.Size
+                                local cf = part.CFrame
+                                local topLeft = Camera:WorldToViewportPoint((cf * CFrame.new(-size.X/2, size.Y/2, 0)).p)
+                                local topRight = Camera:WorldToViewportPoint((cf * CFrame.new(size.X/2, size.Y/2, 0)).p)
+                                local bottomLeft = Camera:WorldToViewportPoint((cf * CFrame.new(-size.X/2, -size.Y/2, 0)).p)
+                                local bottomRight = Camera:WorldToViewportPoint((cf * CFrame.new(size.X/2, -size.Y/2, 0)).p)
+                                local lines = drawings.Normal[partName]
+                                if topLeft.Z > 0 and topRight.Z > 0 and bottomLeft.Z > 0 and bottomRight.Z > 0 then
+                                    lines.Top.From = Vector2.new(topLeft.X, topLeft.Y)
+                                    lines.Top.To = Vector2.new(topRight.X, topRight.Y)
+                                    lines.Top.Visible = true
+
+                                    lines.Bottom.From = Vector2.new(bottomLeft.X, bottomLeft.Y)
+                                    lines.Bottom.To = Vector2.new(bottomRight.X, bottomRight.Y)
+                                    lines.Bottom.Visible = true
+
+                                    lines.Left.From = Vector2.new(topLeft.X, topLeft.Y)
+                                    lines.Left.To = Vector2.new(bottomLeft.X, bottomLeft.Y)
+                                    lines.Left.Visible = true
+
+                                    lines.Right.From = Vector2.new(topRight.X, topRight.Y)
+                                    lines.Right.To = Vector2.new(bottomRight.X, bottomRight.Y)
+                                    lines.Right.Visible = true
+                                else
+                                    for _, line in pairs(lines) do
+                                        line.Visible = false
+                                    end
+                                end
+                            else
+                                for _, line in pairs(drawings.Normal[partName]) do
+                                    line.Visible = false
+                                end
+                            end
                         end
                     else
-                        drawings.Outline.Visible = false
+                        for _, partLines in pairs(drawings.Normal) do
+                            for _, line in pairs(partLines) do
+                                line.Visible = false
+                            end
+                        end
                     end
                 else
                     for _, drawing in pairs(drawings) do
                         if type(drawing) == "table" then
-                            for _, line in pairs(drawing) do line.Visible = false end
+                            for _, line in pairs(drawing) do
+                                if type(line) == "table" then
+                                    for _, subLine in pairs(line) do
+                                        subLine.Visible = false
+                                    end
+                                else
+                                    line.Visible = false
+                                end
+                            end
                         else
                             drawing.Visible = false
                         end
@@ -561,7 +595,15 @@ local function DrawESP(plr)
             else
                 for _, drawing in pairs(drawings) do
                     if type(drawing) == "table" then
-                        for _, line in pairs(drawing) do line.Visible = false end
+                        for _, line in pairs(drawing) do
+                            if type(line) == "table" then
+                                for _, subLine in pairs(line) do
+                                    subLine.Visible = false
+                                end
+                            else
+                                line.Visible = false
+                            end
+                        end
                     else
                         drawing.Visible = false
                     end
@@ -649,7 +691,7 @@ FlyToggle.Parent = tabContents["Exploits"]
 
 local FlySpeedLabel = Instance.new("TextLabel")
 FlySpeedLabel.Size = UDim2.new(0, 100, 0, 20)
-FlySpeedLabel.Position = UDim2.new(0, 10, 0, 50)
+FlySpeedLabel.Position = UDim2.new(0, 10, 0, 40)
 FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
 FlySpeedLabel.BackgroundTransparency = 1
 FlySpeedLabel.TextTransparency = 1
@@ -660,7 +702,7 @@ FlySpeedLabel.Parent = tabContents["Exploits"]
 
 local FlySpeedSlider = Instance.new("TextButton")
 FlySpeedSlider.Size = UDim2.new(0, 200, 0, 20)
-FlySpeedSlider.Position = UDim2.new(0, 10, 0, 70)
+FlySpeedSlider.Position = UDim2.new(0, 10, 0, 60)
 FlySpeedSlider.Text = ""
 FlySpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 FlySpeedSlider.BackgroundTransparency = 1
@@ -673,9 +715,33 @@ FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
 FlySpeedKnob.BackgroundTransparency = 1
 FlySpeedKnob.Parent = FlySpeedSlider
 
+local InfiniteJumpToggle = Instance.new("TextButton")
+InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
+InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 90)
+InfiniteJumpToggle.Text = "Inf Jump: OFF"
+InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+InfiniteJumpToggle.BackgroundTransparency = 1
+InfiniteJumpToggle.TextTransparency = 1
+InfiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+InfiniteJumpToggle.Font = Enum.Font.SourceSans
+InfiniteJumpToggle.TextSize = 16
+InfiniteJumpToggle.Parent = tabContents["Exploits"]
+
+local NoClipToggle = Instance.new("TextButton")
+NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
+NoClipToggle.Position = UDim2.new(0, 10, 0, 130)
+NoClipToggle.Text = "NoClip: OFF"
+NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+NoClipToggle.BackgroundTransparency = 1
+NoClipToggle.TextTransparency = 1
+NoClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+NoClipToggle.Font = Enum.Font.SourceSans
+NoClipToggle.TextSize = 16
+NoClipToggle.Parent = tabContents["Exploits"]
+
 local SpeedToggle = Instance.new("TextButton")
 SpeedToggle.Size = UDim2.new(0, 100, 0, 30)
-SpeedToggle.Position = UDim2.new(0, 10, 0, 100)
+SpeedToggle.Position = UDim2.new(0, 10, 0, 170)
 SpeedToggle.Text = "Speed: OFF"
 SpeedToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 SpeedToggle.BackgroundTransparency = 1
@@ -687,7 +753,7 @@ SpeedToggle.Parent = tabContents["Exploits"]
 
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Size = UDim2.new(0, 100, 0, 20)
-SpeedLabel.Position = UDim2.new(0, 10, 0, 140)
+SpeedLabel.Position = UDim2.new(0, 10, 0, 200)
 SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.TextTransparency = 1
@@ -698,7 +764,7 @@ SpeedLabel.Parent = tabContents["Exploits"]
 
 local SpeedSlider = Instance.new("TextButton")
 SpeedSlider.Size = UDim2.new(0, 200, 0, 20)
-SpeedSlider.Position = UDim2.new(0, 10, 0, 160)
+SpeedSlider.Position = UDim2.new(0, 10, 0, 220)
 SpeedSlider.Text = ""
 SpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 SpeedSlider.BackgroundTransparency = 1
@@ -706,14 +772,14 @@ SpeedSlider.Parent = tabContents["Exploits"]
 
 local SpeedKnob = Instance.new("Frame")
 SpeedKnob.Size = UDim2.new(0, 10, 1, 0)
-SpeedKnob.Position = UDim2.new((speedMultiplier - 1) / 9, 0, 0, 0) -- Range 1 to 10
+SpeedKnob.Position = UDim2.new((speedMultiplier - 1) / 9, 0, 0, 0)
 SpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
 SpeedKnob.BackgroundTransparency = 1
 SpeedKnob.Parent = SpeedSlider
 
 local HighJumpToggle = Instance.new("TextButton")
 HighJumpToggle.Size = UDim2.new(0, 100, 0, 30)
-HighJumpToggle.Position = UDim2.new(0, 10, 0, 190)
+HighJumpToggle.Position = UDim2.new(0, 10, 0, 250)
 HighJumpToggle.Text = "High Jump: OFF"
 HighJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 HighJumpToggle.BackgroundTransparency = 1
@@ -725,7 +791,7 @@ HighJumpToggle.Parent = tabContents["Exploits"]
 
 local JumpHeightLabel = Instance.new("TextLabel")
 JumpHeightLabel.Size = UDim2.new(0, 100, 0, 20)
-JumpHeightLabel.Position = UDim2.new(0, 10, 0, 230)
+JumpHeightLabel.Position = UDim2.new(0, 10, 0, 280)
 JumpHeightLabel.Text = "Jump Height: " .. jumpHeight
 JumpHeightLabel.BackgroundTransparency = 1
 JumpHeightLabel.TextTransparency = 1
@@ -736,7 +802,7 @@ JumpHeightLabel.Parent = tabContents["Exploits"]
 
 local JumpHeightSlider = Instance.new("TextButton")
 JumpHeightSlider.Size = UDim2.new(0, 200, 0, 20)
-JumpHeightSlider.Position = UDim2.new(0, 10, 0, 250)
+JumpHeightSlider.Position = UDim2.new(0, 10, 0, 300)
 JumpHeightSlider.Text = ""
 JumpHeightSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 JumpHeightSlider.BackgroundTransparency = 1
@@ -744,14 +810,14 @@ JumpHeightSlider.Parent = tabContents["Exploits"]
 
 local JumpHeightKnob = Instance.new("Frame")
 JumpHeightKnob.Size = UDim2.new(0, 10, 1, 0)
-JumpHeightKnob.Position = UDim2.new((jumpHeight - 5) / 15, 0, 0, 0) -- Range 5 to 20
+JumpHeightKnob.Position = UDim2.new((jumpHeight - 5) / 15, 0, 0, 0)
 JumpHeightKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
 JumpHeightKnob.BackgroundTransparency = 1
 JumpHeightKnob.Parent = JumpHeightSlider
 
 local TpAuraToggle = Instance.new("TextButton")
 TpAuraToggle.Size = UDim2.new(0, 100, 0, 30)
-TpAuraToggle.Position = UDim2.new(0, 10, 0, 280)
+TpAuraToggle.Position = UDim2.new(0, 10, 0, 330)
 TpAuraToggle.Text = "TP Aura: OFF"
 TpAuraToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 TpAuraToggle.BackgroundTransparency = 1
@@ -763,7 +829,7 @@ TpAuraToggle.Parent = tabContents["Exploits"]
 
 local SaveLastPositionToggle = Instance.new("TextButton")
 SaveLastPositionToggle.Size = UDim2.new(0, 100, 0, 30)
-SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 310)
+SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 360)
 SaveLastPositionToggle.Text = "Save Pos: OFF"
 SaveLastPositionToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 SaveLastPositionToggle.BackgroundTransparency = 1
@@ -772,30 +838,6 @@ SaveLastPositionToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 SaveLastPositionToggle.Font = Enum.Font.SourceSans
 SaveLastPositionToggle.TextSize = 16
 SaveLastPositionToggle.Parent = tabContents["Exploits"]
-
-local NoClipToggle = Instance.new("TextButton")
-NoClipToggle.Size = UDim2.new(0, 100, 0, 340)
-NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
-NoClipToggle.Text = "NoClip: OFF"
-NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-NoClipToggle.BackgroundTransparency = 1
-NoClipToggle.TextTransparency = 1
-NoClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-NoClipToggle.Font = Enum.Font.SourceSans
-NoClipToggle.TextSize = 16
-NoClipToggle.Parent = tabContents["Exploits"]
-
-local InfiniteJumpToggle = Instance.new("TextButton")
-InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
-InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 140)
-InfiniteJumpToggle.Text = "Inf Jump: OFF"
-InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-InfiniteJumpToggle.BackgroundTransparency = 1
-InfiniteJumpToggle.TextTransparency = 1
-InfiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-InfiniteJumpToggle.Font = Enum.Font.SourceSans
-InfiniteJumpToggle.TextSize = 16
-InfiniteJumpToggle.Parent = tabContents["Exploits"]
 
 local draggingSlider = false
 FlySpeedSlider.InputBegan:Connect(function(input)
@@ -1037,7 +1079,7 @@ local function toggleHighJump()
     end
     
     local humanoid = getCharacter():WaitForChild("Humanoid")
-    humanoid.JumpPower = highJumpEnabled and jumpHeight or 7.6 -- Default Roblox JumpPower
+    humanoid.JumpPower = highJumpEnabled and jumpHeight or 7.6
     
     if not highJumpEnabled and saveLastPositionEnabled and lastPosition then
         getCharacter().HumanoidRootPart.Position = lastPosition
@@ -1062,18 +1104,18 @@ local function toggleTpAura()
                 local nearestPlayer = getNearestPlayer()
                 if nearestPlayer and nearestPlayer.Character and nearestPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     local targetRoot = nearestPlayer.Character.HumanoidRootPart
-                    local angles = {0, 90, 180, 270} -- Four directions around the player
+                    local angles = {0, 90, 180, 270}
                     local success = false
                     
                     for _, angle in ipairs(angles) do
                         local rad = math.rad(angle)
-                        local offset = Vector3.new(math.cos(rad) * 3, 0, math.sin(rad) * 3) -- 3 studs away
+                        local offset = Vector3.new(math.cos(rad) * 3, 0, math.sin(rad) * 3)
                         local newPos = targetRoot.Position + offset
                         
                         -- Check if position is above ground and not in walls
-                        local ray = Ray.new(newPos + Vector3.new(0, 5, 0), Vector3.new(0, -10, 0)) -- Raycast downward
+                        local ray = Ray.new(newPos + Vector3.new(0, 5, 0), Vector3.new(0, -10, 0))
                         local hit, pos = workspace:FindPartOnRay(ray, getCharacter())
-                        if hit and (pos.Y > newPos.Y - 1) then -- Ensure not underground
+                        if hit and (pos.Y > newPos.Y - 1) then
                             local region = Region3.new(newPos - Vector3.new(1, 1, 1), newPos + Vector3.new(1, 1, 1))
                             local parts = workspace:FindPartsInRegion3(region, nil, 10)
                             local isInWall = false
@@ -1084,7 +1126,6 @@ local function toggleTpAura()
                                 end
                             end
                             if not isInWall then
-                                -- Check if target is visible from new position
                                 local humanoidRootPart = getCharacter():WaitForChild("HumanoidRootPart")
                                 local direction = (targetRoot.Position - newPos).Unit
                                 local ray2 = Ray.new(newPos + Vector3.new(0, 3, 0), direction * 10)
@@ -1143,7 +1184,7 @@ local function animateGui(isVisible)
         local fadeInTab = TweenService:Create(TabFrame, fadeInInfo, {BackgroundTransparency = 0})
         local fadeInContent = TweenService:Create(ContentFrame, fadeInInfo, {BackgroundTransparency = 0})
         MainFrame.Size = UDim2.new(0, 400, 0, 0)
-        local scaleIn = TweenService:Create(MainFrame, scaleInInfo, {Size = UDim2.new(0, 400, 0, 400)}) -- Increased height for more options
+        local scaleIn = TweenService:Create(MainFrame, scaleInInfo, {Size = UDim2.new(0, 400, 0, 400)})
 
         fadeIn:Play()
         fadeInTab:Play()
