@@ -91,6 +91,7 @@ end
 local aimbotEnabled = false
 local aimlockEnabled = false
 local targetPlayer = nil
+local aimlockGyro = nil  -- To store the BodyGyro instance
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -150,7 +151,15 @@ AimlockToggle.MouseButton1Click:Connect(function()
     AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     if not aimlockEnabled then
         RunService:UnbindFromRenderStep("AimlockPersist")
+        if aimlockGyro then
+            aimlockGyro:Destroy()
+            aimlockGyro = nil
+        end
         targetPlayer = nil
+        local character = getCharacter()
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.AutoRotate = true
+        end
     end
 end)
 
@@ -164,27 +173,36 @@ UserInputService.InputBegan:Connect(function(input)
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
                     local targetPos = targetPlayer.Character.Head.Position
                     if targetPos.Magnitude < 10000 then
-                        -- Works in both first and third person by directly setting camera
                         Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
                     end
                 end
             end)
         end
         
-        -- Aimlock (Persistent Lock-on)
+        -- Aimlock (Persistent Lock-on with Character Rotation)
         if aimlockEnabled and targetPlayer then
+            local character = getCharacter()
+            local rootPart = character:WaitForChild("HumanoidRootPart")
+            local humanoid = character:WaitForChild("Humanoid")
+            humanoid.AutoRotate = false  -- Disable default rotation
+            
+            -- Create BodyGyro if it doesn't exist
+            if not aimlockGyro then
+                aimlockGyro = Instance.new("BodyGyro")
+                aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)  -- Strong enough to override movement
+                aimlockGyro.P = 10000  -- High power for instant response
+                aimlockGyro.D = 500  -- Damping to prevent oscillation
+                aimlockGyro.Parent = rootPart
+            end
+
             RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
                     local targetPos = targetPlayer.Character.Head.Position
                     if targetPos.Magnitude < 10000 then
-                        -- Persistent lock-on that overrides normal camera control
-                        local character = getCharacter()
-                        local humanoid = character:WaitForChild("Humanoid")
-                        humanoid.AutoRotate = false  -- Prevent character rotation
+                        -- Update camera
                         Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                        -- Rotate local player to face target
-                        local rootPart = character:WaitForChild("HumanoidRootPart")
-                        rootPart.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
+                        -- Update BodyGyro to rotate character
+                        aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
                     end
                 end
             end)
@@ -197,6 +215,10 @@ UserInputService.InputEnded:Connect(function(input)
         RunService:UnbindFromRenderStep("AimbotSnap")
         RunService:UnbindFromRenderStep("AimlockPersist")
         targetPlayer = nil
+        if aimlockGyro then
+            aimlockGyro:Destroy()
+            aimlockGyro = nil
+        end
         local character = getCharacter()
         if character and character:FindFirstChild("Humanoid") then
             character.Humanoid.AutoRotate = true  -- Restore normal rotation
@@ -218,13 +240,20 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     elseif aimlockEnabled and targetPlayer then
         local rootPart = char:WaitForChild("HumanoidRootPart")
         local humanoid = char:WaitForChild("Humanoid")
+        humanoid.AutoRotate = false
+        if not aimlockGyro then
+            aimlockGyro = Instance.new("BodyGyro")
+            aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)
+            aimlockGyro.P = 10000
+            aimlockGyro.D = 500
+            aimlockGyro.Parent = rootPart
+        end
         RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
                 local targetPos = targetPlayer.Character.Head.Position
                 if targetPos.Magnitude < 10000 then
-                    humanoid.AutoRotate = false
                     Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                    rootPart.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
+                    aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
                 end
             end
         end)
@@ -600,7 +629,7 @@ local function toggleFly()
         humanoid:ChangeState(Enum.HumanoidStateType.Physics)
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
+        bv.MaxTorque = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
         bv.Parent = rootPart
         
         local bg = Instance.new("BodyGyro")
