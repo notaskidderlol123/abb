@@ -87,85 +87,14 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot and Aim Lock Logic (Custom Implementation with Right-Click)
+-- Aimbot Tab
 local aimbotEnabled = false
-local aimLockEnabled = false
-local aimbotFov = 50
-local aimLockTarget = nil
-local aimKeybind = Enum.UserInputType.MouseButton2 -- Right-click to aim/lock
-
-local function getNearestPlayer()
-    local character = getCharacter()
-    local rootPart = character:WaitForChild("HumanoidRootPart")
-    local nearestPlayer = nil
-    local minDistance = aimbotFov
-
-    for _, player in pairs(PlayersService:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local targetRoot = player.Character.HumanoidRootPart
-            local distance = (rootPart.Position - targetRoot.Position).Magnitude
-            if distance < minDistance and Camera:WorldToViewportPoint(targetRoot.Position).Z > 0 then
-                minDistance = distance
-                nearestPlayer = player
-            end
-        end
-    end
-    return nearestPlayer
-end
-
-local function updateAimbot()
-    if not aimbotEnabled then return end
-    if UserInputService:IsMouseButtonPressed(aimKeybind) then
-        local target = getNearestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            local headPos = target.Character.Head.Position
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, headPos)
-        end
-    end
-end
-
-local bodyGyro = nil
-local function updateAimLock()
-    if not aimLockEnabled then
-        if bodyGyro then
-            bodyGyro:Destroy()
-            bodyGyro = nil
-        end
-        return
-    end
-    if UserInputService:IsMouseButtonPressed(aimKeybind) then
-        local target = getNearestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("Head") and not bodyGyro then
-            aimLockTarget = target
-            local character = getCharacter()
-            local rootPart = character:WaitForChild("HumanoidRootPart")
-            bodyGyro = Instance.new("BodyGyro")
-            bodyGyro.P = 10000
-            bodyGyro.D = 1000
-            bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
-            bodyGyro.Parent = rootPart
-        end
-        if aimLockTarget and aimLockTarget.Character and aimLockTarget.Character:FindFirstChild("Head") then
-            local headPos = aimLockTarget.Character.Head.Position
-            if bodyGyro then
-                bodyGyro.CFrame = CFrame.new(rootPart.Position, headPos)
-            end
-        else
-            if bodyGyro then
-                bodyGyro:Destroy()
-                bodyGyro = nil
-                aimLockTarget = nil
-            end
-        end
-    elseif bodyGyro then
-        bodyGyro:Destroy()
-        bodyGyro = nil
-        aimLockTarget = nil
-    end
-end
+local aimlockEnabled = false
+local targetPlayer = nil
+local aimlockGyro = nil  -- To store the BodyGyro instance
 
 local AimbotToggle = Instance.new("TextButton")
-AimbotToggle.Size = UDim2.new(0, 200, 0, 40)
+AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
 AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
 AimbotToggle.Text = "Aimbot: OFF"
 AimbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -173,45 +102,165 @@ AimbotToggle.BackgroundTransparency = 1
 AimbotToggle.TextTransparency = 1
 AimbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 AimbotToggle.Font = Enum.Font.SourceSans
-AimbotToggle.TextSize = 18
+AimbotToggle.TextSize = 16
 AimbotToggle.Parent = tabContents["Aimbot"]
 
-local AimLockToggle = Instance.new("TextButton")
-AimLockToggle.Size = UDim2.new(0, 200, 0, 40)
-AimLockToggle.Position = UDim2.new(0, 10, 0, 60)
-AimLockToggle.Text = "Aim Lock: OFF"
-AimLockToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimLockToggle.BackgroundTransparency = 1
-AimLockToggle.TextTransparency = 1
-AimLockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-AimLockToggle.Font = Enum.Font.SourceSans
-AimLockToggle.TextSize = 18
-AimLockToggle.Parent = tabContents["Aimbot"]
+local AimlockToggle = Instance.new("TextButton")
+AimlockToggle.Size = UDim2.new(0, 100, 0, 30)
+AimlockToggle.Position = UDim2.new(0, 10, 0, 50)
+AimlockToggle.Text = "Aimlock: OFF"
+AimlockToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+AimlockToggle.BackgroundTransparency = 1
+AimlockToggle.TextTransparency = 1
+AimlockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+AimlockToggle.Font = Enum.Font.SourceSans
+AimlockToggle.TextSize = 16
+AimlockToggle.Parent = tabContents["Aimbot"]
+
+local function getNearestPlayer()
+    local nearestDistance = math.huge
+    local nearestPlayer = nil
+    local character = getCharacter()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+
+    for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
+        if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("Head") then
+            local distance = (rootPart.Position - otherPlayer.Character.Head.Position).Magnitude
+            if distance < nearestDistance then
+                nearestDistance = distance
+                nearestPlayer = otherPlayer
+            end
+        end
+    end
+    return nearestPlayer
+end
 
 AimbotToggle.MouseButton1Click:Connect(function()
     aimbotEnabled = not aimbotEnabled
-    AimLockToggle.Text = "Aim Lock: OFF"
-    aimLockEnabled = false
-    AimLockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
     AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    if not aimbotEnabled then
+        RunService:UnbindFromRenderStep("AimbotSnap")
+        targetPlayer = nil
+    end
 end)
 
-AimLockToggle.MouseButton1Click:Connect(function()
-    aimLockEnabled = not aimLockEnabled
-    AimbotToggle.Text = "Aimbot: OFF"
-    aimbotEnabled = false
-    AimbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    AimLockToggle.Text = "Aim Lock: " .. (aimLockEnabled and "ON" or "OFF")
-    AimLockToggle.TextColor3 = aimLockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+AimlockToggle.MouseButton1Click:Connect(function()
+    aimlockEnabled = not aimlockEnabled
+    AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
+    AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    if not aimlockEnabled then
+        RunService:UnbindFromRenderStep("AimlockPersist")
+        if aimlockGyro then
+            aimlockGyro:Destroy()
+            aimlockGyro = nil
+        end
+        targetPlayer = nil
+        local character = getCharacter()
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.AutoRotate = true
+        end
+    end
 end)
 
-RunService.RenderStepped:Connect(function()
-    updateAimbot()
-    updateAimLock()
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        targetPlayer = getNearestPlayer()
+        
+        -- Aimbot (Snap to Head)
+        if aimbotEnabled and targetPlayer then
+            RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                    local targetPos = targetPlayer.Character.Head.Position
+                    if targetPos.Magnitude < 10000 then
+                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                    end
+                end
+            end)
+        end
+        
+        -- Aimlock (Persistent Lock-on with Character Rotation)
+        if aimlockEnabled and targetPlayer then
+            local character = getCharacter()
+            local rootPart = character:WaitForChild("HumanoidRootPart")
+            local humanoid = character:WaitForChild("Humanoid")
+            humanoid.AutoRotate = false  -- Disable default rotation
+            
+            -- Create BodyGyro if it doesn't exist
+            if not aimlockGyro then
+                aimlockGyro = Instance.new("BodyGyro")
+                aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)  -- Strong enough to override movement
+                aimlockGyro.P = 10000  -- High power for instant response
+                aimlockGyro.D = 500  -- Damping to prevent oscillation
+                aimlockGyro.Parent = rootPart
+            end
+
+            RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                    local targetPos = targetPlayer.Character.Head.Position
+                    if targetPos.Magnitude < 10000 then
+                        -- Update camera
+                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                        -- Update BodyGyro to rotate character
+                        aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
+                    end
+                end
+            end)
+        end
+    end
 end)
 
--- Visuals Tab (Unchanged)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        RunService:UnbindFromRenderStep("AimbotSnap")
+        RunService:UnbindFromRenderStep("AimlockPersist")
+        targetPlayer = nil
+        if aimlockGyro then
+            aimlockGyro:Destroy()
+            aimlockGyro = nil
+        end
+        local character = getCharacter()
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.AutoRotate = true  -- Restore normal rotation
+        end
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if aimbotEnabled and targetPlayer then
+        local rootPart = char:WaitForChild("HumanoidRootPart")
+        RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                local targetPos = targetPlayer.Character.Head.Position
+                if targetPos.Magnitude < 10000 then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                end
+            end
+        end)
+    elseif aimlockEnabled and targetPlayer then
+        local rootPart = char:WaitForChild("HumanoidRootPart")
+        local humanoid = char:WaitForChild("Humanoid")
+        humanoid.AutoRotate = false
+        if not aimlockGyro then
+            aimlockGyro = Instance.new("BodyGyro")
+            aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)
+            aimlockGyro.P = 10000
+            aimlockGyro.D = 500
+            aimlockGyro.Parent = rootPart
+        end
+        RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                local targetPos = targetPlayer.Character.Head.Position
+                if targetPos.Magnitude < 10000 then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                    aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
+                end
+            end
+        end)
+    end
+end)
+
+-- Visuals Tab
 local espToggles = {
     Box = false,
     Name = false,
@@ -228,9 +277,7 @@ local function DrawESP(plr)
         Box = Drawing.new("Quad"),
         Name = Drawing.new("Text"),
         Distance = Drawing.new("Text"),
-        HealthBarGreen = Drawing.new("Line"),
-        HealthBarRed = Drawing.new("Line"),
-        HealthLabel = Drawing.new("Text"),
+        HealthBar = Drawing.new("Line"),
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {}
@@ -251,18 +298,8 @@ local function DrawESP(plr)
     drawings.Distance.Outline = true
     drawings.Distance.Visible = false
 
-    drawings.HealthBarGreen.Thickness = 10
-    drawings.HealthBarGreen.Color = Color3.fromRGB(0, 255, 0)
-    drawings.HealthBarGreen.Visible = false
-
-    drawings.HealthBarRed.Thickness = 10
-    drawings.HealthBarRed.Color = Color3.fromRGB(255, 0, 0)
-    drawings.HealthBarRed.Visible = false
-
-    drawings.HealthLabel.Size = 14
-    drawings.HealthLabel.Color = Color3.fromRGB(255, 255, 255)
-    drawings.HealthLabel.Outline = true
-    drawings.HealthLabel.Visible = false
+    drawings.HealthBar.Thickness = 12
+    drawings.HealthBar.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
     drawings.Tracer.Thickness = 1
@@ -311,7 +348,7 @@ local function DrawESP(plr)
                     local headPart = plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart
                     local headPos, headVis
                     if headPart then
-                        headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 0.5, 0)).p)
+                        headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 1.5, 0)).p)
                     else
                         headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true
                     end
@@ -347,27 +384,16 @@ local function DrawESP(plr)
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            local barHeight = 50
-                            local barWidth = 10
-                            local barX = TopLeft.X - 20
-                            local barY = TopLeft.Y
-
-                            drawings.HealthBarGreen.From = Vector2.new(barX, barY + (barHeight * (1 - healthPercent)))
-                            drawings.HealthBarGreen.To = Vector2.new(barX + barWidth, barY + (barHeight * (1 - healthPercent)))
-                            drawings.HealthBarGreen.Visible = true
-
-                            drawings.HealthBarRed.From = Vector2.new(barX, barY)
-                            drawings.HealthBarRed.To = Vector2.new(barX + barWidth, barY + (barHeight * (1 - healthPercent)))
-                            drawings.HealthBarRed.Visible = true
-
-                            drawings.HealthLabel.Position = Vector2.new(barX - 30, barY + (barHeight / 2) - 10)
-                            drawings.HealthLabel.Text = "Health: " .. math.floor(humanoid.Health) .. "%"
-                            drawings.HealthLabel.Visible = true
+                            local barWidth = 100
+                            local barHeight = 12
+                            local barX = headPos.X - barWidth / 2
+                            drawings.HealthBar.From = Vector2.new(barX, headPos.Y - 10)
+                            drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), headPos.Y - 10)
+                            drawings.HealthBar.Color = Color3.fromRGB(0, 255, 0)
+                            drawings.HealthBar.Visible = true
                         end
                     else
-                        drawings.HealthBarGreen.Visible = false
-                        drawings.HealthBarRed.Visible = false
-                        drawings.HealthLabel.Visible = false
+                        drawings.HealthBar.Visible = false
                     end
 
                     if espToggles.Tracer then
@@ -520,14 +546,12 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (Custom Loop TP)
+-- Exploits Tab
 local flyEnabled = false
 local flySpeed = 75
 local controlSpeed = 10000
 local noClipEnabled = false
 local infiniteJumpEnabled = false
-local teleporting = false
-local selectedPlayer = nil
 
 local FlyToggle = Instance.new("TextButton")
 FlyToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -605,7 +629,7 @@ local function toggleFly()
         humanoid:ChangeState(Enum.HumanoidStateType.Physics)
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
+        bv.MaxTorque = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
         bv.Parent = rootPart
         
         local bg = Instance.new("BodyGyro")
@@ -619,17 +643,15 @@ local function toggleFly()
             while flyEnabled do
                 local char = getCharacter()
                 local root = char:WaitForChild("HumanoidRootPart")
+                local hum = char:WaitForChild("Humanoid")
                 local cam = workspace.CurrentCamera
                 local move = Vector3.new(0, 0, 0)
-                
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then 
-                    move = move + Vector3.new(0, -1, 0) 
-                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then move = move + Vector3.new(0, -1, 0) end
                 
                 if move.Magnitude > 0 then
                     move = move.Unit * flySpeed
@@ -649,6 +671,14 @@ end
 
 FlyToggle.MouseButton1Click:Connect(toggleFly)
 
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if flyEnabled then
+        wait(0.1)
+        toggleFly()
+        toggleFly()
+    end
+end)
+
 local NoClipToggle = Instance.new("TextButton")
 NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
 NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
@@ -661,39 +691,31 @@ NoClipToggle.Font = Enum.Font.SourceSans
 NoClipToggle.TextSize = 16
 NoClipToggle.Parent = tabContents["Exploits"]
 
-local Noclip = nil
-local Clip = true
-
-function noclip()
-    Clip = false
-    local function Nocl()
-        if Clip == false and PlayersService.LocalPlayer.Character ~= nil then
-            for _, v in pairs(PlayersService.LocalPlayer.Character:GetDescendants()) do
-                if v:IsA("BasePart") and v.CanCollide and v.Name ~= floatName then
-                    v.CanCollide = false
-                end
-            end
-        end
-        wait(0.21)
-    end
-    Noclip = game:GetService("RunService").Stepped:Connect(Nocl)
-end
-
-function clip()
-    if Noclip then Noclip:Disconnect() end
-    Clip = true
-end
-
-NoClipToggle.MouseButton1Click:Connect(function()
+local function toggleNoClip()
     noClipEnabled = not noClipEnabled
     NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
     NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    if noClipEnabled then
-        noclip()
-    else
-        clip()
-    end
-end)
+    
+    spawn(function()
+        while noClipEnabled do
+            local character = getCharacter()
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+            wait()
+        end
+        local character = getCharacter()
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end)
+end
+
+NoClipToggle.MouseButton1Click:Connect(toggleNoClip)
 
 local InfiniteJumpToggle = Instance.new("TextButton")
 InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -719,101 +741,6 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     infiniteJumpEnabled = not infiniteJumpEnabled
     InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-end)
-
-local TeleportTargetInput = Instance.new("TextBox")
-TeleportTargetInput.Size = UDim2.new(0, 200, 0, 30)
-TeleportTargetInput.Position = UDim2.new(0, 10, 0, 180)
-TeleportTargetInput.Text = "Enter Player Name"
-TeleportTargetInput.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-TeleportTargetInput.BackgroundTransparency = 1
-TeleportTargetInput.TextTransparency = 1
-TeleportTargetInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeleportTargetInput.Font = Enum.Font.SourceSans
-TeleportTargetInput.TextSize = 16
-TeleportTargetInput.Parent = tabContents["Exploits"]
-
-TeleportTargetInput.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        local inputValue = TeleportTargetInput.Text:lower()
-        local matchingPlayer = nil
-        for _, player in ipairs(PlayersService:GetPlayers()) do
-            local playerName = player.Name:lower()
-            local playerDisplayName = player.DisplayName:lower()
-            if playerName:find(inputValue, 1, true) or playerDisplayName:find(inputValue, 1, true) then
-                matchingPlayer = player
-                break
-            end
-        end
-        selectedPlayer = matchingPlayer
-        TeleportTargetInput.Text = matchingPlayer and matchingPlayer.Name or "Enter Player Name"
-    end
-end)
-
-local StartLoopTPButton = Instance.new("TextButton")
-StartLoopTPButton.Size = UDim2.new(0, 100, 0, 30)
-StartLoopTPButton.Position = UDim2.new(0, 220, 0, 180)
-StartLoopTPButton.Text = "Start Loop TP"
-StartLoopTPButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-StartLoopTPButton.BackgroundTransparency = 1
-StartLoopTPButton.TextTransparency = 1
-StartLoopTPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-StartLoopTPButton.Font = Enum.Font.SourceSans
-StartLoopTPButton.TextSize = 16
-StartLoopTPButton.Parent = tabContents["Exploits"]
-
-local StopLoopTPButton = Instance.new("TextButton")
-StopLoopTPButton.Size = UDim2.new(0, 100, 0, 30)
-StopLoopTPButton.Position = UDim2.new(0, 220, 0, 220)
-StopLoopTPButton.Text = "Stop Loop TP"
-StopLoopTPButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-StopLoopTPButton.BackgroundTransparency = 1
-StopLoopTPButton.TextTransparency = 1
-StopLoopTPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-StopLoopTPButton.Font = Enum.Font.SourceSans
-StopLoopTPButton.TextSize = 16
-StopLoopTPButton.Parent = tabContents["Exploits"]
-
-local function loopTP()
-    teleporting = true
-    local character = getCharacter()
-    local rootPart = character:WaitForChild("HumanoidRootPart")
-    while teleporting and selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") do
-        local targetRoot = selectedPlayer.Character.HumanoidRootPart
-        local targetPos = targetRoot.Position
-        local newPos = targetPos - (targetRoot.CFrame.LookVector * 5) + Vector3.new(0, targetRoot.Position.Y - rootPart.Position.Y, 0)
-        rootPart.CFrame = CFrame.new(newPos, targetPos)
-        RunService.Heartbeat:Wait()
-    end
-    teleporting = false
-end
-
-StartLoopTPButton.MouseButton1Click:Connect(function()
-    if selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        if teleporting then
-            teleporting = false
-            wait(0.1)
-        end
-        loopTP()
-    else
-        warn("Invalid target or target not found!")
-    end
-end)
-
-StopLoopTPButton.MouseButton1Click:Connect(function()
-    teleporting = false
-end)
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    if flyEnabled then
-        wait(0.1)
-        toggleFly()
-        toggleFly()
-    end
-    if teleporting and selectedPlayer then
-        wait(0.1)
-        loopTP()
-    end
 end)
 
 -- GUI Animation Setup
