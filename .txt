@@ -18,11 +18,13 @@ local function getCharacter()
 end
 
 -- Config System
-local configFileName = "config.json"
+local configFolder = "configs"
 local defaultConfig = {
     aimbotEnabled = false,
     aimlockEnabled = false,
     aimbotV2Enabled = false,
+    deadCheck = false,
+    teamCheck = false,
     espToggles = {
         Box = false,
         Name = false,
@@ -45,19 +47,27 @@ local config = defaultConfig
 local lastSaveTime = 0
 local saveDebounce = 1 -- 1-second debounce
 
-local function saveConfig()
+local function ensureConfigFolder()
+    if not isfolder(configFolder) then
+        makefolder(configFolder)
+    end
+end
+
+local function saveConfig(name)
+    ensureConfigFolder()
     local currentTime = tick()
     if currentTime - lastSaveTime < saveDebounce then return end
     lastSaveTime = currentTime
     local jsonConfig = HttpService:JSONEncode(config)
     pcall(function()
-        writefile(configFileName, jsonConfig)
+        writefile(configFolder .. "/" .. name .. ".json", jsonConfig)
     end)
 end
 
-local function loadConfig()
+local function loadConfig(name)
+    ensureConfigFolder()
     local success, data = pcall(function()
-        return readfile(configFileName)
+        return readfile(configFolder .. "/" .. name .. ".json")
     end)
     if success and data then
         local decoded = HttpService:JSONDecode(data)
@@ -70,13 +80,12 @@ local function loadConfig()
                 config[key] = value
             end
         end
+        return true
     end
+    return false
 end
 
--- Load config on startup
-loadConfig()
-
--- GUI Setup (unchanged except for applying config later)
+-- GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -106,14 +115,14 @@ ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.Parent = MainFrame
 
-local tabs = {"Aimbot", "Visuals", "Exploits"}
+local tabs = {"Aimbot", "Visuals", "Exploits", "Settings"}
 local currentTab = nil
 local tabContents = {}
 
 for i, tabName in ipairs(tabs) do
     local TabButton = Instance.new("TextButton")
-    TabButton.Size = UDim2.new(0, 133, 1, 0)
-    TabButton.Position = UDim2.new(0, (i-1) * 133, 0, 0)
+    TabButton.Size = UDim2.new(0, 100, 1, 0)
+    TabButton.Position = UDim2.new(0, (i-1) * 100, 0, 0)
     TabButton.Text = tabName
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
@@ -152,6 +161,8 @@ end
 local aimbotEnabled = config.aimbotEnabled
 local aimlockEnabled = config.aimlockEnabled
 local aimbotV2Enabled = config.aimbotV2Enabled
+local deadCheck = config.deadCheck
+local teamCheck = config.teamCheck
 local targetPlayer = nil
 local aimlockGyro = nil
 
@@ -191,18 +202,50 @@ AimbotV2Toggle.Font = Enum.Font.SourceSans
 AimbotV2Toggle.TextSize = 16
 AimbotV2Toggle.Parent = tabContents["Aimbot"]
 
+local DeadCheckToggle = Instance.new("TextButton")
+DeadCheckToggle.Size = UDim2.new(0, 100, 0, 30)
+DeadCheckToggle.Position = UDim2.new(0, 10, 0, 130)
+DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
+DeadCheckToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+DeadCheckToggle.BackgroundTransparency = 1
+DeadCheckToggle.TextTransparency = 1
+DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+DeadCheckToggle.Font = Enum.Font.SourceSans
+DeadCheckToggle.TextSize = 16
+DeadCheckToggle.Parent = tabContents["Aimbot"]
+
+local TeamCheckToggle = Instance.new("TextButton")
+TeamCheckToggle.Size = UDim2.new(0, 100, 0, 30)
+TeamCheckToggle.Position = UDim2.new(0, 10, 0, 170)
+TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
+TeamCheckToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TeamCheckToggle.BackgroundTransparency = 1
+TeamCheckToggle.TextTransparency = 1
+TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+TeamCheckToggle.Font = Enum.Font.SourceSans
+TeamCheckToggle.TextSize = 16
+TeamCheckToggle.Parent = tabContents["Aimbot"]
+
 local function getNearestPlayer()
     local nearestDistance = math.huge
     local nearestPlayer = nil
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
+    local localTeam = LocalPlayer.Team
 
     for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
         if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("Head") then
-            local distance = (rootPart.Position - otherPlayer.Character.Head.Position).Magnitude
-            if distance < nearestDistance then
-                nearestDistance = distance
-                nearestPlayer = otherPlayer
+            local humanoid = otherPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                local isDead = deadCheck and humanoid.Health <= 0
+                local isSameTeam = teamCheck and localTeam and otherPlayer.Team == localTeam
+                if not isDead and not isSameTeam then
+                    local distance = (rootPart.Position - otherPlayer.Character.Head.Position).Magnitude
+                    if distance < nearestDistance then
+                        nearestDistance = distance
+                        nearestPlayer = otherPlayer
+                    end
+                end
             end
         end
     end
@@ -214,7 +257,7 @@ AimbotToggle.MouseButton1Click:Connect(function()
     AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.aimbotEnabled = aimbotEnabled
-    saveConfig()
+    saveConfig("current")
     if not aimbotEnabled then
         RunService:UnbindFromRenderStep("AimbotSnap")
         targetPlayer = nil
@@ -226,7 +269,7 @@ AimlockToggle.MouseButton1Click:Connect(function()
     AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
     AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.aimlockEnabled = aimlockEnabled
-    saveConfig()
+    saveConfig("current")
     if not aimlockEnabled then
         RunService:UnbindFromRenderStep("AimlockPersist")
         if aimlockGyro then
@@ -246,11 +289,27 @@ AimbotV2Toggle.MouseButton1Click:Connect(function()
     AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
     AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.aimbotV2Enabled = aimbotV2Enabled
-    saveConfig()
+    saveConfig("current")
     if not aimbotV2Enabled then
         RunService:UnbindFromRenderStep("AimbotV2Move")
         targetPlayer = nil
     end
+end)
+
+DeadCheckToggle.MouseButton1Click:Connect(function()
+    deadCheck = not deadCheck
+    DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
+    DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.deadCheck = deadCheck
+    saveConfig("current")
+end)
+
+TeamCheckToggle.MouseButton1Click:Connect(function()
+    teamCheck = not teamCheck
+    TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
+    TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.teamCheck = teamCheck
+    saveConfig("current")
 end)
 
 UserInputService.InputBegan:Connect(function(input)
@@ -260,9 +319,15 @@ UserInputService.InputBegan:Connect(function(input)
         if aimbotEnabled and targetPlayer then
             RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                    local targetPos = targetPlayer.Character.Head.Position
-                    if targetPos.Magnitude < 10000 then
-                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                    local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid and (not deadCheck or humanoid.Health > 0) then
+                        local targetPos = targetPlayer.Character.Head.Position
+                        if targetPos.Magnitude < 10000 then
+                            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                        end
+                    else
+                        targetPlayer = nil
+                        RunService:UnbindFromRenderStep("AimbotSnap")
                     end
                 end
             end)
@@ -284,10 +349,21 @@ UserInputService.InputBegan:Connect(function(input)
 
             RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                    local targetPos = targetPlayer.Character.Head.Position
-                    if targetPos.Magnitude < 10000 then
-                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                        aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
+                    local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid and (not deadCheck or humanoid.Health > 0) then
+                        local targetPos = targetPlayer.Character.Head.Position
+                        if targetPos.Magnitude < 10000 then
+                            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                            aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
+                        end
+                    else
+                        targetPlayer = nil
+                        RunService:UnbindFromRenderStep("AimlockPersist")
+                        if aimlockGyro then
+                            aimlockGyro:Destroy()
+                            aimlockGyro = nil
+                        end
+                        humanoid.AutoRotate = true
                     end
                 end
             end)
@@ -296,12 +372,18 @@ UserInputService.InputBegan:Connect(function(input)
         if aimbotV2Enabled and targetPlayer then
             RunService:BindToRenderStep("AimbotV2Move", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                    local targetPos = Camera:WorldToViewportPoint(targetPlayer.Character.Head.Position)
-                    UserInputService.MouseDeltaSensitivity = 1
-                    local currentMousePos = UserInputService:GetMouseLocation()
-                    local deltaX = targetPos.X - currentMousePos.X
-                    local deltaY = targetPos.Y - currentMousePos.Y
-                    UserInputService.MouseMoveRelative(Vector2.new(deltaX, deltaY))
+                    local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid and (not deadCheck or humanoid.Health > 0) then
+                        local targetPos = Camera:WorldToViewportPoint(targetPlayer.Character.Head.Position)
+                        UserInputService.MouseDeltaSensitivity = 1
+                        local currentMousePos = UserInputService:GetMouseLocation()
+                        local deltaX = targetPos.X - currentMousePos.X
+                        local deltaY = targetPos.Y - currentMousePos.Y
+                        UserInputService.MouseMoveRelative(Vector2.new(deltaX, deltaY))
+                    else
+                        targetPlayer = nil
+                        RunService:UnbindFromRenderStep("AimbotV2Move")
+                    end
                 end
             end)
         end
@@ -330,9 +412,12 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         local rootPart = char:WaitForChild("HumanoidRootPart")
         RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                local targetPos = targetPlayer.Character.Head.Position
-                if targetPos.Magnitude < 10000 then
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid and (not deadCheck or humanoid.Health > 0) then
+                    local targetPos = targetPlayer.Character.Head.Position
+                    if targetPos.Magnitude < 10000 then
+                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                    end
                 end
             end
         end)
@@ -349,10 +434,13 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         end
         RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                local targetPos = targetPlayer.Character.Head.Position
-                if targetPos.Magnitude < 10000 then
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                    aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
+                local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid and (not deadCheck or humanoid.Health > 0) then
+                    local targetPos = targetPlayer.Character.Head.Position
+                    if targetPos.Magnitude < 10000 then
+                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                        aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
+                    end
                 end
             end
         end)
@@ -363,6 +451,7 @@ end)
 local espToggles = config.espToggles
 local espPlayers = {}
 local lastPositions = {}
+local lastKnownPositions = {} -- For persistent tracers
 
 local function DrawESP(plr)
     local drawings = {
@@ -439,6 +528,7 @@ local function DrawESP(plr)
         connection = RunService.RenderStepped:Connect(function()
             if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
                 local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
+                lastKnownPositions[plr] = plr.Character.PrimaryPart.Position
                 if vis then
                     local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
                     local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
@@ -492,12 +582,12 @@ local function DrawESP(plr)
                             local barWidth = 60
                             local barHeight = 10
                             local barX = headPos.X - (barWidth / 2)
-                            local barY = headPos.Y - 30
+                            local barY = headPos.Y + 20 -- Moved down
 
                             local healthText = math.floor(healthPercent * 100) .. "%"
                             local textWidth = drawings.HealthText.TextBounds.X
                             drawings.HealthText.Text = healthText
-                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y - 50)
+                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y) -- Moved down
                             drawings.HealthText.Visible = true
 
                             drawings.HealthBar.Position = Vector2.new(barX, barY)
@@ -514,13 +604,14 @@ local function DrawESP(plr)
                         local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso")
                         if chest then
                             local chestPos, chestVis = Camera:WorldToViewportPoint(chest.Position)
-                            if chestVis then
-                                drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                                drawings.Tracer.To = Vector2.new(chestPos.X, chestPos.Y)
-                                drawings.Tracer.Visible = true
-                            else
-                                drawings.Tracer.Visible = false
-                            end
+                            drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                            drawings.Tracer.To = Vector2.new(chestPos.X, chestPos.Y)
+                            drawings.Tracer.Visible = true
+                        elseif lastKnownPositions[plr] then
+                            local lastPos = Camera:WorldToViewportPoint(lastKnownPositions[plr])
+                            drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                            drawings.Tracer.To = Vector2.new(lastPos.X, lastPos.Y)
+                            drawings.Tracer.Visible = true
                         else
                             drawings.Tracer.Visible = false
                         end
@@ -589,20 +680,24 @@ local function DrawESP(plr)
                         end
                     end
                 else
-                    for key, drawing in pairs(drawings) do
-                        if type(drawing) == "table" then
-                            for _, line in pairs(drawing) do
-                                if type(line) == "table" then
-                                    for _, subLine in pairs(line) do
-                                        subLine.Visible = false
-                                    end
-                                else
-                                    line.Visible = false
-                                end
-                            end
-                        else
-                            drawing.Visible = false
-                        end
+                    if espToggles.Tracer and lastKnownPositions[plr] then
+                        local lastPos = Camera:WorldToViewportPoint(lastKnownPositions[plr])
+                        drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                        drawings.Tracer.To = Vector2.new(lastPos.X, lastPos.Y)
+                        drawings.Tracer.Visible = true
+                    else
+                        drawings.Tracer.Visible = false
+                    end
+                    drawings.Box.Visible = false
+                    drawings.Name.Visible = false
+                    drawings.Speed.Visible = false
+                    drawings.HealthText.Visible = false
+                    drawings.HealthBar.Visible = false
+                    for _, line in pairs(drawings.Skeleton) do
+                        line.Visible = false
+                    end
+                    for _, line in ipairs(drawings.Box3D) do
+                        line.Visible = false
                     end
                 end
             else
@@ -673,7 +768,7 @@ for feature, enabled in pairs(espToggles) do
         Toggle.Text = feature .. ": " .. (espToggles[feature] and "ON" or "OFF")
         Toggle.TextColor3 = espToggles[feature] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
         config.espToggles[feature] = espToggles[feature]
-        saveConfig()
+        saveConfig("current")
     end)
     yOffset = yOffset + 40
 end
@@ -814,6 +909,140 @@ SaveLastPositionToggle.Font = Enum.Font.SourceSans
 SaveLastPositionToggle.TextSize = 16
 SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
+-- Settings Tab
+local ConfigNameInput = Instance.new("TextBox")
+ConfigNameInput.Size = UDim2.new(0, 200, 0, 30)
+ConfigNameInput.Position = UDim2.new(0, 10, 0, 10)
+ConfigNameInput.Text = "Enter Config Name"
+ConfigNameInput.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ConfigNameInput.BackgroundTransparency = 1
+ConfigNameInput.TextTransparency = 1
+ConfigNameInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConfigNameInput.Font = Enum.Font.SourceSans
+ConfigNameInput.TextSize = 16
+ConfigNameInput.Parent = tabContents["Settings"]
+
+local SaveConfigButton = Instance.new("TextButton")
+SaveConfigButton.Size = UDim2.new(0, 100, 0, 30)
+SaveConfigButton.Position = UDim2.new(0, 10, 0, 50)
+SaveConfigButton.Text = "Save Config"
+SaveConfigButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SaveConfigButton.BackgroundTransparency = 1
+SaveConfigButton.TextTransparency = 1
+SaveConfigButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SaveConfigButton.Font = Enum.Font.SourceSans
+SaveConfigButton.TextSize = 16
+SaveConfigButton.Parent = tabContents["Settings"]
+
+local LoadConfigButton = Instance.new("TextButton")
+LoadConfigButton.Size = UDim2.new(0, 100, 0, 30)
+LoadConfigButton.Position = UDim2.new(0, 120, 0, 50)
+LoadConfigButton.Text = "Load Config"
+LoadConfigButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+LoadConfigButton.BackgroundTransparency = 1
+LoadConfigButton.TextTransparency = 1
+LoadConfigButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoadConfigButton.Font = Enum.Font.SourceSans
+LoadConfigButton.TextSize = 16
+LoadConfigButton.Parent = tabContents["Settings"]
+
+local ConfigStatusLabel = Instance.new("TextLabel")
+ConfigStatusLabel.Size = UDim2.new(0, 200, 0, 20)
+ConfigStatusLabel.Position = UDim2.new(0, 10, 0, 90)
+ConfigStatusLabel.Text = "Status: Idle"
+ConfigStatusLabel.BackgroundTransparency = 1
+ConfigStatusLabel.TextTransparency = 1
+ConfigStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConfigStatusLabel.Font = Enum.Font.SourceSans
+ConfigStatusLabel.TextSize = 16
+ConfigStatusLabel.Parent = tabContents["Settings"]
+
+SaveConfigButton.MouseButton1Click:Connect(function()
+    local configName = ConfigNameInput.Text
+    if configName and configName ~= "" and configName ~= "Enter Config Name" then
+        saveConfig(configName)
+        ConfigStatusLabel.Text = "Status: Saved '" .. configName .. "'"
+    else
+        ConfigStatusLabel.Text = "Status: Enter a valid name"
+    end
+end)
+
+LoadConfigButton.MouseButton1Click:Connect(function()
+    local configName = ConfigNameInput.Text
+    if configName and configName ~= "" and configName ~= "Enter Config Name" then
+        if loadConfig(configName) then
+            -- Apply loaded config to UI and variables
+            aimbotEnabled = config.aimbotEnabled
+            AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+            AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            aimlockEnabled = config.aimlockEnabled
+            AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
+            AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            aimbotV2Enabled = config.aimbotV2Enabled
+            AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
+            AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            deadCheck = config.deadCheck
+            DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
+            DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            teamCheck = config.teamCheck
+            TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
+            TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            for feature, enabled in pairs(config.espToggles) do
+                espToggles[feature] = enabled
+                for _, child in pairs(tabContents["Visuals"]:GetChildren()) do
+                    if child:IsA("TextButton") and child.Text:find(feature) then
+                        child.Text = feature .. ": " .. (enabled and "ON" or "OFF")
+                        child.TextColor3 = enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+                    end
+                end
+            end
+
+            flyEnabled = config.flyEnabled
+            FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
+            FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            flySpeed = config.flySpeed
+            FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
+            FlySpeedKnob.Position = UDim2.new((flySpeed - 10) / 190, 0, 0, 0)
+
+            infiniteJumpEnabled = config.infiniteJumpEnabled
+            InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
+            InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            noClipEnabled = config.noClipEnabled
+            NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
+            NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            speedEnabled = config.speedEnabled
+            SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
+            SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            speedMultiplier = config.speedMultiplier
+            SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
+            SpeedKnob.Position = UDim2.new((speedMultiplier - 1) / 9, 0, 0, 0)
+
+            tpAuraEnabled = config.tpAuraEnabled
+            TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
+            TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            saveLastPositionEnabled = config.saveLastPositionEnabled
+            SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
+            SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+            ConfigStatusLabel.Text = "Status: Loaded '" .. configName .. "'"
+        else
+            ConfigStatusLabel.Text = "Status: Config '" .. configName .. "' not found"
+        end
+    else
+        ConfigStatusLabel.Text = "Status: Enter a valid name"
+    end
+end)
+
 local draggingFlySlider = false
 local draggingSpeedSlider = false
 
@@ -852,7 +1081,7 @@ RunService.RenderStepped:Connect(function()
         flySpeed = math.floor(10 + (flyNewPos * 190))
         FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
         config.flySpeed = flySpeed
-        saveConfig()
+        saveConfig("current")
     end
 
     if draggingSpeedSlider then
@@ -863,7 +1092,7 @@ RunService.RenderStepped:Connect(function()
         speedMultiplier = math.floor(1 + (speedNewPos * 9))
         SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
         config.speedMultiplier = speedMultiplier
-        saveConfig()
+        saveConfig("current")
     end
 end)
 
@@ -872,7 +1101,7 @@ local function toggleFly()
     FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
     FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.flyEnabled = flyEnabled
-    saveConfig()
+    saveConfig("current")
     
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
@@ -959,7 +1188,7 @@ local function toggleNoClip()
     NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
     NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.noClipEnabled = noClipEnabled
-    saveConfig()
+    saveConfig("current")
     
     spawn(function()
         while noClipEnabled do
@@ -995,7 +1224,7 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.infiniteJumpEnabled = infiniteJumpEnabled
-    saveConfig()
+    saveConfig("current")
 end)
 
 local function toggleSpeed()
@@ -1003,7 +1232,7 @@ local function toggleSpeed()
     SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
     SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.speedEnabled = speedEnabled
-    saveConfig()
+    saveConfig("current")
     
     if speedEnabled and saveLastPositionEnabled then
         lastPosition = getCharacter().HumanoidRootPart.Position
@@ -1043,7 +1272,7 @@ local function toggleTpAura()
     TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
     TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.tpAuraEnabled = tpAuraEnabled
-    saveConfig()
+    saveConfig("current")
     
     if tpAuraEnabled and saveLastPositionEnabled then
         lastPosition = getCharacter().HumanoidRootPart.Position
@@ -1112,10 +1341,10 @@ SaveLastPositionToggle.MouseButton1Click:Connect(function()
     SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
     SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.saveLastPositionEnabled = saveLastPositionEnabled
-    saveConfig()
+    saveConfig("current")
 end)
 
--- GUI Animation Setup (unchanged)
+-- GUI Animation Setup
 local isGuiVisible = false
 local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -1150,12 +1379,12 @@ local function animateGui(isVisible)
         if tabContents then
             for _, tabContent in pairs(tabContents) do
                 for _, child in pairs(tabContent:GetChildren()) do
-                    if child:IsA("TextButton") or child:IsA("TextLabel") then
+                    if child:IsA("TextButton") or child:IsA("TextLabel") or child:IsA("TextBox") then
                         child.TextTransparency = 1
                         local fadeInChild = TweenService:Create(child, fadeInInfo, {TextTransparency = 0})
                         fadeInChild:Play()
                     end
-                    if child:IsA("TextButton") then
+                    if child:IsA("TextButton") or child:IsA("TextBox") then
                         child.BackgroundTransparency = 1
                         local fadeInBg = TweenService:Create(child, fadeInInfo, {BackgroundTransparency = 0})
                         fadeInBg:Play()
@@ -1184,11 +1413,11 @@ local function animateGui(isVisible)
         if tabContents then
             for _, tabContent in pairs(tabContents) do
                 for _, child in pairs(tabContent:GetChildren()) do
-                    if child:IsA("TextButton") or child:IsA("TextLabel") then
+                    if child:IsA("TextButton") or child:IsA("TextLabel") or child:IsA("TextBox") then
                         local fadeOutChild = TweenService:Create(child, fadeOutInfo, {TextTransparency = 1})
                         fadeOutChild:Play()
                     end
-                    if child:IsA("TextButton") then
+                    if child:IsA("TextButton") or child:IsA("TextBox") then
                         local fadeOutBg = TweenService:Create(child, fadeOutInfo, {BackgroundTransparency = 1})
                         fadeOutBg:Play()
                     end
@@ -1243,3 +1472,6 @@ spawn(function()
     wait(0.1)
     animateGui(true)
 end)
+
+-- Load default "current" config if it exists
+loadConfig("current")
