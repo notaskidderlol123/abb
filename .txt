@@ -89,7 +89,7 @@ end
 
 -- Aimbot Tab
 local aimbotEnabled = false
-local aimbotV2Enabled = false  -- New variable for Aimlock
+local aimlockEnabled = false
 local targetPlayer = nil
 
 local AimbotToggle = Instance.new("TextButton")
@@ -104,18 +104,17 @@ AimbotToggle.Font = Enum.Font.SourceSans
 AimbotToggle.TextSize = 16
 AimbotToggle.Parent = tabContents["Aimbot"]
 
--- New Aimbot V2 (Aimlock) Toggle
-local AimbotV2Toggle = Instance.new("TextButton")
-AimbotV2Toggle.Size = UDim2.new(0, 100, 0, 30)
-AimbotV2Toggle.Position = UDim2.new(0, 10, 0, 50)
-AimbotV2Toggle.Text = "Aimlock: OFF"
-AimbotV2Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimbotV2Toggle.BackgroundTransparency = 1
-AimbotV2Toggle.TextTransparency = 1
-AimbotV2Toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-AimbotV2Toggle.Font = Enum.Font.SourceSans
-AimbotV2Toggle.TextSize = 16
-AimbotV2Toggle.Parent = tabContents["Aimbot"]
+local AimlockToggle = Instance.new("TextButton")
+AimlockToggle.Size = UDim2.new(0, 100, 0, 30)
+AimlockToggle.Position = UDim2.new(0, 10, 0, 50)
+AimlockToggle.Text = "Aimlock: OFF"
+AimlockToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+AimlockToggle.BackgroundTransparency = 1
+AimlockToggle.TextTransparency = 1
+AimlockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+AimlockToggle.Font = Enum.Font.SourceSans
+AimlockToggle.TextSize = 16
+AimlockToggle.Parent = tabContents["Aimbot"]
 
 local function getNearestPlayer()
     local nearestDistance = math.huge
@@ -124,8 +123,8 @@ local function getNearestPlayer()
     local rootPart = character:WaitForChild("HumanoidRootPart")
 
     for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
-        if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (rootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
+        if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("Head") then
+            local distance = (rootPart.Position - otherPlayer.Character.Head.Position).Magnitude
             if distance < nearestDistance then
                 nearestDistance = distance
                 nearestPlayer = otherPlayer
@@ -140,18 +139,17 @@ AimbotToggle.MouseButton1Click:Connect(function()
     AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     if not aimbotEnabled then
-        RunService:UnbindFromRenderStep("LockOnPlayer")
+        RunService:UnbindFromRenderStep("AimbotSnap")
         targetPlayer = nil
     end
 end)
 
--- New Aimbot V2 (Aimlock) Toggle Logic
-AimbotV2Toggle.MouseButton1Click:Connect(function()
-    aimbotV2Enabled = not aimbotV2Enabled
-    AimbotV2Toggle.Text = "Aimlock: " .. (aimbotV2Enabled and "ON" or "OFF")
-    AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    if not aimbotV2Enabled then
-        RunService:UnbindFromRenderStep("Aimlock")
+AimlockToggle.MouseButton1Click:Connect(function()
+    aimlockEnabled = not aimlockEnabled
+    AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
+    AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    if not aimlockEnabled then
+        RunService:UnbindFromRenderStep("AimlockPersist")
         targetPlayer = nil
     end
 end)
@@ -160,25 +158,33 @@ UserInputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         targetPlayer = getNearestPlayer()
         
-        -- Regular Aimbot
+        -- Aimbot (Snap to Head)
         if aimbotEnabled and targetPlayer then
-            RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local targetPos = targetPlayer.Character.HumanoidRootPart.Position
+            RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                    local targetPos = targetPlayer.Character.Head.Position
                     if targetPos.Magnitude < 10000 then
+                        -- Works in both first and third person by directly setting camera
                         Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
                     end
                 end
             end)
         end
         
-        -- Aimlock (Aimbot V2)
-        if aimbotV2Enabled and targetPlayer then
-            RunService:BindToRenderStep("Aimlock", Enum.RenderPriority.Camera.Value + 1, function()
+        -- Aimlock (Persistent Lock-on)
+        if aimlockEnabled and targetPlayer then
+            RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
                     local targetPos = targetPlayer.Character.Head.Position
                     if targetPos.Magnitude < 10000 then
+                        -- Persistent lock-on that overrides normal camera control
+                        local character = getCharacter()
+                        local humanoid = character:WaitForChild("Humanoid")
+                        humanoid.AutoRotate = false  -- Prevent character rotation
                         Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                        -- Rotate local player to face target
+                        local rootPart = character:WaitForChild("HumanoidRootPart")
+                        rootPart.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
                     end
                 end
             end)
@@ -188,30 +194,37 @@ end)
 
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        RunService:UnbindFromRenderStep("LockOnPlayer")
-        RunService:UnbindFromRenderStep("Aimlock")
+        RunService:UnbindFromRenderStep("AimbotSnap")
+        RunService:UnbindFromRenderStep("AimlockPersist")
         targetPlayer = nil
+        local character = getCharacter()
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.AutoRotate = true  -- Restore normal rotation
+        end
     end
 end)
 
 LocalPlayer.CharacterAdded:Connect(function(char)
     if aimbotEnabled and targetPlayer then
         local rootPart = char:WaitForChild("HumanoidRootPart")
-        RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local targetPos = targetPlayer.Character.HumanoidRootPart.Position
+        RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                local targetPos = targetPlayer.Character.Head.Position
                 if targetPos.Magnitude < 10000 then
                     Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
                 end
             end
         end)
-    elseif aimbotV2Enabled and targetPlayer then
+    elseif aimlockEnabled and targetPlayer then
         local rootPart = char:WaitForChild("HumanoidRootPart")
-        RunService:BindToRenderStep("Aimlock", Enum.RenderPriority.Camera.Value + 1, function()
+        local humanoid = char:WaitForChild("Humanoid")
+        RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
                 local targetPos = targetPlayer.Character.Head.Position
                 if targetPos.Magnitude < 10000 then
+                    humanoid.AutoRotate = false
                     Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                    rootPart.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
                 end
             end
         end)
