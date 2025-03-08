@@ -17,7 +17,7 @@ local function getCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
--- Config System (Simplified to single file)
+-- Config System
 local configFile = "config.json"
 local defaultConfig = {
     aimbotEnabled = false,
@@ -42,15 +42,18 @@ local defaultConfig = {
     speedMultiplier = 1,
     tpAuraEnabled = false,
     saveLastPositionEnabled = false,
-    playerListEnabled = false
+    playerListEnabled = false,
+    saveConfigEnabled = false -- New toggle for saving config
 }
 local config = defaultConfig
 
 local function saveConfig()
-    local jsonConfig = HttpService:JSONEncode(config)
-    pcall(function()
-        writefile(configFile, jsonConfig)
-    end)
+    if config.saveConfigEnabled then -- Only save if toggle is ON
+        local jsonConfig = HttpService:JSONEncode(config)
+        pcall(function()
+            writefile(configFile, jsonConfig)
+        end)
+    end
 end
 
 local function loadConfig()
@@ -60,6 +63,18 @@ local function loadConfig()
     if success and data then
         local decoded = HttpService:JSONDecode(data)
         config = decoded
+        -- Ensure all default fields exist in loaded config
+        for k, v in pairs(defaultConfig) do
+            if config[k] == nil then
+                config[k] = v
+            elseif type(v) == "table" then
+                for subK, subV in pairs(v) do
+                    if config[k][subK] == nil then
+                        config[k][subK] = subV
+                    end
+                end
+            end
+        end
     end
 end
 
@@ -795,7 +810,7 @@ local lastPosition = nil
 
 local FlyToggle = Instance.new("TextButton")
 FlyToggle.Size = UDim2.new(0, 100, 0, 30)
-FlyToggle.Position = UDim2.new(0, 10, 0, 10) -- Fixed: Corrected "理念10" to 10
+FlyToggle.Position = UDim2.new(0, 10, 0, 10)
 FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
 FlyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 FlyToggle.BackgroundTransparency = 0
@@ -870,7 +885,7 @@ SpeedToggle.Parent = tabContents["Exploits"]
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Size = UDim2.new(0, 100, 0, 20)
 SpeedLabel.Position = UDim2.new(0, 10, 0, 200)
-SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x" -- Fixed: Removed "neurodegenerx"
+SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.TextTransparency = 0
 SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -917,7 +932,7 @@ SaveLastPositionToggle.Font = Enum.Font.SourceSans
 SaveLastPositionToggle.TextSize = 16
 SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
--- Settings Tab with Player List Toggle
+-- Settings Tab with Player List and Save Config Toggles
 local PlayerListToggle = Instance.new("TextButton")
 PlayerListToggle.Size = UDim2.new(0, 100, 0, 30)
 PlayerListToggle.Position = UDim2.new(0, 10, 0, 10)
@@ -929,6 +944,18 @@ PlayerListToggle.TextColor3 = config.playerListEnabled and Color3.fromRGB(0, 255
 PlayerListToggle.Font = Enum.Font.SourceSans
 PlayerListToggle.TextSize = 16
 PlayerListToggle.Parent = tabContents["Settings"]
+
+local SaveConfigToggle = Instance.new("TextButton")
+SaveConfigToggle.Size = UDim2.new(0, 100, 0, 30)
+SaveConfigToggle.Position = UDim2.new(0, 10, 0, 50)
+SaveConfigToggle.Text = "Save Config: " .. (config.saveConfigEnabled and "ON" or "OFF")
+SaveConfigToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SaveConfigToggle.BackgroundTransparency = 0
+SaveConfigToggle.TextTransparency = 0
+SaveConfigToggle.TextColor3 = config.saveConfigEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+SaveConfigToggle.Font = Enum.Font.SourceSans
+SaveConfigToggle.TextSize = 16
+SaveConfigToggle.Parent = tabContents["Settings"]
 
 -- Player List GUI
 local PlayerListFrame = Instance.new("Frame")
@@ -1014,6 +1041,13 @@ PlayerListToggle.MouseButton1Click:Connect(function()
     if config.playerListEnabled then
         updatePlayerList()
     end
+end)
+
+SaveConfigToggle.MouseButton1Click:Connect(function()
+    config.saveConfigEnabled = not config.saveConfigEnabled
+    SaveConfigToggle.Text = "Save Config: " .. (config.saveConfigEnabled and "ON" or "OFF")
+    SaveConfigToggle.TextColor3 = config.saveConfigEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    saveConfig() -- Save immediately when toggling to reflect the new state
 end)
 
 PlayersService.PlayerAdded:Connect(function(player)
@@ -1464,7 +1498,7 @@ DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.f
 TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
 TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
--- Sync Visuals tab toggles (fixed "Box3D" label issue)
+-- Sync Visuals tab toggles
 for feature, enabled in pairs(espToggles) do
     for _, child in pairs(tabContents["Visuals"]:GetChildren()) do
         if child:IsA("TextButton") and child.Text:find(feature) then
@@ -1502,6 +1536,9 @@ PlayerListFrame.Visible = config.playerListEnabled
 if config.playerListEnabled then
     updatePlayerList()
 end
+
+SaveConfigToggle.Text = "Save Config: " .. (config.saveConfigEnabled and "ON" or "OFF")
+SaveConfigToggle.TextColor3 = config.saveConfigEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
 -- Set initial tab
 if tabContents["Aimbot"] then
