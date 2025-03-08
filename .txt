@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 local PlayersService = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
 
 -- Safely get LocalPlayer with a wait loop
 local LocalPlayer
@@ -16,12 +17,71 @@ local function getCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
--- GUI Setup
+-- Config System
+local configFileName = "config.json"
+local defaultConfig = {
+    aimbotEnabled = false,
+    aimlockEnabled = false,
+    aimbotV2Enabled = false,
+    espToggles = {
+        Box = false,
+        Name = false,
+        Speed = false,
+        HealthBar = false,
+        Tracer = true,
+        Skeleton = false,
+        Box3D = false
+    },
+    flyEnabled = false,
+    flySpeed = 75,
+    infiniteJumpEnabled = false,
+    noClipEnabled = false,
+    speedEnabled = false,
+    speedMultiplier = 1,
+    tpAuraEnabled = false,
+    saveLastPositionEnabled = false
+}
+local config = defaultConfig
+local lastSaveTime = 0
+local saveDebounce = 1 -- 1-second debounce
+
+local function saveConfig()
+    local currentTime = tick()
+    if currentTime - lastSaveTime < saveDebounce then return end
+    lastSaveTime = currentTime
+    local jsonConfig = HttpService:JSONEncode(config)
+    pcall(function()
+        writefile(configFileName, jsonConfig)
+    end)
+end
+
+local function loadConfig()
+    local success, data = pcall(function()
+        return readfile(configFileName)
+    end)
+    if success and data then
+        local decoded = HttpService:JSONDecode(data)
+        for key, value in pairs(decoded) do
+            if type(value) == "table" and config[key] then
+                for subKey, subValue in pairs(value) do
+                    config[key][subKey] = subValue
+                end
+            else
+                config[key] = value
+            end
+        end
+    end
+end
+
+-- Load config on startup
+loadConfig()
+
+-- GUI Setup (unchanged except for applying config later)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true -- Prevents GUI from being hidden by escape menu
+ScreenGui.IgnoreGuiInset = true
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 400)
@@ -89,20 +149,20 @@ for i, tabName in ipairs(tabs) do
 end
 
 -- Aimbot Tab
-local aimbotEnabled = false
-local aimlockEnabled = false
-local aimbotV2Enabled = false -- New AimbotV2 toggle
+local aimbotEnabled = config.aimbotEnabled
+local aimlockEnabled = config.aimlockEnabled
+local aimbotV2Enabled = config.aimbotV2Enabled
 local targetPlayer = nil
 local aimlockGyro = nil
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
 AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
-AimbotToggle.Text = "Aimbot: OFF"
+AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
 AimbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 AimbotToggle.BackgroundTransparency = 1
 AimbotToggle.TextTransparency = 1
-AimbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 AimbotToggle.Font = Enum.Font.SourceSans
 AimbotToggle.TextSize = 16
 AimbotToggle.Parent = tabContents["Aimbot"]
@@ -110,23 +170,23 @@ AimbotToggle.Parent = tabContents["Aimbot"]
 local AimlockToggle = Instance.new("TextButton")
 AimlockToggle.Size = UDim2.new(0, 100, 0, 30)
 AimlockToggle.Position = UDim2.new(0, 10, 0, 50)
-AimlockToggle.Text = "Aimlock: OFF"
+AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
 AimlockToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 AimlockToggle.BackgroundTransparency = 1
 AimlockToggle.TextTransparency = 1
-AimlockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 AimlockToggle.Font = Enum.Font.SourceSans
 AimlockToggle.TextSize = 16
 AimlockToggle.Parent = tabContents["Aimbot"]
 
-local AimbotV2Toggle = Instance.new("TextButton") -- New AimbotV2 toggle
+local AimbotV2Toggle = Instance.new("TextButton")
 AimbotV2Toggle.Size = UDim2.new(0, 100, 0, 30)
 AimbotV2Toggle.Position = UDim2.new(0, 10, 0, 90)
-AimbotV2Toggle.Text = "AimbotV2: OFF"
+AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
 AimbotV2Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 AimbotV2Toggle.BackgroundTransparency = 1
 AimbotV2Toggle.TextTransparency = 1
-AimbotV2Toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 AimbotV2Toggle.Font = Enum.Font.SourceSans
 AimbotV2Toggle.TextSize = 16
 AimbotV2Toggle.Parent = tabContents["Aimbot"]
@@ -153,6 +213,8 @@ AimbotToggle.MouseButton1Click:Connect(function()
     aimbotEnabled = not aimbotEnabled
     AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.aimbotEnabled = aimbotEnabled
+    saveConfig()
     if not aimbotEnabled then
         RunService:UnbindFromRenderStep("AimbotSnap")
         targetPlayer = nil
@@ -163,6 +225,8 @@ AimlockToggle.MouseButton1Click:Connect(function()
     aimlockEnabled = not aimlockEnabled
     AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
     AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.aimlockEnabled = aimlockEnabled
+    saveConfig()
     if not aimlockEnabled then
         RunService:UnbindFromRenderStep("AimlockPersist")
         if aimlockGyro then
@@ -177,10 +241,12 @@ AimlockToggle.MouseButton1Click:Connect(function()
     end
 end)
 
-AimbotV2Toggle.MouseButton1Click:Connect(function() -- New AimbotV2 toggle logic
+AimbotV2Toggle.MouseButton1Click:Connect(function()
     aimbotV2Enabled = not aimbotV2Enabled
     AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
     AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.aimbotV2Enabled = aimbotV2Enabled
+    saveConfig()
     if not aimbotV2Enabled then
         RunService:UnbindFromRenderStep("AimbotV2Move")
         targetPlayer = nil
@@ -227,12 +293,11 @@ UserInputService.InputBegan:Connect(function(input)
             end)
         end
         
-        if aimbotV2Enabled and targetPlayer then -- Updated AimbotV2 logic for instant snap
+        if aimbotV2Enabled and targetPlayer then
             RunService:BindToRenderStep("AimbotV2Move", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
                     local targetPos = Camera:WorldToViewportPoint(targetPlayer.Character.Head.Position)
                     UserInputService.MouseDeltaSensitivity = 1
-                    -- Instantly move mouse to target position
                     local currentMousePos = UserInputService:GetMouseLocation()
                     local deltaX = targetPos.X - currentMousePos.X
                     local deltaY = targetPos.Y - currentMousePos.Y
@@ -247,7 +312,7 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         RunService:UnbindFromRenderStep("AimbotSnap")
         RunService:UnbindFromRenderStep("AimlockPersist")
-        RunService:UnbindFromRenderStep("AimbotV2Move") -- Unbind AimbotV2
+        RunService:UnbindFromRenderStep("AimbotV2Move")
         targetPlayer = nil
         if aimlockGyro then
             aimlockGyro:Destroy()
@@ -295,18 +360,10 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- Visuals Tab
-local espToggles = {
-    Box = false,
-    Name = false,
-    Speed = false,
-    HealthBar = false,
-    Tracer = true,
-    Skeleton = false,
-    Box3D = false
-}
-
+local espToggles = config.espToggles
 local espPlayers = {}
 local lastPositions = {}
+
 local function DrawESP(plr)
     local drawings = {
         Box = Drawing.new("Quad"),
@@ -531,7 +588,6 @@ local function DrawESP(plr)
                             line.Visible = false
                         end
                     end
-
                 else
                     for key, drawing in pairs(drawings) do
                         if type(drawing) == "table" then
@@ -616,30 +672,32 @@ for feature, enabled in pairs(espToggles) do
         espToggles[feature] = not espToggles[feature]
         Toggle.Text = feature .. ": " .. (espToggles[feature] and "ON" or "OFF")
         Toggle.TextColor3 = espToggles[feature] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+        config.espToggles[feature] = espToggles[feature]
+        saveConfig()
     end)
     yOffset = yOffset + 40
 end
 
 -- Exploits Tab
-local flyEnabled = false
-local flySpeed = 75
+local flyEnabled = config.flyEnabled
+local flySpeed = config.flySpeed
 local controlSpeed = 10000
-local noClipEnabled = false
-local infiniteJumpEnabled = false
-local speedEnabled = false
-local speedMultiplier = 1
-local tpAuraEnabled = false
-local saveLastPositionEnabled = false
+local noClipEnabled = config.noClipEnabled
+local infiniteJumpEnabled = config.infiniteJumpEnabled
+local speedEnabled = config.speedEnabled
+local speedMultiplier = config.speedMultiplier
+local tpAuraEnabled = config.tpAuraEnabled
+local saveLastPositionEnabled = config.saveLastPositionEnabled
 local lastPosition = nil
 
 local FlyToggle = Instance.new("TextButton")
 FlyToggle.Size = UDim2.new(0, 100, 0, 30)
 FlyToggle.Position = UDim2.new(0, 10, 0, 10)
-FlyToggle.Text = "Fly: OFF"
+FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
 FlyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 FlyToggle.BackgroundTransparency = 1
 FlyToggle.TextTransparency = 1
-FlyToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 FlyToggle.Font = Enum.Font.SourceSans
 FlyToggle.TextSize = 16
 FlyToggle.Parent = tabContents["Exploits"]
@@ -673,11 +731,11 @@ FlySpeedKnob.Parent = FlySpeedSlider
 local InfiniteJumpToggle = Instance.new("TextButton")
 InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
 InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 90)
-InfiniteJumpToggle.Text = "Inf Jump: OFF"
+InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
 InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 InfiniteJumpToggle.BackgroundTransparency = 1
 InfiniteJumpToggle.TextTransparency = 1
-InfiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 InfiniteJumpToggle.Font = Enum.Font.SourceSans
 InfiniteJumpToggle.TextSize = 16
 InfiniteJumpToggle.Parent = tabContents["Exploits"]
@@ -685,11 +743,11 @@ InfiniteJumpToggle.Parent = tabContents["Exploits"]
 local NoClipToggle = Instance.new("TextButton")
 NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
 NoClipToggle.Position = UDim2.new(0, 10, 0, 130)
-NoClipToggle.Text = "NoClip: OFF"
+NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
 NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 NoClipToggle.BackgroundTransparency = 1
 NoClipToggle.TextTransparency = 1
-NoClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 NoClipToggle.Font = Enum.Font.SourceSans
 NoClipToggle.TextSize = 16
 NoClipToggle.Parent = tabContents["Exploits"]
@@ -697,11 +755,11 @@ NoClipToggle.Parent = tabContents["Exploits"]
 local SpeedToggle = Instance.new("TextButton")
 SpeedToggle.Size = UDim2.new(0, 100, 0, 30)
 SpeedToggle.Position = UDim2.new(0, 10, 0, 170)
-SpeedToggle.Text = "Speed: OFF"
+SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
 SpeedToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 SpeedToggle.BackgroundTransparency = 1
 SpeedToggle.TextTransparency = 1
-SpeedToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 SpeedToggle.Font = Enum.Font.SourceSans
 SpeedToggle.TextSize = 16
 SpeedToggle.Parent = tabContents["Exploits"]
@@ -735,11 +793,11 @@ SpeedKnob.Parent = SpeedSlider
 local TpAuraToggle = Instance.new("TextButton")
 TpAuraToggle.Size = UDim2.new(0, 100, 0, 30)
 TpAuraToggle.Position = UDim2.new(0, 10, 0, 250)
-TpAuraToggle.Text = "TP Aura: OFF"
+TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
 TpAuraToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 TpAuraToggle.BackgroundTransparency = 1
 TpAuraToggle.TextTransparency = 1
-TpAuraToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 TpAuraToggle.Font = Enum.Font.SourceSans
 TpAuraToggle.TextSize = 16
 TpAuraToggle.Parent = tabContents["Exploits"]
@@ -747,16 +805,15 @@ TpAuraToggle.Parent = tabContents["Exploits"]
 local SaveLastPositionToggle = Instance.new("TextButton")
 SaveLastPositionToggle.Size = UDim2.new(0, 100, 0, 30)
 SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 290)
-SaveLastPositionToggle.Text = "Save Pos: OFF"
+SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
 SaveLastPositionToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 SaveLastPositionToggle.BackgroundTransparency = 1
 SaveLastPositionToggle.TextTransparency = 1
-SaveLastPositionToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 SaveLastPositionToggle.Font = Enum.Font.SourceSans
 SaveLastPositionToggle.TextSize = 16
 SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
--- Separate dragging states for each slider
 local draggingFlySlider = false
 local draggingSpeedSlider = false
 
@@ -787,7 +844,6 @@ end)
 RunService.RenderStepped:Connect(function()
     local mouseX = UserInputService:GetMouseLocation().X
 
-    -- Fly Speed Slider
     if draggingFlySlider then
         local flySliderPos = FlySpeedSlider.AbsolutePosition.X
         local flySliderWidth = FlySpeedSlider.AbsoluteSize.X
@@ -795,9 +851,10 @@ RunService.RenderStepped:Connect(function()
         FlySpeedKnob.Position = UDim2.new(flyNewPos, 0, 0, 0)
         flySpeed = math.floor(10 + (flyNewPos * 190))
         FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
+        config.flySpeed = flySpeed
+        saveConfig()
     end
 
-    -- Speed Slider
     if draggingSpeedSlider then
         local speedSliderPos = SpeedSlider.AbsolutePosition.X
         local speedSliderWidth = SpeedSlider.AbsoluteSize.X
@@ -805,6 +862,8 @@ RunService.RenderStepped:Connect(function()
         SpeedKnob.Position = UDim2.new(speedNewPos, 0, 0, 0)
         speedMultiplier = math.floor(1 + (speedNewPos * 9))
         SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
+        config.speedMultiplier = speedMultiplier
+        saveConfig()
     end
 end)
 
@@ -812,6 +871,8 @@ local function toggleFly()
     flyEnabled = not flyEnabled
     FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
     FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.flyEnabled = flyEnabled
+    saveConfig()
     
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
@@ -871,13 +932,13 @@ local function toggleFly()
             if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
             if saveLastPositionEnabled and lastPosition then
-                rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
+                rootPart.CFrame = CFrame.new(lastPosition)
                 lastPosition = nil
             end
         end)
     else
         if saveLastPositionEnabled and lastPosition then
-            rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
+            rootPart.CFrame = CFrame.new(lastPosition)
             lastPosition = nil
         end
     end
@@ -897,6 +958,8 @@ local function toggleNoClip()
     noClipEnabled = not noClipEnabled
     NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
     NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.noClipEnabled = noClipEnabled
+    saveConfig()
     
     spawn(function()
         while noClipEnabled do
@@ -931,12 +994,16 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     infiniteJumpEnabled = not infiniteJumpEnabled
     InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.infiniteJumpEnabled = infiniteJumpEnabled
+    saveConfig()
 end)
 
 local function toggleSpeed()
     speedEnabled = not speedEnabled
     SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
     SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.speedEnabled = speedEnabled
+    saveConfig()
     
     if speedEnabled and saveLastPositionEnabled then
         lastPosition = getCharacter().HumanoidRootPart.Position
@@ -956,14 +1023,14 @@ local function toggleSpeed()
             end
             if saveLastPositionEnabled and lastPosition then
                 local rootPart = getCharacter().HumanoidRootPart
-                rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
+                rootPart.CFrame = CFrame.new(lastPosition)
                 lastPosition = nil
             end
         end)
     else
         if saveLastPositionEnabled and lastPosition then
             local rootPart = getCharacter().HumanoidRootPart
-            rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
+            rootPart.CFrame = CFrame.new(lastPosition)
             lastPosition = nil
         end
     end
@@ -975,6 +1042,8 @@ local function toggleTpAura()
     tpAuraEnabled = not tpAuraEnabled
     TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
     TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.tpAuraEnabled = tpAuraEnabled
+    saveConfig()
     
     if tpAuraEnabled and saveLastPositionEnabled then
         lastPosition = getCharacter().HumanoidRootPart.Position
@@ -994,11 +1063,10 @@ local function toggleTpAura()
                         local offset = Vector3.new(math.cos(rad) * 3, 0, math.sin(rad) * 3)
                         local newPos = targetRoot.Position + offset
                         
-                        -- Check if position is above ground and not in walls
                         local ray = Ray.new(newPos + Vector3.new(0, 5, 0), Vector3.new(0, -10, 0))
                         local hit, pos = workspace:FindPartOnRay(ray, getCharacter())
                         if hit then
-                            newPos = Vector3.new(newPos.X, pos.Y + 3, newPos.Z) -- Adjust height to be above ground
+                            newPos = Vector3.new(newPos.X, pos.Y + 3, newPos.Z)
                             local region = Region3.new(newPos - Vector3.new(1, 1, 1), newPos + Vector3.new(1, 1, 1))
                             local parts = workspace:FindPartsInRegion3(region, nil, 10)
                             local isInWall = false
@@ -1010,14 +1078,13 @@ local function toggleTpAura()
                             end
                             if not isInWall then
                                 local humanoidRootPart = getCharacter():WaitForChild("HumanoidRootPart")
-                                humanoidRootPart.CFrame = CFrame.new(newPos) -- Instant teleport
+                                humanoidRootPart.CFrame = CFrame.new(newPos)
                                 success = true
                                 break
                             end
                         end
                     end
                     if not success then
-                        -- If no valid position is found, don't disable TP Aura, just skip this cycle
                         print("No valid teleport position found, retrying...")
                     end
                 end
@@ -1025,14 +1092,14 @@ local function toggleTpAura()
             end
             if saveLastPositionEnabled and lastPosition then
                 local rootPart = getCharacter().HumanoidRootPart
-                rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
+                rootPart.CFrame = CFrame.new(lastPosition)
                 lastPosition = nil
             end
         end)
     else
         if saveLastPositionEnabled and lastPosition then
             local rootPart = getCharacter().HumanoidRootPart
-            rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
+            rootPart.CFrame = CFrame.new(lastPosition)
             lastPosition = nil
         end
     end
@@ -1044,9 +1111,11 @@ SaveLastPositionToggle.MouseButton1Click:Connect(function()
     saveLastPositionEnabled = not saveLastPositionEnabled
     SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
     SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    config.saveLastPositionEnabled = saveLastPositionEnabled
+    saveConfig()
 end)
 
--- GUI Animation Setup
+-- GUI Animation Setup (unchanged)
 local isGuiVisible = false
 local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
