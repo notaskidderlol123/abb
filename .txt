@@ -87,12 +87,12 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab
+-- Aimbot Tab (unchanged)
 local aimbotEnabled = false
 local aimlockEnabled = false
 local targetPlayer = nil
 local aimlockGyro = nil
-local aimAtPart = "Head"  -- Default to Head as per your request
+local aimAtPart = "Head"
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -118,7 +118,6 @@ AimlockToggle.Font = Enum.Font.SourceSans
 AimlockToggle.TextSize = 16
 AimlockToggle.Parent = tabContents["Aimbot"]
 
--- Aimbot/Aimlock Functions (Adapted from OrionLib Script)
 local function getClosestTarget()
     local character = getCharacter()
     local localRoot = character:WaitForChild("HumanoidRootPart")
@@ -177,7 +176,6 @@ UserInputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         targetPlayer = getClosestTarget()
 
-        -- Aimbot (Snap to Head)
         if aimbotEnabled and targetPlayer then
             RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild(aimAtPart) then
@@ -189,7 +187,6 @@ UserInputService.InputBegan:Connect(function(input)
             end)
         end
 
-        -- Aimlock (Persistent Lock-on with Character Rotation)
         if aimlockEnabled and targetPlayer then
             local character = getCharacter()
             local rootPart = character:WaitForChild("HumanoidRootPart")
@@ -267,7 +264,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Visuals Tab (unchanged)
+-- Visuals Tab (Healthbar Size Increased)
 local espToggles = {
     Box = false,
     Name = false,
@@ -305,7 +302,7 @@ local function DrawESP(plr)
     drawings.Distance.Outline = true
     drawings.Distance.Visible = false
 
-    drawings.HealthBar.Thickness = 12
+    drawings.HealthBar.Thickness = 5  -- Reduced thickness to make it taller rather than wider
     drawings.HealthBar.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
@@ -391,12 +388,11 @@ local function DrawESP(plr)
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            local barWidth = 100
-                            local barHeight = 12
-                            local barX = headPos.X - barWidth / 2
-                            drawings.HealthBar.From = Vector2.new(barX, headPos.Y - 10)
-                            drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), headPos.Y - 10)
-                            drawings.HealthBar.Color = Color3.fromRGB(0, 255, 0)
+                            local barHeight = 50  -- Increased vertical size
+                            local barX = TopLeft.X - 10  -- Positioned to the left of the character
+                            drawings.HealthBar.From = Vector2.new(barX, TopLeft.Y)  -- Start at top
+                            drawings.HealthBar.To = Vector2.new(barX, TopLeft.Y + (barHeight * healthPercent))  -- Extend downward
+                            drawings.HealthBar.Color = Color3.fromRGB(0, 255 * healthPercent, 255 * (1 - healthPercent))  -- Green to red gradient
                             drawings.HealthBar.Visible = true
                         end
                     else
@@ -553,12 +549,13 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab
+-- Exploits Tab (Added Loop TP)
 local flyEnabled = false
 local flySpeed = 75
 local controlSpeed = 10000
 local noClipEnabled = false
 local infiniteJumpEnabled = false
+local loopTPEnabled = false
 
 local FlyToggle = Instance.new("TextButton")
 FlyToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -635,7 +632,7 @@ local function toggleFly()
     if flyEnabled then
         humanoid:ChangeState(Enum.HumanoidStateType.Physics)
         local bv = Instance.new("BodyVelocity")
-        bv.Velocity = Vector3.new(0, 0, 0)  -- Start with zero velocity
+        bv.Velocity = Vector3.new(0, 0, 0)
         bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
         bv.Parent = rootPart
         
@@ -653,7 +650,6 @@ local function toggleFly()
                 local cam = workspace.CurrentCamera
                 local move = Vector3.new(0, 0, 0)
                 
-                -- Movement controls
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
@@ -668,7 +664,6 @@ local function toggleFly()
                     bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
                     bg.CFrame = cam.CFrame
                 else
-                    -- Hold position when no keys are pressed
                     bv.Velocity = Vector3.new(0, 0, 0)
                 end
                 wait()
@@ -681,14 +676,6 @@ local function toggleFly()
 end
 
 FlyToggle.MouseButton1Click:Connect(toggleFly)
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    if flyEnabled then
-        wait(0.1)
-        toggleFly()
-        toggleFly()
-    end
-end)
 
 local NoClipToggle = Instance.new("TextButton")
 NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -752,6 +739,57 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     infiniteJumpEnabled = not infiniteJumpEnabled
     InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
+-- Loop TP Toggle
+local LoopTPToggle = Instance.new("TextButton")
+LoopTPToggle.Size = UDim2.new(0, 100, 0, 30)
+LoopTPToggle.Position = UDim2.new(0, 10, 0, 180)
+LoopTPToggle.Text = "Loop TP: OFF"
+LoopTPToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+LoopTPToggle.BackgroundTransparency = 1
+LoopTPToggle.TextTransparency = 1
+LoopTPToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+LoopTPToggle.Font = Enum.Font.SourceSans
+LoopTPToggle.TextSize = 16
+LoopTPToggle.Parent = tabContents["Exploits"]
+
+local function toggleLoopTP()
+    loopTPEnabled = not loopTPEnabled
+    LoopTPToggle.Text = "Loop TP: " .. (loopTPEnabled and "ON" or "OFF")
+    LoopTPToggle.TextColor3 = loopTPEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    
+    spawn(function()
+        while loopTPEnabled do
+            local character = getCharacter()
+            local rootPart = character:WaitForChild("HumanoidRootPart")
+            local target = getClosestTarget()
+            
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                local targetRoot = target.Character.HumanoidRootPart
+                local direction = (targetRoot.Position - rootPart.Position).Unit
+                local behindPosition = targetRoot.Position - (direction * 5)  -- 5 studs behind
+                behindPosition = Vector3.new(behindPosition.X, targetRoot.Position.Y, behindPosition.Z)  -- Match Y level
+                rootPart.CFrame = CFrame.new(behindPosition, targetRoot.Position)  -- Face the target
+            end
+            wait(0.1)  -- Adjust this delay as needed
+        end
+    end)
+end
+
+LoopTPToggle.MouseButton1Click:Connect(toggleLoopTP)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if flyEnabled then
+        wait(0.1)
+        toggleFly()
+        toggleFly()
+    end
+    if loopTPEnabled then
+        wait(0.1)
+        toggleLoopTP()
+        toggleLoopTP()
+    end
 end)
 
 -- GUI Animation Setup (unchanged)
