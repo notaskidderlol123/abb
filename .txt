@@ -268,11 +268,14 @@ RunService.RenderStepped:Connect(function()
                     
                     -- Check if the mouse is over the head (within a small radius)
                     if distance < 20 and (currentTime - lastFireTime) >= fireCooldown then
-                        -- Simulate a mouse click to fire
-                        mouse1press()
-                        wait()
-                        mouse1release()
-                        lastFireTime = currentTime
+                        -- Find an equipped tool in the player's inventory
+                        local character = getCharacter()
+                        local tool = character and character:FindFirstChildWhichIsA("Tool")
+                        if tool then
+                            -- Activate the tool to fire
+                            tool:Activate()
+                            lastFireTime = currentTime
+                        end
                         break
                     end
                 end
@@ -332,13 +335,14 @@ local function DrawESP(plr)
         Box = Drawing.new("Quad"),
         Name = Drawing.new("Text"),
         Distance = Drawing.new("Text"),
-        HealthBar = Drawing.new("Line"),
-        HealthBarBg = Drawing.new("Line"),
+        HealthText = Drawing.new("Text"), -- For health percentage
+        HealthBar = Drawing.new("Line"),  -- For the health bar
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {}
     }
     
+    -- Configure drawings
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
     drawings.Box.Thickness = 1
     drawings.Box.Transparency = 1
@@ -354,16 +358,21 @@ local function DrawESP(plr)
     drawings.Distance.Outline = true
     drawings.Distance.Visible = false
 
-    drawings.HealthBar.Thickness = 12
+    -- Health Text (Percentage)
+    drawings.HealthText.Size = 16
+    drawings.HealthText.Color = Color3.fromRGB(255, 255, 255)
+    drawings.HealthText.Outline = true
+    drawings.HealthText.Visible = false
+
+    -- Health Bar (Single bar, no background)
+    drawings.HealthBar.Thickness = 5 -- Thickness of the health bar
     drawings.HealthBar.Visible = false
-    drawings.HealthBarBg.Thickness = 14
-    drawings.HealthBarBg.Color = Color3.fromRGB(50, 50, 50)
-    drawings.HealthBarBg.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
 
+    -- Skeleton bones
     local bones = {
         {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
         {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
@@ -379,6 +388,7 @@ local function DrawESP(plr)
         drawings.Skeleton[pair[1] .. pair[2]] = line
     end
 
+    -- 3D Box edges
     local box3DIndices = {
         {1, 2}, {2, 3}, {3, 4}, {4, 1},
         {5, 6}, {6, 7}, {7, 8}, {8, 5},
@@ -412,6 +422,7 @@ local function DrawESP(plr)
                         headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true
                     end
 
+                    -- Box ESP
                     if espToggles.Box then
                         drawings.Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
                         drawings.Box.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
@@ -422,15 +433,17 @@ local function DrawESP(plr)
                         drawings.Box.Visible = false
                     end
 
+                    -- Name ESP (Centered above head)
                     if espToggles.Name and headVis then
-                        local nameWidth = drawings.Name.TextBounds.X
-                        drawings.Name.Position = Vector2.new(headPos.X - (nameWidth / 2), headPos.Y - 30)
+                        local nameWidth = drawings.Name.TextBounds.X -- Get the width of the text
+                        drawings.Name.Position = Vector2.new(headPos.X - (nameWidth / 2), headPos.Y - 30) -- Center and offset above head
                         drawings.Name.Text = plr.Name
                         drawings.Name.Visible = true
                     else
                         drawings.Name.Visible = false
                     end
 
+                    -- Distance ESP
                     if espToggles.Distance then
                         local playerDistance = (rootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
                         drawings.Distance.Position = Vector2.new(BottomRight.X, BottomRight.Y + 5)
@@ -440,29 +453,34 @@ local function DrawESP(plr)
                         drawings.Distance.Visible = false
                     end
 
+                    -- Health ESP (Percentage Text + Bar)
                     if espToggles.HealthBar and headVis then
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            local barWidth = 100
-                            local barHeight = 12
-                            local barX = headPos.X - (barWidth / 2)
-                            local barY = headPos.Y - 10
+                            local barWidth = 60 -- Width of the health bar
+                            local barX = headPos.X - (barWidth / 2) -- Center the bar
 
-                            drawings.HealthBarBg.From = Vector2.new(barX, barY)
-                            drawings.HealthBarBg.To = Vector2.new(barX + barWidth, barY)
-                            drawings.HealthBarBg.Visible = true
+                            -- Health Percentage Text (above the bar)
+                            local healthText = math.floor(healthPercent * 100) .. "%"
+                            local textWidth = drawings.HealthText.TextBounds.X
+                            drawings.HealthText.Text = healthText
+                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y - 50) -- Position above the bar
+                            drawings.HealthText.Visible = true
 
+                            -- Health Bar (below the text)
+                            local barY = headPos.Y - 30 -- Position the bar below the text
                             drawings.HealthBar.From = Vector2.new(barX, barY)
                             drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), barY)
-                            drawings.HealthBar.Color = Color3.fromRGB(0, 255 * healthPercent, 0)
+                            drawings.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0) -- Green to red transition
                             drawings.HealthBar.Visible = true
                         end
                     else
+                        drawings.HealthText.Visible = false
                         drawings.HealthBar.Visible = false
-                        drawings.HealthBarBg.Visible = false
                     end
 
+                    -- Tracer ESP
                     if espToggles.Tracer then
                         local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso")
                         if chest then
@@ -481,6 +499,7 @@ local function DrawESP(plr)
                         drawings.Tracer.Visible = false
                     end
 
+                    -- Skeleton ESP
                     if espToggles.Skeleton then
                         for _, pair in ipairs(bones) do
                             local p1 = plr.Character:FindFirstChild(pair[1])
@@ -504,6 +523,7 @@ local function DrawESP(plr)
                         end
                     end
 
+                    -- 3D Box ESP
                     if espToggles.Box3D then
                         local size = plr.Character:GetExtentsSize() * 1.1
                         local cf = plr.Character.PrimaryPart.CFrame
@@ -696,7 +716,7 @@ local function toggleFly()
         humanoid:ChangeState(Enum.HumanoidStateType.Physics)
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed) -- Changed MaxTorque to MaxForce
+        bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
         bv.Parent = rootPart
         
         local bg = Instance.new("BodyGyro")
@@ -727,7 +747,7 @@ local function toggleFly()
                 elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
                     verticalMove = -1
                 else
-                    verticalMove = 0 -- No vertical movement if neither Space nor Shift is pressed
+                    verticalMove = 0
                 end
                 move = move + Vector3.new(0, verticalMove, 0)
                 
@@ -736,7 +756,6 @@ local function toggleFly()
                     bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
                     bg.CFrame = cam.CFrame
                 else
-                    -- When no movement keys are pressed, maintain position (no vertical velocity)
                     bv.Velocity = Vector3.new(0, 0, 0)
                 end
                 wait()
