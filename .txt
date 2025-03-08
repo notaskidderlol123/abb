@@ -87,16 +87,82 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (Simplified to Aimbot and Aim Lock)
+-- Aimbot and Aim Lock Logic (Custom Implementation with Right-Click)
 local aimbotEnabled = false
 local aimLockEnabled = false
-local lockedTarget = nil
-local aimbotAimPart = "Head"
-local aimbotKeybind = Enum.UserInputType.MouseButton2
-local aimbotPredictionEnabled = false
-local aimbotPredictionStrengthX = 0
-local aimbotPredictionStrengthY = 0
-local aimbotStickyAimEnabled = false
+local aimbotFov = 50
+local aimLockTarget = nil
+local aimKeybind = Enum.UserInputType.MouseButton2 -- Right-click to aim/lock
+
+local function getNearestPlayer()
+    local character = getCharacter()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local nearestPlayer = nil
+    local minDistance = aimbotFov
+
+    for _, player in pairs(PlayersService:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local targetRoot = player.Character.HumanoidRootPart
+            local distance = (rootPart.Position - targetRoot.Position).Magnitude
+            if distance < minDistance and Camera:WorldToViewportPoint(targetRoot.Position).Z > 0 then
+                minDistance = distance
+                nearestPlayer = player
+            end
+        end
+    end
+    return nearestPlayer
+end
+
+local function updateAimbot()
+    if not aimbotEnabled then return end
+    if UserInputService:IsMouseButtonPressed(aimKeybind) then
+        local target = getNearestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            local headPos = target.Character.Head.Position
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, headPos)
+        end
+    end
+end
+
+local bodyGyro = nil
+local function updateAimLock()
+    if not aimLockEnabled then
+        if bodyGyro then
+            bodyGyro:Destroy()
+            bodyGyro = nil
+        end
+        return
+    end
+    if UserInputService:IsMouseButtonPressed(aimKeybind) then
+        local target = getNearestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("Head") and not bodyGyro then
+            aimLockTarget = target
+            local character = getCharacter()
+            local rootPart = character:WaitForChild("HumanoidRootPart")
+            bodyGyro = Instance.new("BodyGyro")
+            bodyGyro.P = 10000
+            bodyGyro.D = 1000
+            bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
+            bodyGyro.Parent = rootPart
+        end
+        if aimLockTarget and aimLockTarget.Character and aimLockTarget.Character:FindFirstChild("Head") then
+            local headPos = aimLockTarget.Character.Head.Position
+            if bodyGyro then
+                bodyGyro.CFrame = CFrame.new(rootPart.Position, headPos)
+            end
+        else
+            if bodyGyro then
+                bodyGyro:Destroy()
+                bodyGyro = nil
+                aimLockTarget = nil
+            end
+        end
+    elseif bodyGyro then
+        bodyGyro:Destroy()
+        bodyGyro = nil
+        aimLockTarget = nil
+    end
+end
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 200, 0, 40)
@@ -122,106 +188,28 @@ AimLockToggle.Font = Enum.Font.SourceSans
 AimLockToggle.TextSize = 18
 AimLockToggle.Parent = tabContents["Aimbot"]
 
-local function aimbot()
-    if not aimbotEnabled or not aimbotKeybind then
-        return
-    end
-
-    if aimbotKeybind == Enum.UserInputType.MouseButton2 then
-        if not UserInputService:IsMouseButtonPressed(aimbotKeybind) then
-            lockedTarget = nil
-            return
-        end
-    else
-        if not UserInputService:IsKeyDown(aimbotKeybind) then
-            lockedTarget = nil
-            return
-        end
-    end
-
-    local mouse = LocalPlayer:GetMouse()
-    if lockedTarget and aimbotStickyAimEnabled and aimLockEnabled then
-        if lockedTarget.Character and lockedTarget.Character:FindFirstChild(aimbotAimPart) then
-            local part = lockedTarget.Character[aimbotAimPart]
-            local predictedPosition = part.Position
-            if aimbotPredictionEnabled then
-                local velocity = lockedTarget.Character.HumanoidRootPart.Velocity
-                predictedPosition = part.Position + Vector3.new(
-                    velocity.X * aimbotPredictionStrengthX * 0.1,
-                    velocity.Y * aimbotPredictionStrengthY * 0.1,
-                    0
-                )
-            end
-            local screenPos = Camera:WorldToViewportPoint(predictedPosition)
-            local target = Vector2.new(screenPos.X, screenPos.Y)
-            local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-            local move = target - screenCenter
-            mousemoverel(move.X, move.Y)
-            return
-        else
-            lockedTarget = nil
-        end
-    end
-
-    local closestPlayer = nil
-    local closestDistance = 50 -- Default FOV size
-
-    for _, player in pairs(PlayersService:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(aimbotAimPart) then
-            local part = player.Character[aimbotAimPart]
-            local predictedPosition = part.Position
-            if aimbotPredictionEnabled then
-                local velocity = player.Character.HumanoidRootPart.Velocity
-                predictedPosition = part.Position + Vector3.new(
-                    velocity.X * aimbotPredictionStrengthX * 0.1,
-                    velocity.Y * aimbotPredictionStrengthY * 0.1,
-                    0
-                )
-            end
-            local screenPos, onScreen = Camera:WorldToViewportPoint(predictedPosition)
-            if onScreen then
-                local distance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                if distance < closestDistance then
-                    closestDistance = distance
-                    closestPlayer = player
-                end
-            end
-        end
-    end
-
-    if closestPlayer then
-        lockedTarget = closestPlayer
-        local part = closestPlayer.Character[aimbotAimPart]
-        local predictedPosition = part.Position
-        if aimbotPredictionEnabled then
-            local velocity = closestPlayer.Character.HumanoidRootPart.Velocity
-            predictedPosition = part.Position + Vector3.new(
-                velocity.X * aimbotPredictionStrengthX * 0.1,
-                velocity.Y * aimbotPredictionStrengthY * 0.1,
-                0
-            )
-        end
-        local screenPos = Camera:WorldToViewportPoint(predictedPosition)
-        local target = Vector2.new(screenPos.X, screenPos.Y)
-        local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-        local move = target - screenCenter
-        mousemoverel(move.X, move.Y)
-    end
-end
-
 AimbotToggle.MouseButton1Click:Connect(function()
     aimbotEnabled = not aimbotEnabled
+    AimLockToggle.Text = "Aim Lock: OFF"
+    aimLockEnabled = false
+    AimLockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
     AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
 AimLockToggle.MouseButton1Click:Connect(function()
     aimLockEnabled = not aimLockEnabled
+    AimbotToggle.Text = "Aimbot: OFF"
+    aimbotEnabled = false
+    AimbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
     AimLockToggle.Text = "Aim Lock: " .. (aimLockEnabled and "ON" or "OFF")
     AimLockToggle.TextColor3 = aimLockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
-RunService.RenderStepped:Connect(aimbot)
+RunService.RenderStepped:Connect(function()
+    updateAimbot()
+    updateAimLock()
+end)
 
 -- Visuals Tab (Unchanged)
 local espToggles = {
@@ -532,15 +520,13 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (Fixed Loop TP)
+-- Exploits Tab (Custom Loop TP)
 local flyEnabled = false
 local flySpeed = 75
 local controlSpeed = 10000
 local noClipEnabled = false
 local infiniteJumpEnabled = false
 local teleporting = false
-local tpBehindOffset = 5
-local tpBehindHeight = 0
 local selectedPlayer = nil
 
 local FlyToggle = Instance.new("TextButton")
@@ -788,22 +774,16 @@ StopLoopTPButton.Font = Enum.Font.SourceSans
 StopLoopTPButton.TextSize = 16
 StopLoopTPButton.Parent = tabContents["Exploits"]
 
-local function loopBehind(targetPlayer)
+local function loopTP()
     teleporting = true
-    local player = PlayersService.LocalPlayer
-    while teleporting and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") do
-        local targetCharacter = targetPlayer.Character
-        local targetHumanoidRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
-        local playerCharacter = player.Character
-        local playerHumanoidRootPart = playerCharacter and playerCharacter:FindFirstChild("HumanoidRootPart")
-        if playerHumanoidRootPart and targetHumanoidRootPart then
-            local targetCframe = targetHumanoidRootPart.CFrame
-            local targetLookVector = targetCframe.LookVector
-            local targetPosition = targetCframe.Position
-            local newPosition = targetPosition - (targetLookVector * tpBehindOffset) + Vector3.new(0, tpBehindHeight, 0)
-            playerHumanoidRootPart.CFrame = CFrame.new(newPosition, newPosition + targetLookVector)
-        end
-        task.wait(0.01) -- Faster update for better locking
+    local character = getCharacter()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    while teleporting and selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") do
+        local targetRoot = selectedPlayer.Character.HumanoidRootPart
+        local targetPos = targetRoot.Position
+        local newPos = targetPos - (targetRoot.CFrame.LookVector * 5) + Vector3.new(0, targetRoot.Position.Y - rootPart.Position.Y, 0)
+        rootPart.CFrame = CFrame.new(newPos, targetPos)
+        RunService.Heartbeat:Wait()
     end
     teleporting = false
 end
@@ -811,10 +791,10 @@ end
 StartLoopTPButton.MouseButton1Click:Connect(function()
     if selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
         if teleporting then
-            teleporting = false -- Stop any existing loop
-            wait(0.1) -- Brief pause to ensure stop
+            teleporting = false
+            wait(0.1)
         end
-        loopBehind(selectedPlayer)
+        loopTP()
     else
         warn("Invalid target or target not found!")
     end
@@ -832,7 +812,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
     if teleporting and selectedPlayer then
         wait(0.1)
-        loopBehind(selectedPlayer)
+        loopTP()
     end
 end)
 
