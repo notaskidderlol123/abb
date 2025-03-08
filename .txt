@@ -71,21 +71,13 @@ local function loadConfig(name)
     end)
     if success and data then
         local decoded = HttpService:JSONDecode(data)
-        for key, value in pairs(decoded) do
-            if type(value) == "table" and config[key] then
-                for subKey, subValue in pairs(value) do
-                    config[key][subKey] = subValue
-                end
-            else
-                config[key] = value
-            end
-        end
+        config = decoded -- Replace entire config with loaded one
         return true
     end
     return false
 end
 
--- GUI Setup
+-- GUI Setup with Dragging
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -96,14 +88,14 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 400)
 MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-MainFrame.BackgroundTransparency = 0 -- Visible on injection
+MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
 TabFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-TabFrame.BackgroundTransparency = 0 -- Visible on injection
+TabFrame.BackgroundTransparency = 0
 TabFrame.BorderSizePixel = 0
 TabFrame.Parent = MainFrame
 
@@ -111,9 +103,45 @@ local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, 0, 1, -30)
 ContentFrame.Position = UDim2.new(0, 0, 0, 30)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ContentFrame.BackgroundTransparency = 0 -- Visible on injection
+ContentFrame.BackgroundTransparency = 0
 ContentFrame.BorderSizePixel = 0
 ContentFrame.Parent = MainFrame
+
+-- Dragging Functionality
+local dragging = false
+local dragInput, dragStart, startPos
+
+TabFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+
+TabFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if dragging and dragInput then
+        local delta = dragInput.Position - dragStart
+        MainFrame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
 local tabs = {"Aimbot", "Visuals", "Exploits", "Settings"}
 local currentTab = nil
@@ -126,8 +154,8 @@ for i, tabName in ipairs(tabs) do
     TabButton.Text = tabName
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    TabButton.BackgroundTransparency = 0 -- Visible on injection
-    TabButton.TextTransparency = 0 -- Text visible on injection
+    TabButton.BackgroundTransparency = 0
+    TabButton.TextTransparency = 0
     TabButton.BorderSizePixel = 0
     TabButton.Font = Enum.Font.SourceSans
     TabButton.TextSize = 18
@@ -171,8 +199,8 @@ AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
 AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
 AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
 AimbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimbotToggle.BackgroundTransparency = 0 -- Visible on injection
-AimbotToggle.TextTransparency = 0 -- Text visible on injection
+AimbotToggle.BackgroundTransparency = 0
+AimbotToggle.TextTransparency = 0
 AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 AimbotToggle.Font = Enum.Font.SourceSans
 AimbotToggle.TextSize = 16
@@ -195,8 +223,8 @@ AimbotV2Toggle.Size = UDim2.new(0, 100, 0, 30)
 AimbotV2Toggle.Position = UDim2.new(0, 10, 0, 90)
 AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
 AimbotV2Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimbotV2Toggle.BackgroundTransparency = 0
-AimbotV2Toggle.TextTransparency = 0
+AimbotToggle.BackgroundTransparency = 0
+AimbotToggle.TextTransparency = 0
 AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 AimbotV2Toggle.Font = Enum.Font.SourceSans
 AimbotV2Toggle.TextSize = 16
@@ -226,7 +254,7 @@ TeamCheckToggle.Font = Enum.Font.SourceSans
 TeamCheckToggle.TextSize = 16
 TeamCheckToggle.Parent = tabContents["Aimbot"]
 
--- Aimbot Logic (unchanged)
+-- Aimbot Logic with Fixed Team Check
 local function getNearestPlayer()
     local nearestDistance = math.huge
     local nearestPlayer = nil
@@ -239,7 +267,8 @@ local function getNearestPlayer()
             local humanoid = otherPlayer.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 local isDead = deadCheck and humanoid.Health <= 0
-                local isSameTeam = teamCheck and localTeam and otherPlayer.Team == localTeam
+                -- Fix team check: Properly compare teams and handle nil cases
+                local isSameTeam = teamCheck and localTeam and otherPlayer.Team and (otherPlayer.Team == localTeam)
                 if not isDead and not isSameTeam then
                     local distance = (rootPart.Position - otherPlayer.Character.Head.Position).Magnitude
                     if distance < nearestDistance then
@@ -998,28 +1027,39 @@ local function updateConfigList()
 
                 ConfigButton.MouseButton1Click:Connect(function()
                     if loadConfig(configName) then
+                        -- Update variables from config
                         aimbotEnabled = config.aimbotEnabled
+                        aimlockEnabled = config.aimlockEnabled
+                        aimbotV2Enabled = config.aimbotV2Enabled
+                        deadCheck = config.deadCheck
+                        teamCheck = config.teamCheck
+                        espToggles = config.espToggles
+                        flyEnabled = config.flyEnabled
+                        flySpeed = config.flySpeed
+                        infiniteJumpEnabled = config.infiniteJumpEnabled
+                        noClipEnabled = config.noClipEnabled
+                        speedEnabled = config.speedEnabled
+                        speedMultiplier = config.speedMultiplier
+                        tpAuraEnabled = config.tpAuraEnabled
+                        saveLastPositionEnabled = config.saveLastPositionEnabled
+
+                        -- Sync GUI with loaded config
                         AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
                         AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-                        aimlockEnabled = config.aimlockEnabled
                         AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
                         AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-                        aimbotV2Enabled = config.aimbotV2Enabled
                         AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
                         AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-                        deadCheck = config.deadCheck
                         DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
                         DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-                        teamCheck = config.teamCheck
                         TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
                         TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-                        for feature, enabled in pairs(config.espToggles) do
-                            espToggles[feature] = enabled
+                        for feature, enabled in pairs(espToggles) do
                             for _, child in pairs(tabContents["Visuals"]:GetChildren()) do
                                 if child:IsA("TextButton") and child.Text:find(feature) then
                                     child.Text = feature .. ": " .. (enabled and "ON" or "OFF")
@@ -1028,35 +1068,25 @@ local function updateConfigList()
                             end
                         end
 
-                        flyEnabled = config.flyEnabled
                         FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
                         FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-
-                        flySpeed = config.flySpeed
                         FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
                         FlySpeedKnob.Position = UDim2.new((flySpeed - 10) / 190, 0, 0, 0)
 
-                        infiniteJumpEnabled = config.infiniteJumpEnabled
                         InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
                         InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-                        noClipEnabled = config.noClipEnabled
                         NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
                         NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-                        speedEnabled = config.speedEnabled
                         SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
                         SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-
-                        speedMultiplier = config.speedMultiplier
                         SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
                         SpeedKnob.Position = UDim2.new((speedMultiplier - 1) / 9, 0, 0, 0)
 
-                        tpAuraEnabled = config.tpAuraEnabled
                         TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
                         TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-                        saveLastPositionEnabled = config.saveLastPositionEnabled
                         SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
                         SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
@@ -1271,8 +1301,8 @@ local function toggleNoClip()
         local character = getCharacter()
         for _, part in pairs(character:GetDescendants()) do
             if part:IsA("BasePart") then
-                part.CanCollide = true 
-                             end
+                part.CanCollide = true
+            end
         end
     end)
 end
@@ -1388,7 +1418,8 @@ local function toggleTpAura()
                 wait(0.1)
             end
             if saveLastPositionEnabled and lastPosition then
-                local rootPart = getCharacter().HumanoidRootPart
+                local rootPart = getCharacter(). 
+                                   HumanoidRootPart
                 rootPart.CFrame = CFrame.new(lastPosition)
                 lastPosition = nil
             end
@@ -1444,19 +1475,17 @@ local function animateGui(isVisible)
             end
         end
 
-        if tabContents then
-            for _, tabContent in pairs(tabContents) do
-                for _, child in pairs(tabContent:GetChildren()) do
-                    if child:IsA("TextButton") or child:IsA("TextLabel") or child:IsA("TextBox") then
-                        child.TextTransparency = 1
-                        local fadeInChild = TweenService:Create(child, fadeInInfo, {TextTransparency = 0})
-                        fadeInChild:Play()
-                    end
-                    if child:IsA("TextButton") or child:IsA("TextBox") then
-                        child.BackgroundTransparency = 1
-                        local fadeInBg = TweenService:Create(child, fadeInInfo, {BackgroundTransparency = 0})
-                        fadeInBg:Play()
-                    end
+        for _, tabContent in pairs(tabContents) do
+            for _, child in pairs(tabContent:GetChildren()) do
+                if child:IsA("TextButton") or child:IsA("TextLabel") or child:IsA("TextBox") then
+                    child.TextTransparency = 1
+                    local fadeInChild = TweenService:Create(child, fadeInInfo, {TextTransparency = 0})
+                    fadeInChild:Play()
+                end
+                if child:IsA("TextButton") or child:IsA("TextBox") then
+                    child.BackgroundTransparency = 1
+                    local fadeInBg = TweenService:Create(child, fadeInInfo, {BackgroundTransparency = 0})
+                    fadeInBg:Play()
                 end
             end
         end
@@ -1478,17 +1507,15 @@ local function animateGui(isVisible)
             end
         end
 
-        if tabContents then
-            for _, tabContent in pairs(tabContents) do
-                for _, child in pairs(tabContent:GetChildren()) do
-                    if child:IsA("TextButton") or child:IsA("TextLabel") or child:IsA("TextBox") then
-                        local fadeOutChild = TweenService:Create(child, fadeOutInfo, {TextTransparency = 1})
-                        fadeOutChild:Play()
-                    end
-                    if child:IsA("TextButton") or child:IsA("TextBox") then
-                        local fadeOutBg = TweenService:Create(child, fadeOutInfo, {BackgroundTransparency = 1})
-                        fadeOutBg:Play()
-                    end
+        for _, tabContent in pairs(tabContents) do
+            for _, child in pairs(tabContent:GetChildren()) do
+                if child:IsA("TextButton") or child:IsA("TextLabel") or child:IsA("TextBox") then
+                    local fadeOutChild = TweenService:Create(child, fadeOutInfo, {TextTransparency = 1})
+                    fadeOutChild:Play()
+                end
+                if child:IsA("TextButton") or child:IsA("TextBox") then
+                    local fadeOutBg = TweenService:Create(child, fadeOutInfo, {BackgroundTransparency = 1})
+                    fadeOutBg:Play()
                 end
             end
         end
@@ -1508,8 +1535,65 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
--- Load default config on startup
-loadConfig("current")
+-- Load default config on startup and sync GUI
+if loadConfig("current") then
+    aimbotEnabled = config.aimbotEnabled
+    aimlockEnabled = config.aimlockEnabled
+    aimbotV2Enabled = config.aimbotV2Enabled
+    deadCheck = config.deadCheck
+    teamCheck = config.teamCheck
+    espToggles = config.espToggles
+    flyEnabled = config.flyEnabled
+    flySpeed = config.flySpeed
+    infiniteJumpEnabled = config.infiniteJumpEnabled
+    noClipEnabled = config.noClipEnabled
+    speedEnabled = config.speedEnabled
+    speedMultiplier = config.speedMultiplier
+    tpAuraEnabled = config.tpAuraEnabled
+    saveLastPositionEnabled = config.saveLastPositionEnabled
+
+    AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+    AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
+    AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
+    AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
+    DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
+    TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+    for feature, enabled in pairs(espToggles) do
+        for _, child in pairs(tabContents["Visuals"]:GetChildren()) do
+            if child:IsA("TextButton") and child.Text:find(feature) then
+                child.Text = feature .. ": " .. (enabled and "ON" or "OFF")
+                child.TextColor3 = enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+            end
+        end
+    end
+
+    FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
+    FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
+    FlySpeedKnob.Position = UDim2.new((flySpeed - 10) / 190, 0, 0, 0)
+
+    InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
+    InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+    NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
+    NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+    SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
+    SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
+    SpeedKnob.Position = UDim2.new((speedMultiplier - 1) / 9, 0, 0, 0)
+
+    TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
+    TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+    SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
+    SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end
 
 -- Set initial tab
 if tabContents["Aimbot"] then
@@ -1521,5 +1605,3 @@ if tabContents["Aimbot"] then
         end
     end
 end
-
--- GUI is active on injection, no need to hide initially
