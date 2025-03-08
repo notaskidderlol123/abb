@@ -96,14 +96,14 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 400)
 MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-MainFrame.BackgroundTransparency = 1
+MainFrame.BackgroundTransparency = 0 -- Visible on injection
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
 TabFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-TabFrame.BackgroundTransparency = 1
+TabFrame.BackgroundTransparency = 0 -- Visible on injection
 TabFrame.BorderSizePixel = 0
 TabFrame.Parent = MainFrame
 
@@ -111,7 +111,7 @@ local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, 0, 1, -30)
 ContentFrame.Position = UDim2.new(0, 0, 0, 30)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ContentFrame.BackgroundTransparency = 1
+ContentFrame.BackgroundTransparency = 0 -- Visible on injection
 ContentFrame.BorderSizePixel = 0
 ContentFrame.Parent = MainFrame
 
@@ -126,8 +126,8 @@ for i, tabName in ipairs(tabs) do
     TabButton.Text = tabName
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    TabButton.BackgroundTransparency = 1
-    TabButton.TextTransparency = 1
+    TabButton.BackgroundTransparency = 0 -- Visible on injection
+    TabButton.TextTransparency = 0 -- Text visible on injection
     TabButton.BorderSizePixel = 0
     TabButton.Font = Enum.Font.SourceSans
     TabButton.TextSize = 18
@@ -157,7 +157,7 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (unchanged variables and setup)
+-- Aimbot Tab
 local aimbotEnabled = config.aimbotEnabled
 local aimlockEnabled = config.aimlockEnabled
 local aimbotV2Enabled = config.aimbotV2Enabled
@@ -171,8 +171,8 @@ AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
 AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
 AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
 AimbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimbotToggle.BackgroundTransparency = 1
-AimbotToggle.TextTransparency = 1
+AimbotToggle.BackgroundTransparency = 0 -- Visible on injection
+AimbotToggle.TextTransparency = 0 -- Text visible on injection
 AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 AimbotToggle.Font = Enum.Font.SourceSans
 AimbotToggle.TextSize = 16
@@ -183,8 +183,8 @@ AimlockToggle.Size = UDim2.new(0, 100, 0, 30)
 AimlockToggle.Position = UDim2.new(0, 10, 0, 50)
 AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
 AimlockToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimlockToggle.BackgroundTransparency = 1
-AimlockToggle.TextTransparency = 1
+AimlockToggle.BackgroundTransparency = 0
+AimlockToggle.TextTransparency = 0
 AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 AimlockToggle.Font = Enum.Font.SourceSans
 AimlockToggle.TextSize = 16
@@ -195,8 +195,8 @@ AimbotV2Toggle.Size = UDim2.new(0, 100, 0, 30)
 AimbotV2Toggle.Position = UDim2.new(0, 10, 0, 90)
 AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
 AimbotV2Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimbotV2Toggle.BackgroundTransparency = 1
-AimbotV2Toggle.TextTransparency = 1
+AimbotV2Toggle.BackgroundTransparency = 0
+AimbotV2Toggle.TextTransparency = 0
 AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 AimbotV2Toggle.Font = Enum.Font.SourceSans
 AimbotV2Toggle.TextSize = 16
@@ -207,8 +207,8 @@ DeadCheckToggle.Size = UDim2.new(0, 100, 0, 30)
 DeadCheckToggle.Position = UDim2.new(0, 10, 0, 130)
 DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
 DeadCheckToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-DeadCheckToggle.BackgroundTransparency = 1
-DeadCheckToggle.TextTransparency = 1
+DeadCheckToggle.BackgroundTransparency = 0
+DeadCheckToggle.TextTransparency = 0
 DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 DeadCheckToggle.Font = Enum.Font.SourceSans
 DeadCheckToggle.TextSize = 16
@@ -219,14 +219,14 @@ TeamCheckToggle.Size = UDim2.new(0, 100, 0, 30)
 TeamCheckToggle.Position = UDim2.new(0, 10, 0, 170)
 TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
 TeamCheckToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-TeamCheckToggle.BackgroundTransparency = 1
-TeamCheckToggle.TextTransparency = 1
+TeamCheckToggle.BackgroundTransparency = 0
+TeamCheckToggle.TextTransparency = 0
 TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 TeamCheckToggle.Font = Enum.Font.SourceSans
 TeamCheckToggle.TextSize = 16
 TeamCheckToggle.Parent = tabContents["Aimbot"]
 
--- Aimbot Logic (unchanged, skipping for brevity)
+-- Aimbot Logic (unchanged)
 local function getNearestPlayer()
     local nearestDistance = math.huge
     local nearestPlayer = nil
@@ -448,7 +448,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Visuals Tab (unchanged variables and setup)
+-- Visuals Tab
 local espToggles = config.espToggles
 local espPlayers = {}
 local lastPositions = {}
@@ -581,12 +581,12 @@ local function DrawESP(plr)
                             local barWidth = 60
                             local barHeight = 10
                             local barX = headPos.X - (barWidth / 2)
-                            local barY = headPos.Y + 20 -- Moved down
+                            local barY = headPos.Y + 20
 
                             local healthText = math.floor(healthPercent * 100) .. "%"
                             local textWidth = drawings.HealthText.TextBounds.X
                             drawings.HealthText.Text = healthText
-                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y) -- Moved down
+                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y)
                             drawings.HealthText.Visible = true
 
                             drawings.HealthBar.Position = Vector2.new(barX, barY)
@@ -750,8 +750,8 @@ for feature, enabled in pairs(espToggles) do
     Toggle.Position = UDim2.new(0, 10, 0, yOffset)
     Toggle.Text = feature .. ": " .. (enabled and "ON" or "OFF")
     Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    Toggle.BackgroundTransparency = 1
-    Toggle.TextTransparency = 1
+    Toggle.BackgroundTransparency = 0
+    Toggle.TextTransparency = 0
     Toggle.TextColor3 = enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     Toggle.Font = Enum.Font.SourceSans
     Toggle.TextSize = 16
@@ -767,7 +767,7 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (unchanged variables and setup)
+-- Exploits Tab
 local flyEnabled = config.flyEnabled
 local flySpeed = config.flySpeed
 local controlSpeed = 10000
@@ -784,8 +784,8 @@ FlyToggle.Size = UDim2.new(0, 100, 0, 30)
 FlyToggle.Position = UDim2.new(0, 10, 0, 10)
 FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
 FlyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-FlyToggle.BackgroundTransparency = 1
-FlyToggle.TextTransparency = 1
+FlyToggle.BackgroundTransparency = 0
+FlyToggle.TextTransparency = 0
 FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 FlyToggle.Font = Enum.Font.SourceSans
 FlyToggle.TextSize = 16
@@ -796,7 +796,7 @@ FlySpeedLabel.Size = UDim2.new(0, 100, 0, 20)
 FlySpeedLabel.Position = UDim2.new(0, 10, 0, 40)
 FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
 FlySpeedLabel.BackgroundTransparency = 1
-FlySpeedLabel.TextTransparency = 1
+FlySpeedLabel.TextTransparency = 0
 FlySpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlySpeedLabel.Font = Enum.Font.SourceSans
 FlySpeedLabel.TextSize = 16
@@ -807,14 +807,14 @@ FlySpeedSlider.Size = UDim2.new(0, 200, 0, 20)
 FlySpeedSlider.Position = UDim2.new(0, 10, 0, 60)
 FlySpeedSlider.Text = ""
 FlySpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-FlySpeedSlider.BackgroundTransparency = 1
+FlySpeedSlider.BackgroundTransparency = 0
 FlySpeedSlider.Parent = tabContents["Exploits"]
 
 local FlySpeedKnob = Instance.new("Frame")
 FlySpeedKnob.Size = UDim2.new(0, 10, 1, 0)
 FlySpeedKnob.Position = UDim2.new((flySpeed - 10) / 190, 0, 0, 0)
 FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
-FlySpeedKnob.BackgroundTransparency = 1
+FlySpeedKnob.BackgroundTransparency = 0
 FlySpeedKnob.Parent = FlySpeedSlider
 
 local InfiniteJumpToggle = Instance.new("TextButton")
@@ -822,8 +822,8 @@ InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
 InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 90)
 InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
 InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-InfiniteJumpToggle.BackgroundTransparency = 1
-InfiniteJumpToggle.TextTransparency = 1
+InfiniteJumpToggle.BackgroundTransparency = 0
+InfiniteJumpToggle.TextTransparency = 0
 InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 InfiniteJumpToggle.Font = Enum.Font.SourceSans
 InfiniteJumpToggle.TextSize = 16
@@ -834,8 +834,8 @@ NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
 NoClipToggle.Position = UDim2.new(0, 10, 0, 130)
 NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
 NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-NoClipToggle.BackgroundTransparency = 1
-NoClipToggle.TextTransparency = 1
+NoClipToggle.BackgroundTransparency = 0
+NoClipToggle.TextTransparency = 0
 NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 NoClipToggle.Font = Enum.Font.SourceSans
 NoClipToggle.TextSize = 16
@@ -846,8 +846,8 @@ SpeedToggle.Size = UDim2.new(0, 100, 0, 30)
 SpeedToggle.Position = UDim2.new(0, 10, 0, 170)
 SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
 SpeedToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-SpeedToggle.BackgroundTransparency = 1
-SpeedToggle.TextTransparency = 1
+SpeedToggle.BackgroundTransparency = 0
+SpeedToggle.TextTransparency = 0
 SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 SpeedToggle.Font = Enum.Font.SourceSans
 SpeedToggle.TextSize = 16
@@ -858,7 +858,7 @@ SpeedLabel.Size = UDim2.new(0, 100, 0, 20)
 SpeedLabel.Position = UDim2.new(0, 10, 0, 200)
 SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
 SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.TextTransparency = 1
+SpeedLabel.TextTransparency = 0
 SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedLabel.Font = Enum.Font.SourceSans
 SpeedLabel.TextSize = 16
@@ -869,14 +869,14 @@ SpeedSlider.Size = UDim2.new(0, 200, 0, 20)
 SpeedSlider.Position = UDim2.new(0, 10, 0, 220)
 SpeedSlider.Text = ""
 SpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-SpeedSlider.BackgroundTransparency = 1
+SpeedSlider.BackgroundTransparency = 0
 SpeedSlider.Parent = tabContents["Exploits"]
 
 local SpeedKnob = Instance.new("Frame")
 SpeedKnob.Size = UDim2.new(0, 10, 1, 0)
 SpeedKnob.Position = UDim2.new((speedMultiplier - 1) / 9, 0, 0, 0)
 SpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
-SpeedKnob.BackgroundTransparency = 1
+SpeedKnob.BackgroundTransparency = 0
 SpeedKnob.Parent = SpeedSlider
 
 local TpAuraToggle = Instance.new("TextButton")
@@ -884,8 +884,8 @@ TpAuraToggle.Size = UDim2.new(0, 100, 0, 30)
 TpAuraToggle.Position = UDim2.new(0, 10, 0, 250)
 TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
 TpAuraToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-TpAuraToggle.BackgroundTransparency = 1
-TpAuraToggle.TextTransparency = 1
+TpAuraToggle.BackgroundTransparency = 0
+TpAuraToggle.TextTransparency = 0
 TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 TpAuraToggle.Font = Enum.Font.SourceSans
 TpAuraToggle.TextSize = 16
@@ -896,21 +896,21 @@ SaveLastPositionToggle.Size = UDim2.new(0, 100, 0, 30)
 SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 290)
 SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
 SaveLastPositionToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-SaveLastPositionToggle.BackgroundTransparency = 1
-SaveLastPositionToggle.TextTransparency = 1
+SaveLastPositionToggle.BackgroundTransparency = 0
+SaveLastPositionToggle.TextTransparency = 0
 SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 SaveLastPositionToggle.Font = Enum.Font.SourceSans
 SaveLastPositionToggle.TextSize = 16
 SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
--- Settings Tab (updated with config list)
+-- Settings Tab with Config List
 local ConfigNameInput = Instance.new("TextBox")
 ConfigNameInput.Size = UDim2.new(0, 200, 0, 30)
 ConfigNameInput.Position = UDim2.new(0, 10, 0, 10)
 ConfigNameInput.Text = "Enter Config Name"
 ConfigNameInput.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-ConfigNameInput.BackgroundTransparency = 1
-ConfigNameInput.TextTransparency = 1
+ConfigNameInput.BackgroundTransparency = 0
+ConfigNameInput.TextTransparency = 0
 ConfigNameInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 ConfigNameInput.Font = Enum.Font.SourceSans
 ConfigNameInput.TextSize = 16
@@ -921,8 +921,8 @@ SaveConfigButton.Size = UDim2.new(0, 100, 0, 30)
 SaveConfigButton.Position = UDim2.new(0, 10, 0, 50)
 SaveConfigButton.Text = "Save Config"
 SaveConfigButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-SaveConfigButton.BackgroundTransparency = 1
-SaveConfigButton.TextTransparency = 1
+SaveConfigButton.BackgroundTransparency = 0
+SaveConfigButton.TextTransparency = 0
 SaveConfigButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 SaveConfigButton.Font = Enum.Font.SourceSans
 SaveConfigButton.TextSize = 16
@@ -933,8 +933,8 @@ LoadConfigButton.Size = UDim2.new(0, 100, 0, 30)
 LoadConfigButton.Position = UDim2.new(0, 120, 0, 50)
 LoadConfigButton.Text = "Load Config"
 LoadConfigButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-LoadConfigButton.BackgroundTransparency = 1
-LoadConfigButton.TextTransparency = 1
+LoadConfigButton.BackgroundTransparency = 0
+LoadConfigButton.TextTransparency = 0
 LoadConfigButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 LoadConfigButton.Font = Enum.Font.SourceSans
 LoadConfigButton.TextSize = 16
@@ -944,7 +944,7 @@ local ConfigListFrame = Instance.new("ScrollingFrame")
 ConfigListFrame.Size = UDim2.new(0, 200, 0, 200)
 ConfigListFrame.Position = UDim2.new(0, 10, 0, 90)
 ConfigListFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ConfigListFrame.BackgroundTransparency = 1
+ConfigListFrame.BackgroundTransparency = 0
 ConfigListFrame.BorderSizePixel = 0
 ConfigListFrame.ScrollBarThickness = 5
 ConfigListFrame.Visible = false
@@ -955,7 +955,7 @@ ConfigStatusLabel.Size = UDim2.new(0, 200, 0, 20)
 ConfigStatusLabel.Position = UDim2.new(0, 10, 0, 300)
 ConfigStatusLabel.Text = "Status: Idle"
 ConfigStatusLabel.BackgroundTransparency = 1
-ConfigStatusLabel.TextTransparency = 1
+ConfigStatusLabel.TextTransparency = 0
 ConfigStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 ConfigStatusLabel.Font = Enum.Font.SourceSans
 ConfigStatusLabel.TextSize = 16
@@ -989,8 +989,8 @@ local function updateConfigList()
                 ConfigButton.Position = UDim2.new(0, 5, 0, yOffset)
                 ConfigButton.Text = configName
                 ConfigButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                ConfigButton.BackgroundTransparency = 1
-                ConfigButton.TextTransparency = 1
+                ConfigButton.BackgroundTransparency = 0
+                ConfigButton.TextTransparency = 0
                 ConfigButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                 ConfigButton.Font = Enum.Font.SourceSans
                 ConfigButton.TextSize = 16
@@ -1110,7 +1110,7 @@ ConfigListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- Exploits Logic (unchanged, skipping for brevity)
+-- Exploits Logic
 local draggingFlySlider = false
 local draggingSpeedSlider = false
 
@@ -1271,8 +1271,8 @@ local function toggleNoClip()
         local character = getCharacter()
         for _, part in pairs(character:GetDescendants()) do
             if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
+                part.CanCollide = true 
+                             end
         end
     end)
 end
@@ -1412,8 +1412,8 @@ SaveLastPositionToggle.MouseButton1Click:Connect(function()
     saveConfig("current")
 end)
 
--- GUI Animation Setup (unchanged)
-local isGuiVisible = false
+-- GUI Toggle with Q Key
+local isGuiVisible = true -- Active on injection
 local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local scaleInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
@@ -1462,7 +1462,7 @@ local function animateGui(isVisible)
         end
     else
         local fadeOut = TweenService:Create(MainFrame, fadeOutInfo, {BackgroundTransparency = 1})
-                local fadeOutTab = TweenService:Create(TabFrame, fadeOutInfo, {BackgroundTransparency = 1})
+        local fadeOutTab = TweenService:Create(TabFrame, fadeOutInfo, {BackgroundTransparency = 1})
         local fadeOutContent = TweenService:Create(ContentFrame, fadeOutInfo, {BackgroundTransparency = 1})
         local scaleOut = TweenService:Create(MainFrame, scaleOutInfo, {Size = UDim2.new(0, 400, 0, 0)})
 
@@ -1501,9 +1501,9 @@ local function animateGui(isVisible)
     end
 end
 
--- Toggle GUI with Insert key
+-- Bind GUI toggle to Q
 UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.Insert then
+    if input.KeyCode == Enum.KeyCode.Q then
         animateGui(not isGuiVisible)
     end
 end)
@@ -1522,5 +1522,4 @@ if tabContents["Aimbot"] then
     end
 end
 
--- Ensure GUI starts hidden
-MainFrame.Visible = false
+-- GUI is active on injection, no need to hide initially
