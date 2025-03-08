@@ -264,7 +264,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Visuals Tab (Healthbar Size Increased)
+-- Visuals Tab (Healthbar ESP Updated)
 local espToggles = {
     Box = false,
     Name = false,
@@ -281,7 +281,9 @@ local function DrawESP(plr)
         Box = Drawing.new("Quad"),
         Name = Drawing.new("Text"),
         Distance = Drawing.new("Text"),
-        HealthBar = Drawing.new("Line"),
+        HealthBarGreen = Drawing.new("Line"),  -- Green for current health
+        HealthBarRed = Drawing.new("Line"),    -- Red for lost health
+        HealthLabel = Drawing.new("Text"),     -- Label for health percentage
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {}
@@ -302,8 +304,18 @@ local function DrawESP(plr)
     drawings.Distance.Outline = true
     drawings.Distance.Visible = false
 
-    drawings.HealthBar.Thickness = 5  -- Reduced thickness to make it taller rather than wider
-    drawings.HealthBar.Visible = false
+    drawings.HealthBarGreen.Thickness = 10
+    drawings.HealthBarGreen.Color = Color3.fromRGB(0, 255, 0)
+    drawings.HealthBarGreen.Visible = false
+
+    drawings.HealthBarRed.Thickness = 10
+    drawings.HealthBarRed.Color = Color3.fromRGB(255, 0, 0)
+    drawings.HealthBarRed.Visible = false
+
+    drawings.HealthLabel.Size = 14
+    drawings.HealthLabel.Color = Color3.fromRGB(255, 255, 255)
+    drawings.HealthLabel.Outline = true
+    drawings.HealthLabel.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
     drawings.Tracer.Thickness = 1
@@ -352,7 +364,7 @@ local function DrawESP(plr)
                     local headPart = plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart
                     local headPos, headVis
                     if headPart then
-                        headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 1.5, 0)).p)
+                        headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 0.5, 0)).p)  -- Adjusted to center of head
                     else
                         headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true
                     end
@@ -388,15 +400,30 @@ local function DrawESP(plr)
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            local barHeight = 50  -- Increased vertical size
-                            local barX = TopLeft.X - 10  -- Positioned to the left of the character
-                            drawings.HealthBar.From = Vector2.new(barX, TopLeft.Y)  -- Start at top
-                            drawings.HealthBar.To = Vector2.new(barX, TopLeft.Y + (barHeight * healthPercent))  -- Extend downward
-                            drawings.HealthBar.Color = Color3.fromRGB(0, 255 * healthPercent, 255 * (1 - healthPercent))  -- Green to red gradient
-                            drawings.HealthBar.Visible = true
+                            local barHeight = 50
+                            local barWidth = 10
+                            local barX = TopLeft.X - 20  -- Positioned to the left of the character
+                            local barY = TopLeft.Y  -- Start at the top of the bounding box
+
+                            -- Green health bar (current health)
+                            drawings.HealthBarGreen.From = Vector2.new(barX, barY + (barHeight * (1 - healthPercent)))
+                            drawings.HealthBarGreen.To = Vector2.new(barX + barWidth, barY + (barHeight * (1 - healthPercent)))
+                            drawings.HealthBarGreen.Visible = true
+
+                            -- Red health bar (lost health)
+                            drawings.HealthBarRed.From = Vector2.new(barX, barY)
+                            drawings.HealthBarRed.To = Vector2.new(barX + barWidth, barY + (barHeight * (1 - healthPercent)))
+                            drawings.HealthBarRed.Visible = true
+
+                            -- Health label
+                            drawings.HealthLabel.Position = Vector2.new(barX - 30, barY + (barHeight / 2) - 10)
+                            drawings.HealthLabel.Text = "Health: " .. math.floor(humanoid.Health) .. "%"
+                            drawings.HealthLabel.Visible = true
                         end
                     else
-                        drawings.HealthBar.Visible = false
+                        drawings.HealthBarGreen.Visible = false
+                        drawings.HealthBarRed.Visible = false
+                        drawings.HealthLabel.Visible = false
                     end
 
                     if espToggles.Tracer then
@@ -549,7 +576,7 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (Added Loop TP)
+-- Exploits Tab (Loop TP Updated)
 local flyEnabled = false
 local flySpeed = 75
 local controlSpeed = 10000
@@ -741,7 +768,6 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
--- Loop TP Toggle
 local LoopTPToggle = Instance.new("TextButton")
 LoopTPToggle.Size = UDim2.new(0, 100, 0, 30)
 LoopTPToggle.Position = UDim2.new(0, 10, 0, 180)
@@ -771,8 +797,9 @@ local function toggleLoopTP()
                 local behindPosition = targetRoot.Position - (direction * 5)  -- 5 studs behind
                 behindPosition = Vector3.new(behindPosition.X, targetRoot.Position.Y, behindPosition.Z)  -- Match Y level
                 rootPart.CFrame = CFrame.new(behindPosition, targetRoot.Position)  -- Face the target
+                rootPart.Velocity = Vector3.new(0, 0, 0)  -- Lock position to prevent drifting
             end
-            wait(0.1)  -- Adjust this delay as needed
+            wait(0.05)  -- Faster update for better locking
         end
     end)
 end
