@@ -18,7 +18,10 @@ local function getCharacter()
 end
 
 -- Config System
-local configFile = "config.json"
+local configFolder = "NettlwareConfigs"
+if not isfolder(configFolder) then
+    makefolder(configFolder)
+end
 local defaultConfig = {
     aimbotEnabled = false,
     aimlockEnabled = false,
@@ -47,26 +50,26 @@ local defaultConfig = {
 }
 local config = defaultConfig
 
-local function saveConfig()
+local function saveConfig(filename)
     if config.saveConfigEnabled then -- Automatic save when enabled
         local jsonConfig = HttpService:JSONEncode(config)
         pcall(function()
-            writefile(configFile, jsonConfig)
+            writefile(configFolder .. "/" .. filename .. ".json", jsonConfig)
         end)
     end
 end
 
-local function manualSaveConfig()
+local function manualSaveConfig(filename)
     local jsonConfig = HttpService:JSONEncode(config)
     pcall(function()
-        writefile(configFile, jsonConfig)
-        print("Configuration saved to " .. configFile)
+        writefile(configFolder .. "/" .. filename .. ".json", jsonConfig)
+        print("Configuration saved to " .. configFolder .. "/" .. filename .. ".json")
     end)
 end
 
-local function loadConfig()
+local function loadConfig(filename)
     local success, data = pcall(function()
-        return readfile(configFile)
+        return readfile(configFolder .. "/" .. filename .. ".json")
     end)
     if success and data then
         local decoded = HttpService:JSONDecode(data)
@@ -84,36 +87,50 @@ local function loadConfig()
         end
         return true
     else
-        print("No config file found or error loading, using default settings.")
+        print("No config file found for " .. filename .. " or error loading, using default settings.")
         return false
     end
 end
 
--- GUI Setup with Dragging Anywhere
+-- GUI Setup with Dragging and Title
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CustomExecutor"
+ScreenGui.Name = "NettlwareGUI"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 400, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+MainFrame.Size = UDim2.new(0, 400, 0, 430) -- Increased height for title bar
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -165)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
+MainFrame.Visible = false -- Initially hidden
+
+local TitleBar = Instance.new("TextLabel")
+TitleBar.Size = UDim2.new(1, 0, 0, 30)
+TitleBar.Position = UDim2.new(0, 0, 0, 0)
+TitleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+TitleBar.Text = "Nettlware alpha discord.gg/Y4mu9Fe97X"
+TitleBar.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleBar.Font = Enum.Font.SourceSansBold
+TitleBar.TextSize = 18
+TitleBar.TextTransparency = 0
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
 
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
+TabFrame.Position = UDim2.new(0, 0, 0, 30) -- Adjusted for title bar
 TabFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 TabFrame.BackgroundTransparency = 0
 TabFrame.BorderSizePixel = 0
 TabFrame.Parent = MainFrame
 
 local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, 0, 1, -30)
-ContentFrame.Position = UDim2.new(0, 0, 0, 30)
+ContentFrame.Size = UDim2.new(1, 0, 1, -60) -- Adjusted for title bar
+ContentFrame.Position = UDim2.new(0, 0, 0, 60)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 ContentFrame.BackgroundTransparency = 0
 ContentFrame.BorderSizePixel = 0
@@ -152,6 +169,13 @@ RunService.RenderStepped:Connect(function()
             startPos.Y.Scale,
             startPos.Y.Offset + delta.Y
         )
+    end
+end)
+
+-- GUI Toggle with Q Key
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Q then
+        MainFrame.Visible = not MainFrame.Visible
     end
 end)
 
@@ -197,7 +221,7 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab
+-- Aimbot Tab (unchanged)
 local aimbotEnabled = config.aimbotEnabled
 local aimlockEnabled = config.aimlockEnabled
 local aimbotV2Enabled = config.aimbotV2Enabled
@@ -266,7 +290,7 @@ TeamCheckToggle.Font = Enum.Font.SourceSans
 TeamCheckToggle.TextSize = 16
 TeamCheckToggle.Parent = tabContents["Aimbot"]
 
--- Aimbot Logic
+-- Aimbot Logic (unchanged)
 local function getNearestPlayer()
     local nearestDistance = math.huge
     local nearestPlayer = nil
@@ -298,7 +322,7 @@ AimbotToggle.MouseButton1Click:Connect(function()
     AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.aimbotEnabled = aimbotEnabled
-    saveConfig()
+    saveConfig("default")
     if not aimbotEnabled then
         RunService:UnbindFromRenderStep("AimbotSnap")
         targetPlayer = nil
@@ -310,7 +334,7 @@ AimlockToggle.MouseButton1Click:Connect(function()
     AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
     AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.aimlockEnabled = aimlockEnabled
-    saveConfig()
+    saveConfig("default")
     if not aimlockEnabled then
         RunService:UnbindFromRenderStep("AimlockPersist")
         if aimlockGyro then
@@ -330,7 +354,7 @@ AimbotV2Toggle.MouseButton1Click:Connect(function()
     AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
     AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.aimbotV2Enabled = aimbotV2Enabled
-    saveConfig()
+    saveConfig("default")
     if not aimbotV2Enabled then
         RunService:UnbindFromRenderStep("AimbotV2Move")
         targetPlayer = nil
@@ -342,7 +366,7 @@ DeadCheckToggle.MouseButton1Click:Connect(function()
     DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
     DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.deadCheck = deadCheck
-    saveConfig()
+    saveConfig("default")
 end)
 
 TeamCheckToggle.MouseButton1Click:Connect(function()
@@ -350,7 +374,7 @@ TeamCheckToggle.MouseButton1Click:Connect(function()
     TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
     TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.teamCheck = teamCheck
-    saveConfig()
+    saveConfig("default")
 end)
 
 UserInputService.InputBegan:Connect(function(input)
@@ -488,7 +512,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Visuals Tab
+-- Visuals Tab (unchanged except for saveConfig call)
 local espToggles = config.espToggles or defaultConfig.espToggles
 local espPlayers = {}
 local lastPositions = {}
@@ -802,12 +826,12 @@ for feature, enabled in pairs(espToggles) do
         Toggle.Text = feature .. ": " .. (espToggles[feature] and "ON" or "OFF")
         Toggle.TextColor3 = espToggles[feature] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
         config.espToggles[feature] = espToggles[feature]
-        saveConfig()
+        saveConfig("default")
     end)
     yOffset = yOffset + 40
 end
 
--- Exploits Tab
+-- Exploits Tab (unchanged except for saveConfig call)
 local flyEnabled = config.flyEnabled
 local flySpeed = config.flySpeed
 local controlSpeed = 10000
@@ -943,7 +967,7 @@ SaveLastPositionToggle.Font = Enum.Font.SourceSans
 SaveLastPositionToggle.TextSize = 16
 SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
--- Settings Tab with Player List, Save Config, and Save/Load Buttons
+-- Settings Tab with Custom Save/Load
 local PlayerListToggle = Instance.new("TextButton")
 PlayerListToggle.Size = UDim2.new(0, 100, 0, 30)
 PlayerListToggle.Position = UDim2.new(0, 10, 0, 10)
@@ -968,9 +992,19 @@ SaveConfigToggle.Font = Enum.Font.SourceSans
 SaveConfigToggle.TextSize = 16
 SaveConfigToggle.Parent = tabContents["Settings"]
 
+local ConfigNameBox = Instance.new("TextBox")
+ConfigNameBox.Size = UDim2.new(0, 150, 0, 30)
+ConfigNameBox.Position = UDim2.new(0, 10, 0, 90)
+ConfigNameBox.Text = "default"
+ConfigNameBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ConfigNameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConfigNameBox.Font = Enum.Font.SourceSans
+ConfigNameBox.TextSize = 16
+ConfigNameBox.Parent = tabContents["Settings"]
+
 local SaveButton = Instance.new("TextButton")
 SaveButton.Size = UDim2.new(0, 100, 0, 30)
-SaveButton.Position = UDim2.new(0, 10, 0, 90)
+SaveButton.Position = UDim2.new(0, 170, 0, 90)
 SaveButton.Text = "Save"
 SaveButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 SaveButton.BackgroundTransparency = 0
@@ -982,7 +1016,7 @@ SaveButton.Parent = tabContents["Settings"]
 
 local LoadButton = Instance.new("TextButton")
 LoadButton.Size = UDim2.new(0, 100, 0, 30)
-LoadButton.Position = UDim2.new(0, 120, 0, 90)
+LoadButton.Position = UDim2.new(0, 10, 0, 130)
 LoadButton.Text = "Load"
 LoadButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 LoadButton.BackgroundTransparency = 0
@@ -992,7 +1026,65 @@ LoadButton.Font = Enum.Font.SourceSans
 LoadButton.TextSize = 16
 LoadButton.Parent = tabContents["Settings"]
 
--- Player List GUI
+local LoadListFrame = Instance.new("ScrollingFrame")
+LoadListFrame.Size = UDim2.new(0, 200, 0, 200)
+LoadListFrame.Position = UDim2.new(0, 120, 0, 130)
+LoadListFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+LoadListFrame.ScrollBarThickness = 5
+LoadListFrame.Visible = false
+LoadListFrame.Parent = tabContents["Settings"]
+
+local function updateLoadList()
+    for _, child in pairs(LoadListFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    local files = listfiles(configFolder)
+    local yPos = 0
+    for _, file in pairs(files) do
+        if file:match("%.json$") then
+            local configName = file:match("([^/\\]+)%.json$")
+            local LoadConfigButton = Instance.new("TextButton")
+            LoadConfigButton.Size = UDim2.new(1, -10, 0, 30)
+            LoadConfigButton.Position = UDim2.new(0, 5, 0, yPos)
+            LoadConfigButton.Text = configName
+            LoadConfigButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            LoadConfigButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            LoadConfigButton.Font = Enum.Font.SourceSans
+            LoadConfigButton.TextSize = 16
+            LoadConfigButton.Parent = LoadListFrame
+            LoadConfigButton.MouseButton1Click:Connect(function()
+                if loadConfig(configName) then
+                    applyLoadedConfig()
+                    print("Configuration loaded from " .. configFolder .. "/" .. configName .. ".json")
+                end
+                LoadListFrame.Visible = false
+            end)
+            yPos = yPos + 35
+        end
+    end
+    LoadListFrame.CanvasSize = UDim2.new(0, 0, 0, yPos)
+end
+
+SaveButton.MouseButton1Click:Connect(function()
+    local filename = ConfigNameBox.Text
+    if filename ~= "" then
+        manualSaveConfig(filename)
+        updateLoadList()
+    else
+        print("Please enter a config name!")
+    end
+end)
+
+LoadButton.MouseButton1Click:Connect(function()
+    LoadListFrame.Visible = not LoadListFrame.Visible
+    if LoadListFrame.Visible then
+        updateLoadList()
+    end
+end)
+
+-- Player List GUI (unchanged)
 local PlayerListFrame = Instance.new("Frame")
 PlayerListFrame.Size = UDim2.new(0, 200, 0, 300)
 PlayerListFrame.Position = UDim2.new(1, -210, 0, 10)
@@ -1072,7 +1164,7 @@ PlayerListToggle.MouseButton1Click:Connect(function()
     PlayerListToggle.Text = "Player List: " .. (config.playerListEnabled and "ON" or "OFF")
     PlayerListToggle.TextColor3 = config.playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     PlayerListFrame.Visible = config.playerListEnabled
-    saveConfig()
+    saveConfig("default")
     if config.playerListEnabled then
         updatePlayerList()
     end
@@ -1082,11 +1174,7 @@ SaveConfigToggle.MouseButton1Click:Connect(function()
     config.saveConfigEnabled = not config.saveConfigEnabled
     SaveConfigToggle.Text = "Save Config: " .. (config.saveConfigEnabled and "ON" or "OFF")
     SaveConfigToggle.TextColor3 = config.saveConfigEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    saveConfig()
-end)
-
-SaveButton.MouseButton1Click:Connect(function()
-    manualSaveConfig()
+    saveConfig("default")
 end)
 
 local function applyLoadedConfig()
@@ -1160,13 +1248,6 @@ local function applyLoadedConfig()
     SaveConfigToggle.TextColor3 = config.saveConfigEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end
 
-LoadButton.MouseButton1Click:Connect(function()
-    if loadConfig() then
-        applyLoadedConfig()
-        print("Configuration loaded from " .. configFile)
-    end
-end)
-
 PlayersService.PlayerAdded:Connect(function(player)
     if config.playerListEnabled then
         wait(1)
@@ -1193,7 +1274,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Exploits Logic
+-- Exploits Logic (unchanged except for saveConfig call)
 local draggingFlySlider = false
 local draggingSpeedSlider = false
 
@@ -1232,7 +1313,7 @@ RunService.RenderStepped:Connect(function()
         flySpeed = math.floor(10 + (flyNewPos * 190))
         FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
         config.flySpeed = flySpeed
-        saveConfig()
+        saveConfig("default")
     end
 
     if draggingSpeedSlider then
@@ -1243,7 +1324,7 @@ RunService.RenderStepped:Connect(function()
         speedMultiplier = math.floor(1 + (speedNewPos * 9))
         SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
         config.speedMultiplier = speedMultiplier
-        saveConfig()
+        saveConfig("default")
     end
 end)
 
@@ -1252,7 +1333,7 @@ function toggleFly()
     FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
     FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.flyEnabled = flyEnabled
-    saveConfig()
+    saveConfig("default")
     
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
@@ -1339,7 +1420,7 @@ function toggleNoClip()
     NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
     NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.noClipEnabled = noClipEnabled
-    saveConfig()
+    saveConfig("default")
     
     spawn(function()
         while noClipEnabled do
@@ -1375,7 +1456,7 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.infiniteJumpEnabled = infiniteJumpEnabled
-    saveConfig()
+    saveConfig("default")
 end)
 
 function toggleSpeed()
@@ -1383,7 +1464,7 @@ function toggleSpeed()
     SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
     SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.speedEnabled = speedEnabled
-    saveConfig()
+    saveConfig("default")
     
     if speedEnabled and saveLastPositionEnabled then
         lastPosition = getCharacter().HumanoidRootPart.Position
@@ -1423,7 +1504,7 @@ function toggleTpAura()
     TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
     TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.tpAuraEnabled = tpAuraEnabled
-    saveConfig()
+    saveConfig("default")
     
     if tpAuraEnabled and saveLastPositionEnabled then
         lastPosition = getCharacter().HumanoidRootPart.Position
@@ -1443,11 +1524,10 @@ function toggleTpAura()
                         local offset = Vector3.new(math.cos(rad) * 3, 0, math.sin(rad) * 3)
                         local newPos = targetRoot.Position + offset
                         
-                        local ray = Ray.new(newPos + Vector3.new(0, 5, 0), Vector3.new(0, -10, 0))
-                        local hit, pos = workspace:FindPartOnRay(ray, getCharacter())
-                        if hit then
-                            newPos = Vector3.new(newPos.X, pos.Y + 3, newPos.Z)
-                                                        local region = Region3.new(newPos - Vector3.new(1, 1, 1), newPos + Vector3.new(1, 1, 1))
+                        local ray = Ray.new(newPos + Vector3.new(0, 5, 0), Vector3.new(0, -10, 0)) 
+                                                 local raycastResult = workspace:Raycast(ray.Origin, ray.Direction)
+                        if not raycastResult then
+                            local region = Region3.new(newPos - Vector3.new(1, 1, 1), newPos + Vector3.new(1, 1, 1))
                             local parts = workspace:FindPartsInRegion3(region, getCharacter(), 100)
                             if #parts == 0 then
                                 getCharacter().HumanoidRootPart.CFrame = CFrame.new(newPos)
@@ -1485,7 +1565,7 @@ SaveLastPositionToggle.MouseButton1Click:Connect(function()
     SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
     SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.saveLastPositionEnabled = saveLastPositionEnabled
-    saveConfig()
+    saveConfig("default")
     
     if saveLastPositionEnabled then
         local character = getCharacter()
@@ -1516,7 +1596,8 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- Initial Config Load
-loadConfig()
+loadConfig("default")
+applyLoadedConfig()
 
 -- Set initial tab
 if tabContents["Aimbot"] then
@@ -1528,9 +1609,6 @@ if tabContents["Aimbot"] then
         end
     end
 end
-
--- Apply loaded config on startup
-applyLoadedConfig()
 
 -- Cleanup on script end
 ScreenGui.Destroying:Connect(function()
@@ -1558,4 +1636,4 @@ ScreenGui.Destroying:Connect(function()
     end
 end)
 
-print("Custom Executor Loaded Successfully!")
+print("Nettlware Alpha Loaded Successfully!")
