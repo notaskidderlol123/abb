@@ -90,6 +90,7 @@ end
 -- Aimbot Tab
 local aimbotEnabled = false
 local aimlockEnabled = false
+local aimbotV2Enabled = false -- New AimbotV2 toggle
 local targetPlayer = nil
 local aimlockGyro = nil
 
@@ -116,6 +117,18 @@ AimlockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 AimlockToggle.Font = Enum.Font.SourceSans
 AimlockToggle.TextSize = 16
 AimlockToggle.Parent = tabContents["Aimbot"]
+
+local AimbotV2Toggle = Instance.new("TextButton") -- New AimbotV2 toggle
+AimbotV2Toggle.Size = UDim2.new(0, 100, 0, 30)
+AimbotV2Toggle.Position = UDim2.new(0, 10, 0, 90)
+AimbotV2Toggle.Text = "AimbotV2: OFF"
+AimbotV2Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+AimbotV2Toggle.BackgroundTransparency = 1
+AimbotV2Toggle.TextTransparency = 1
+AimbotV2Toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+AimbotV2Toggle.Font = Enum.Font.SourceSans
+AimbotV2Toggle.TextSize = 16
+AimbotV2Toggle.Parent = tabContents["Aimbot"]
 
 local function getNearestPlayer()
     local nearestDistance = math.huge
@@ -163,6 +176,16 @@ AimlockToggle.MouseButton1Click:Connect(function()
     end
 end)
 
+AimbotV2Toggle.MouseButton1Click:Connect(function() -- New AimbotV2 toggle logic
+    aimbotV2Enabled = not aimbotV2Enabled
+    AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
+    AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    if not aimbotV2Enabled then
+        RunService:UnbindFromRenderStep("AimbotV2Move")
+        targetPlayer = nil
+    end
+end)
+
 UserInputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         targetPlayer = getNearestPlayer()
@@ -202,6 +225,19 @@ UserInputService.InputBegan:Connect(function(input)
                 end
             end)
         end
+        
+        if aimbotV2Enabled and targetPlayer then -- New AimbotV2 logic
+            RunService:BindToRenderStep("AimbotV2Move", Enum.RenderPriority.Camera.Value + 1, function()
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                    local targetPos = Camera:WorldToViewportPoint(targetPlayer.Character.Head.Position)
+                    local mousePos = UserInputService:GetMouseLocation()
+                    local deltaX = (targetPos.X - mousePos.X) * 0.1 -- Sensitivity factor (adjust as needed)
+                    local deltaY = (targetPos.Y - mousePos.Y) * 0.1
+                    UserInputService.MouseDeltaSensitivity = 1
+                    UserInputService.MouseMoveRelative(Vector2.new(deltaX, deltaY))
+                end
+            end)
+        end
     end
 end)
 
@@ -209,6 +245,7 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         RunService:UnbindFromRenderStep("AimbotSnap")
         RunService:UnbindFromRenderStep("AimlockPersist")
+        RunService:UnbindFromRenderStep("AimbotV2Move") -- Unbind AimbotV2
         targetPlayer = nil
         if aimlockGyro then
             aimlockGyro:Destroy()
@@ -263,8 +300,7 @@ local espToggles = {
     HealthBar = false,
     Tracer = true,
     Skeleton = false,
-    Box3D = false,
-    Normal = false
+    Box3D = false
 }
 
 local espPlayers = {}
@@ -278,8 +314,7 @@ local function DrawESP(plr)
         HealthBar = Drawing.new("Square"),
         Tracer = Drawing.new("Line"),
         Skeleton = {},
-        Box3D = {},
-        Normal = {} -- Changed to a table to hold multiple Quads for character outline
+        Box3D = {}
     }
     
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
@@ -309,17 +344,6 @@ local function DrawESP(plr)
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
-
-    -- Define parts to highlight for the "Normal" ESP
-    local highlightParts = {"Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg"}
-    for _, partName in ipairs(highlightParts) do
-        local quad = Drawing.new("Quad")
-        quad.Color = Color3.fromRGB(255, 0, 0) -- Red highlight
-        quad.Thickness = 2
-        quad.Transparency = 0.5 -- Semi-transparent to show the character underneath
-        quad.Visible = false
-        drawings.Normal[partName] = quad
-    end
 
     local bones = {
         {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
@@ -506,51 +530,11 @@ local function DrawESP(plr)
                         end
                     end
 
-                    if espToggles.Normal then
-                        for partName, quad in pairs(drawings.Normal) do
-                            local part = plr.Character:FindFirstChild(partName)
-                            if part then
-                                local size = part.Size
-                                local cf = part.CFrame
-                                local corners = {
-                                    Camera:WorldToViewportPoint((cf * CFrame.new(-size.X/2, size.Y/2, 0)).p),
-                                    Camera:WorldToViewportPoint((cf * CFrame.new(size.X/2, size.Y/2, 0)).p),
-                                    Camera:WorldToViewportPoint((cf * CFrame.new(size.X/2, -size.Y/2, 0)).p),
-                                    Camera:WorldToViewportPoint((cf * CFrame.new(-size.X/2, -size.Y/2, 0)).p)
-                                }
-                                local allVisible = true
-                                for _, corner in ipairs(corners) do
-                                    if corner.Z <= 0 then
-                                        allVisible = false
-                                        break
-                                    end
-                                end
-                                if allVisible then
-                                    quad.PointA = Vector2.new(corners[2].X, corners[2].Y) -- TopRight
-                                    quad.PointB = Vector2.new(corners[1].X, corners[1].Y) -- TopLeft
-                                    quad.PointC = Vector2.new(corners[3].X, corners[3].Y) -- BottomRight
-                                    quad.PointD = Vector2.new(corners[4].X, corners[4].Y) -- BottomLeft
-                                    quad.Visible = true
-                                else
-                                    quad.Visible = false
-                                end
-                            else
-                                quad.Visible = false
-                            end
-                        end
-                    else
-                        for _, quad in pairs(drawings.Normal) do
-                            quad.Visible = false
-                        end
-                    end
-
                 else
                     for key, drawing in pairs(drawings) do
                         if type(drawing) == "table" then
                             for _, line in pairs(drawing) do
-                                if key == "Normal" then
-                                    line.Visible = false
-                                elseif type(line) == "table" then
+                                if type(line) == "table" then
                                     for _, subLine in pairs(line) do
                                         subLine.Visible = false
                                     end
@@ -567,9 +551,7 @@ local function DrawESP(plr)
                 for key, drawing in pairs(drawings) do
                     if type(drawing) == "table" then
                         for _, line in pairs(drawing) do
-                            if key == "Normal" then
-                                line.Visible = false
-                            elseif type(line) == "table" then
+                            if type(line) == "table" then
                                 for _, subLine in pairs(line) do
                                     subLine.Visible = false
                                 end
