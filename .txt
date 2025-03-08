@@ -23,7 +23,7 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 400, 0, 400) -- Increased height to accommodate more options
+MainFrame.Size = UDim2.new(0, 400, 0, 400)
 MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MainFrame.BackgroundTransparency = 1
@@ -91,7 +91,7 @@ end
 local aimbotEnabled = false
 local aimlockEnabled = false
 local targetPlayer = nil
-local aimlockGyro = nil  -- To store the BodyGyro instance
+local aimlockGyro = nil
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -167,7 +167,6 @@ UserInputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         targetPlayer = getNearestPlayer()
         
-        -- Aimbot (Snap to Head)
         if aimbotEnabled and targetPlayer then
             RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
@@ -179,19 +178,17 @@ UserInputService.InputBegan:Connect(function(input)
             end)
         end
         
-        -- Aimlock (Persistent Lock-on with Character Rotation)
         if aimlockEnabled and targetPlayer then
             local character = getCharacter()
             local rootPart = character:WaitForChild("HumanoidRootPart")
             local humanoid = character:WaitForChild("Humanoid")
-            humanoid.AutoRotate = false  -- Disable default rotation
+            humanoid.AutoRotate = false
             
-            -- Create BodyGyro if it doesn't exist
             if not aimlockGyro then
                 aimlockGyro = Instance.new("BodyGyro")
-                aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)  -- Strong enough to override movement
-                aimlockGyro.P = 10000  -- High power for instant response
-                aimlockGyro.D = 500  -- Damping to prevent oscillation
+                aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)
+                aimlockGyro.P = 10000
+                aimlockGyro.D = 500
                 aimlockGyro.Parent = rootPart
             end
 
@@ -199,9 +196,7 @@ UserInputService.InputBegan:Connect(function(input)
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
                     local targetPos = targetPlayer.Character.Head.Position
                     if targetPos.Magnitude < 10000 then
-                        -- Update camera
                         Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                        -- Update BodyGyro to rotate character
                         aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
                     end
                 end
@@ -221,7 +216,7 @@ UserInputService.InputEnded:Connect(function(input)
         end
         local character = getCharacter()
         if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.AutoRotate = true  -- Restore normal rotation
+            character.Humanoid.AutoRotate = true
         end
     end
 end)
@@ -269,11 +264,11 @@ local espToggles = {
     Tracer = true,
     Skeleton = false,
     Box3D = false,
-    Normal = false -- Renamed Outline to Normal
+    Normal = false
 }
 
 local espPlayers = {}
-local lastPositions = {} -- To track player positions for speed calculation
+local lastPositions = {}
 local function DrawESP(plr)
     local drawings = {
         Box = Drawing.new("Quad"),
@@ -284,10 +279,9 @@ local function DrawESP(plr)
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {},
-        Normal = {} -- Changed to table to hold multiple lines for highlighting
+        Normal = {}
     }
     
-    -- Configure drawings
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
     drawings.Box.Thickness = 1
     drawings.Box.Transparency = 1
@@ -303,13 +297,11 @@ local function DrawESP(plr)
     drawings.Speed.Outline = true
     drawings.Speed.Visible = false
 
-    -- Health Text (Percentage)
     drawings.HealthText.Size = 16
     drawings.HealthText.Color = Color3.fromRGB(255, 255, 255)
     drawings.HealthText.Outline = true
     drawings.HealthText.Visible = false
 
-    -- Health Bar (Box style)
     drawings.HealthBar.Thickness = 0
     drawings.HealthBar.Size = Vector2.new(60, 10)
     drawings.HealthBar.Visible = false
@@ -318,7 +310,6 @@ local function DrawESP(plr)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
 
-    -- Skeleton bones
     local bones = {
         {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
         {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
@@ -334,7 +325,6 @@ local function DrawESP(plr)
         drawings.Skeleton[pair[1] .. pair[2]] = line
     end
 
-    -- 3D Box edges
     local box3DIndices = {
         {1, 2}, {2, 3}, {3, 4}, {4, 1},
         {5, 6}, {6, 7}, {7, 8}, {8, 5},
@@ -348,7 +338,6 @@ local function DrawESP(plr)
         drawings.Box3D[i] = line
     end
 
-    -- Normal ESP (Highlight effect using lines on major parts)
     local highlightParts = {"Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg"}
     for _, partName in ipairs(highlightParts) do
         local lineTop = Drawing.new("Line")
@@ -356,7 +345,7 @@ local function DrawESP(plr)
         local lineLeft = Drawing.new("Line")
         local lineRight = Drawing.new("Line")
         for _, line in ipairs({lineTop, lineBottom, lineLeft, lineRight}) do
-            line.Color = Color3.fromRGB(255, 0, 0) -- Red highlight
+            line.Color = Color3.fromRGB(255, 0, 0)
             line.Thickness = 2
             line.Visible = false
         end
@@ -383,7 +372,6 @@ local function DrawESP(plr)
                         headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true
                     end
 
-                    -- Box ESP
                     if espToggles.Box then
                         drawings.Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
                         drawings.Box.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
@@ -394,7 +382,6 @@ local function DrawESP(plr)
                         drawings.Box.Visible = false
                     end
 
-                    -- Name ESP
                     if espToggles.Name and headVis then
                         local nameWidth = drawings.Name.TextBounds.X
                         drawings.Name.Position = Vector2.new(headPos.X - (nameWidth / 2), headPos.Y - 30)
@@ -404,7 +391,6 @@ local function DrawESP(plr)
                         drawings.Name.Visible = false
                     end
 
-                    -- Speed ESP
                     if espToggles.Speed and headVis then
                         local currentPos = plr.Character.HumanoidRootPart.Position
                         if not lastPositions[plr] then lastPositions[plr] = currentPos end
@@ -419,7 +405,6 @@ local function DrawESP(plr)
                         drawings.Speed.Visible = false
                     end
 
-                    -- Health ESP
                     if espToggles.HealthBar and headVis then
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
@@ -429,14 +414,12 @@ local function DrawESP(plr)
                             local barX = headPos.X - (barWidth / 2)
                             local barY = headPos.Y - 30
 
-                            -- Health Percentage Text
                             local healthText = math.floor(healthPercent * 100) .. "%"
                             local textWidth = drawings.HealthText.TextBounds.X
                             drawings.HealthText.Text = healthText
                             drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y - 50)
                             drawings.HealthText.Visible = true
 
-                            -- Health Bar (Box)
                             drawings.HealthBar.Position = Vector2.new(barX, barY)
                             drawings.HealthBar.Size = Vector2.new(barWidth * healthPercent, barHeight)
                             drawings.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0)
@@ -447,7 +430,6 @@ local function DrawESP(plr)
                         drawings.HealthBar.Visible = false
                     end
 
-                    -- Tracer ESP
                     if espToggles.Tracer then
                         local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso")
                         if chest then
@@ -466,7 +448,6 @@ local function DrawESP(plr)
                         drawings.Tracer.Visible = false
                     end
 
-                    -- Skeleton ESP
                     if espToggles.Skeleton then
                         for _, pair in ipairs(bones) do
                             local p1 = plr.Character:FindFirstChild(pair[1])
@@ -475,7 +456,7 @@ local function DrawESP(plr)
                                 local screenP1, vis1 = Camera:WorldToViewportPoint(p1.Position)
                                 local screenP2, vis2 = Camera:WorldToViewportPoint(p2.Position)
                                 if vis1 and vis2 then
-                                    local boneLine = drawings.Skeleton[part[1] .. pair[2]]
+                                    local boneLine = drawings.Skeleton[pair[1] .. pair[2]]
                                     boneLine.From = Vector2.new(screenP1.X, screenP1.Y)
                                     boneLine.To = Vector2.new(screenP2.X, screenP2.Y)
                                     boneLine.Visible = true
@@ -490,7 +471,6 @@ local function DrawESP(plr)
                         end
                     end
 
-                    -- 3D Box ESP
                     if espToggles.Box3D then
                         local size = plr.Character:GetExtentsSize() * 1.1
                         local cf = plr.Character.PrimaryPart.CFrame
@@ -529,7 +509,6 @@ local function DrawESP(plr)
                         end
                     end
 
-                    -- Normal ESP (Highlight player in red)
                     if espToggles.Normal then
                         for _, partName in ipairs(highlightParts) do
                             local part = plr.Character:FindFirstChild(partName)
@@ -671,8 +650,6 @@ local noClipEnabled = false
 local infiniteJumpEnabled = false
 local speedEnabled = false
 local speedMultiplier = 1
-local highJumpEnabled = false
-local jumpHeight = 7.6
 local tpAuraEnabled = false
 local saveLastPositionEnabled = false
 local lastPosition = nil
@@ -777,47 +754,9 @@ SpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
 SpeedKnob.BackgroundTransparency = 1
 SpeedKnob.Parent = SpeedSlider
 
-local HighJumpToggle = Instance.new("TextButton")
-HighJumpToggle.Size = UDim2.new(0, 100, 0, 30)
-HighJumpToggle.Position = UDim2.new(0, 10, 0, 250)
-HighJumpToggle.Text = "High Jump: OFF"
-HighJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-HighJumpToggle.BackgroundTransparency = 1
-HighJumpToggle.TextTransparency = 1
-HighJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-HighJumpToggle.Font = Enum.Font.SourceSans
-HighJumpToggle.TextSize = 16
-HighJumpToggle.Parent = tabContents["Exploits"]
-
-local JumpHeightLabel = Instance.new("TextLabel")
-JumpHeightLabel.Size = UDim2.new(0, 100, 0, 20)
-JumpHeightLabel.Position = UDim2.new(0, 10, 0, 280)
-JumpHeightLabel.Text = "Jump Height: " .. jumpHeight
-JumpHeightLabel.BackgroundTransparency = 1
-JumpHeightLabel.TextTransparency = 1
-JumpHeightLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-JumpHeightLabel.Font = Enum.Font.SourceSans
-JumpHeightLabel.TextSize = 16
-JumpHeightLabel.Parent = tabContents["Exploits"]
-
-local JumpHeightSlider = Instance.new("TextButton")
-JumpHeightSlider.Size = UDim2.new(0, 200, 0, 20)
-JumpHeightSlider.Position = UDim2.new(0, 10, 0, 300)
-JumpHeightSlider.Text = ""
-JumpHeightSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-JumpHeightSlider.BackgroundTransparency = 1
-JumpHeightSlider.Parent = tabContents["Exploits"]
-
-local JumpHeightKnob = Instance.new("Frame")
-JumpHeightKnob.Size = UDim2.new(0, 10, 1, 0)
-JumpHeightKnob.Position = UDim2.new((jumpHeight - 5) / 15, 0, 0, 0)
-JumpHeightKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
-JumpHeightKnob.BackgroundTransparency = 1
-JumpHeightKnob.Parent = JumpHeightSlider
-
 local TpAuraToggle = Instance.new("TextButton")
 TpAuraToggle.Size = UDim2.new(0, 100, 0, 30)
-TpAuraToggle.Position = UDim2.new(0, 10, 0, 330)
+TpAuraToggle.Position = UDim2.new(0, 10, 0, 250)
 TpAuraToggle.Text = "TP Aura: OFF"
 TpAuraToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 TpAuraToggle.BackgroundTransparency = 1
@@ -829,7 +768,7 @@ TpAuraToggle.Parent = tabContents["Exploits"]
 
 local SaveLastPositionToggle = Instance.new("TextButton")
 SaveLastPositionToggle.Size = UDim2.new(0, 100, 0, 30)
-SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 360)
+SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 290)
 SaveLastPositionToggle.Text = "Save Pos: OFF"
 SaveLastPositionToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 SaveLastPositionToggle.BackgroundTransparency = 1
@@ -839,70 +778,55 @@ SaveLastPositionToggle.Font = Enum.Font.SourceSans
 SaveLastPositionToggle.TextSize = 16
 SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
-local draggingSlider = false
+-- Separate dragging states for each slider
+local draggingFlySlider = false
+local draggingSpeedSlider = false
+
 FlySpeedSlider.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = true
+        draggingFlySlider = true
     end
 end)
 
 FlySpeedSlider.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = false
+        draggingFlySlider = false
     end
 end)
 
 SpeedSlider.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = true
+        draggingSpeedSlider = true
     end
 end)
 
 SpeedSlider.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = false
-    end
-end)
-
-JumpHeightSlider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = true
-    end
-end)
-
-JumpHeightSlider.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = false
+        draggingSpeedSlider = false
     end
 end)
 
 RunService.RenderStepped:Connect(function()
-    if draggingSlider then
-        local mouseX = UserInputService:GetMouseLocation().X
+    local mouseX = UserInputService:GetMouseLocation().X
 
-        -- Fly Speed Slider
+    -- Fly Speed Slider
+    if draggingFlySlider then
         local flySliderPos = FlySpeedSlider.AbsolutePosition.X
         local flySliderWidth = FlySpeedSlider.AbsoluteSize.X
         local flyNewPos = math.clamp((mouseX - flySliderPos) / flySliderWidth, 0, 1)
         FlySpeedKnob.Position = UDim2.new(flyNewPos, 0, 0, 0)
         flySpeed = math.floor(10 + (flyNewPos * 190))
         FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
+    end
 
-        -- Speed Slider
+    -- Speed Slider
+    if draggingSpeedSlider then
         local speedSliderPos = SpeedSlider.AbsolutePosition.X
         local speedSliderWidth = SpeedSlider.AbsoluteSize.X
         local speedNewPos = math.clamp((mouseX - speedSliderPos) / speedSliderWidth, 0, 1)
         SpeedKnob.Position = UDim2.new(speedNewPos, 0, 0, 0)
         speedMultiplier = math.floor(1 + (speedNewPos * 9))
         SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
-
-        -- Jump Height Slider
-        local jumpSliderPos = JumpHeightSlider.AbsolutePosition.X
-        local jumpSliderWidth = JumpHeightSlider.AbsoluteSize.X
-        local jumpNewPos = math.clamp((mouseX - jumpSliderPos) / jumpSliderWidth, 0, 1)
-        JumpHeightKnob.Position = UDim2.new(jumpNewPos, 0, 0, 0)
-        jumpHeight = math.floor(5 + (jumpNewPos * 15))
-        JumpHeightLabel.Text = "Jump Height: " .. jumpHeight
     end
 end)
 
@@ -941,13 +865,11 @@ local function toggleFly()
                 local cam = workspace.CurrentCamera
                 local move = Vector3.new(0, 0, 0)
                 
-                -- Horizontal movement
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
                 
-                -- Vertical movement
                 local verticalMove = 0
                 if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                     verticalMove = 1
@@ -971,13 +893,13 @@ local function toggleFly()
             if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
             if saveLastPositionEnabled and lastPosition then
-                rootPart.Position = lastPosition
+                rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
                 lastPosition = nil
             end
         end)
     else
         if saveLastPositionEnabled and lastPosition then
-            rootPart.Position = lastPosition
+            rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
             lastPosition = nil
         end
     end
@@ -1055,39 +977,21 @@ local function toggleSpeed()
                 wait()
             end
             if saveLastPositionEnabled and lastPosition then
-                getCharacter().HumanoidRootPart.Position = lastPosition
+                local rootPart = getCharacter().HumanoidRootPart
+                rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
                 lastPosition = nil
             end
         end)
     else
         if saveLastPositionEnabled and lastPosition then
-            getCharacter().HumanoidRootPart.Position = lastPosition
+            local rootPart = getCharacter().HumanoidRootPart
+            rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
             lastPosition = nil
         end
     end
 end
 
 SpeedToggle.MouseButton1Click:Connect(toggleSpeed)
-
-local function toggleHighJump()
-    highJumpEnabled = not highJumpEnabled
-    HighJumpToggle.Text = "High Jump: " .. (highJumpEnabled and "ON" or "OFF")
-    HighJumpToggle.TextColor3 = highJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    
-    if highJumpEnabled and saveLastPositionEnabled then
-        lastPosition = getCharacter().HumanoidRootPart.Position
-    end
-    
-    local humanoid = getCharacter():WaitForChild("Humanoid")
-    humanoid.JumpPower = highJumpEnabled and jumpHeight or 7.6
-    
-    if not highJumpEnabled and saveLastPositionEnabled and lastPosition then
-        getCharacter().HumanoidRootPart.Position = lastPosition
-        lastPosition = nil
-    end
-end
-
-HighJumpToggle.MouseButton1Click:Connect(toggleHighJump)
 
 local function toggleTpAura()
     tpAuraEnabled = not tpAuraEnabled
@@ -1115,7 +1019,8 @@ local function toggleTpAura()
                         -- Check if position is above ground and not in walls
                         local ray = Ray.new(newPos + Vector3.new(0, 5, 0), Vector3.new(0, -10, 0))
                         local hit, pos = workspace:FindPartOnRay(ray, getCharacter())
-                        if hit and (pos.Y > newPos.Y - 1) then
+                        if hit then
+                            newPos = Vector3.new(newPos.X, pos.Y + 3, newPos.Z) -- Adjust height to be above ground
                             local region = Region3.new(newPos - Vector3.new(1, 1, 1), newPos + Vector3.new(1, 1, 1))
                             local parts = workspace:FindPartsInRegion3(region, nil, 10)
                             local isInWall = false
@@ -1127,33 +1032,29 @@ local function toggleTpAura()
                             end
                             if not isInWall then
                                 local humanoidRootPart = getCharacter():WaitForChild("HumanoidRootPart")
-                                local direction = (targetRoot.Position - newPos).Unit
-                                local ray2 = Ray.new(newPos + Vector3.new(0, 3, 0), direction * 10)
-                                local hit2, _ = workspace:FindPartOnRayWithIgnoreList(ray2, {getCharacter(), nearestPlayer.Character})
-                                if not hit2 then
-                                    humanoidRootPart.Position = newPos
-                                    success = true
-                                    break
-                                end
+                                humanoidRootPart.CFrame = CFrame.new(newPos) -- Instant teleport
+                                success = true
+                                break
                             end
                         end
                     end
                     if not success then
-                        tpAuraEnabled = false
-                        TpAuraToggle.Text = "TP Aura: OFF"
-                        TpAuraToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        -- If no valid position is found, don't disable TP Aura, just skip this cycle
+                        print("No valid teleport position found, retrying...")
                     end
                 end
                 wait(0.1)
             end
             if saveLastPositionEnabled and lastPosition then
-                getCharacter().HumanoidRootPart.Position = lastPosition
+                local rootPart = getCharacter().HumanoidRootPart
+                rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
                 lastPosition = nil
             end
         end)
     else
         if saveLastPositionEnabled and lastPosition then
-            getCharacter().HumanoidRootPart.Position = lastPosition
+            local rootPart = getCharacter().HumanoidRootPart
+            rootPart.CFrame = CFrame.new(lastPosition) -- Instant teleport
             lastPosition = nil
         end
     end
