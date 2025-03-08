@@ -21,6 +21,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true -- Prevents GUI from being hidden by escape menu
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 400)
@@ -226,14 +227,15 @@ UserInputService.InputBegan:Connect(function(input)
             end)
         end
         
-        if aimbotV2Enabled and targetPlayer then -- New AimbotV2 logic
+        if aimbotV2Enabled and targetPlayer then -- Updated AimbotV2 logic for instant snap
             RunService:BindToRenderStep("AimbotV2Move", Enum.RenderPriority.Camera.Value + 1, function()
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
                     local targetPos = Camera:WorldToViewportPoint(targetPlayer.Character.Head.Position)
-                    local mousePos = UserInputService:GetMouseLocation()
-                    local deltaX = (targetPos.X - mousePos.X) * 0.1 -- Sensitivity factor (adjust as needed)
-                    local deltaY = (targetPos.Y - mousePos.Y) * 0.1
                     UserInputService.MouseDeltaSensitivity = 1
+                    -- Instantly move mouse to target position
+                    local currentMousePos = UserInputService:GetMouseLocation()
+                    local deltaX = targetPos.X - currentMousePos.X
+                    local deltaY = targetPos.Y - currentMousePos.Y
                     UserInputService.MouseMoveRelative(Vector2.new(deltaX, deltaY))
                 end
             end)
