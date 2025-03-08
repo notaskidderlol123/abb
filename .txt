@@ -90,7 +90,6 @@ end
 -- Aimbot Tab
 local aimbotEnabled = false
 local aimlockEnabled = false
-local triggerbotEnabled = false
 local targetPlayer = nil
 local aimlockGyro = nil  -- To store the BodyGyro instance
 
@@ -117,18 +116,6 @@ AimlockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 AimlockToggle.Font = Enum.Font.SourceSans
 AimlockToggle.TextSize = 16
 AimlockToggle.Parent = tabContents["Aimbot"]
-
-local TriggerbotToggle = Instance.new("TextButton")
-TriggerbotToggle.Size = UDim2.new(0, 100, 0, 30)
-TriggerbotToggle.Position = UDim2.new(0, 10, 0, 90)
-TriggerbotToggle.Text = "Triggerbot: OFF"
-TriggerbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-TriggerbotToggle.BackgroundTransparency = 1
-TriggerbotToggle.TextTransparency = 1
-TriggerbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-TriggerbotToggle.Font = Enum.Font.SourceSans
-TriggerbotToggle.TextSize = 16
-TriggerbotToggle.Parent = tabContents["Aimbot"]
 
 local function getNearestPlayer()
     local nearestDistance = math.huge
@@ -173,15 +160,6 @@ AimlockToggle.MouseButton1Click:Connect(function()
         if character and character:FindFirstChild("Humanoid") then
             character.Humanoid.AutoRotate = true
         end
-    end
-end)
-
-TriggerbotToggle.MouseButton1Click:Connect(function()
-    triggerbotEnabled = not triggerbotEnabled
-    TriggerbotToggle.Text = "Triggerbot: " .. (triggerbotEnabled and "ON" or "OFF")
-    TriggerbotToggle.TextColor3 = triggerbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    if not triggerbotEnabled then
-        RunService:UnbindFromRenderStep("TriggerbotFire")
     end
 end)
 
@@ -248,42 +226,6 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Triggerbot Logic
-local lastFireTime = 0
-local fireCooldown = 0.1 -- Cooldown between shots in seconds
-
-RunService.RenderStepped:Connect(function()
-    if triggerbotEnabled then
-        local mousePos = UserInputService:GetMouseLocation()
-        local currentTime = tick()
-
-        for _, player in pairs(PlayersService:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-                local head = player.Character.Head
-                local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                
-                if onScreen then
-                    local headScreenPos = Vector2.new(screenPos.X, screenPos.Y)
-                    local distance = (headScreenPos - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
-                    
-                    -- Check if the mouse is over the head (within a small radius)
-                    if distance < 20 and (currentTime - lastFireTime) >= fireCooldown then
-                        -- Find an equipped tool in the player's inventory
-                        local character = getCharacter()
-                        local tool = character and character:FindFirstChildWhichIsA("Tool")
-                        if tool then
-                            -- Activate the tool to fire
-                            tool:Activate()
-                            lastFireTime = currentTime
-                        end
-                        break
-                    end
-                end
-            end
-        end
-    end
-end)
-
 LocalPlayer.CharacterAdded:Connect(function(char)
     if aimbotEnabled and targetPlayer then
         local rootPart = char:WaitForChild("HumanoidRootPart")
@@ -322,24 +264,27 @@ end)
 local espToggles = {
     Box = false,
     Name = false,
-    Distance = false,
+    Speed = false, -- Replaced Distance with Speed
     HealthBar = false,
     Tracer = true,
     Skeleton = false,
-    Box3D = false
+    Box3D = false,
+    Outline = false -- Added Outline ESP
 }
 
 local espPlayers = {}
+local lastPositions = {} -- To track player positions for speed calculation
 local function DrawESP(plr)
     local drawings = {
         Box = Drawing.new("Quad"),
         Name = Drawing.new("Text"),
-        Distance = Drawing.new("Text"),
-        HealthText = Drawing.new("Text"), -- For health percentage
-        HealthBar = Drawing.new("Line"),  -- For the health bar
+        Speed = Drawing.new("Text"), -- Replaced Distance with Speed
+        HealthText = Drawing.new("Text"),
+        HealthBar = Drawing.new("Square"), -- Changed to Square for box-style health bar
         Tracer = Drawing.new("Line"),
         Skeleton = {},
-        Box3D = {}
+        Box3D = {},
+        Outline = Drawing.new("Quad") -- Added Outline
     }
     
     -- Configure drawings
@@ -353,10 +298,10 @@ local function DrawESP(plr)
     drawings.Name.Outline = true
     drawings.Name.Visible = false
 
-    drawings.Distance.Size = 16
-    drawings.Distance.Color = Color3.fromRGB(255, 255, 255)
-    drawings.Distance.Outline = true
-    drawings.Distance.Visible = false
+    drawings.Speed.Size = 16
+    drawings.Speed.Color = Color3.fromRGB(255, 255, 255)
+    drawings.Speed.Outline = true
+    drawings.Speed.Visible = false
 
     -- Health Text (Percentage)
     drawings.HealthText.Size = 16
@@ -364,13 +309,20 @@ local function DrawESP(plr)
     drawings.HealthText.Outline = true
     drawings.HealthText.Visible = false
 
-    -- Health Bar (Single bar, no background)
-    drawings.HealthBar.Thickness = 5 -- Thickness of the health bar
+    -- Health Bar (Box style)
+    drawings.HealthBar.Thickness = 0 -- No outline for the box
+    drawings.HealthBar.Size = Vector2.new(60, 10) -- Width 60, Height 10 for a thicker box
     drawings.HealthBar.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
+
+    -- Outline (Thick border around player)
+    drawings.Outline.Color = Color3.fromRGB(255, 0, 0) -- Red outline
+    drawings.Outline.Thickness = 2
+    drawings.Outline.Transparency = 1
+    drawings.Outline.Visible = false
 
     -- Skeleton bones
     local bones = {
@@ -433,46 +385,52 @@ local function DrawESP(plr)
                         drawings.Box.Visible = false
                     end
 
-                    -- Name ESP (Centered above head)
+                    -- Name ESP
                     if espToggles.Name and headVis then
-                        local nameWidth = drawings.Name.TextBounds.X -- Get the width of the text
-                        drawings.Name.Position = Vector2.new(headPos.X - (nameWidth / 2), headPos.Y - 30) -- Center and offset above head
+                        local nameWidth = drawings.Name.TextBounds.X
+                        drawings.Name.Position = Vector2.new(headPos.X - (nameWidth / 2), headPos.Y - 30)
                         drawings.Name.Text = plr.Name
                         drawings.Name.Visible = true
                     else
                         drawings.Name.Visible = false
                     end
 
-                    -- Distance ESP
-                    if espToggles.Distance then
-                        local playerDistance = (rootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-                        drawings.Distance.Position = Vector2.new(BottomRight.X, BottomRight.Y + 5)
-                        drawings.Distance.Text = tostring(math.floor(playerDistance)) .. "m"
-                        drawings.Distance.Visible = true
+                    -- Speed ESP
+                    if espToggles.Speed and headVis then
+                        local currentPos = plr.Character.HumanoidRootPart.Position
+                        if not lastPositions[plr] then lastPositions[plr] = currentPos end
+                        local lastPos = lastPositions[plr]
+                        local delta = (currentPos - lastPos).Magnitude
+                        local speed = delta / RunService.RenderStepped:Wait() -- Speed in studs per second
+                        drawings.Speed.Position = Vector2.new(headPos.X, headPos.Y + 10) -- Below the name
+                        drawings.Speed.Text = string.format("Speed: %.1f", speed)
+                        lastPositions[plr] = currentPos
+                        drawings.Speed.Visible = true
                     else
-                        drawings.Distance.Visible = false
+                        drawings.Speed.Visible = false
                     end
 
-                    -- Health ESP (Percentage Text + Bar)
+                    -- Health ESP
                     if espToggles.HealthBar and headVis then
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            local barWidth = 60 -- Width of the health bar
-                            local barX = headPos.X - (barWidth / 2) -- Center the bar
+                            local barWidth = 60
+                            local barHeight = 10 -- Increased height for thicker box
+                            local barX = headPos.X - (barWidth / 2)
+                            local barY = headPos.Y - 30
 
-                            -- Health Percentage Text (above the bar)
+                            -- Health Percentage Text
                             local healthText = math.floor(healthPercent * 100) .. "%"
                             local textWidth = drawings.HealthText.TextBounds.X
                             drawings.HealthText.Text = healthText
-                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y - 50) -- Position above the bar
+                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y - 50)
                             drawings.HealthText.Visible = true
 
-                            -- Health Bar (below the text)
-                            local barY = headPos.Y - 30 -- Position the bar below the text
-                            drawings.HealthBar.From = Vector2.new(barX, barY)
-                            drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), barY)
-                            drawings.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0) -- Green to red transition
+                            -- Health Bar (Box)
+                            drawings.HealthBar.Position = Vector2.new(barX, barY)
+                            drawings.HealthBar.Size = Vector2.new(barWidth * healthPercent, barHeight)
+                            drawings.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0) -- Green to red
                             drawings.HealthBar.Visible = true
                         end
                     else
@@ -561,6 +519,36 @@ local function DrawESP(plr)
                             line.Visible = false
                         end
                     end
+
+                    -- Outline ESP
+                    if espToggles.Outline then
+                        local size = plr.Character:GetExtentsSize() * 1.1
+                        local cf = plr.Character.PrimaryPart.CFrame
+                        local corners = {
+                            cf * CFrame.new(-size.X/2 - 0.5, size.Y/2 + 0.5, 0), -- Top Left (offset outward)
+                            cf * CFrame.new(size.X/2 + 0.5, size.Y/2 + 0.5, 0),  -- Top Right
+                            cf * CFrame.new(size.X/2 + 0.5, -size.Y/2 - 0.5, 0), -- Bottom Right
+                            cf * CFrame.new(-size.X/2 - 0.5, -size.Y/2 - 0.5, 0) -- Bottom Left
+                        }
+                        local screenCorners = {}
+                        local allVisible = true
+                        for i, corner in ipairs(corners) do
+                            local screenPos, vis = Camera:WorldToViewportPoint(corner.p)
+                            screenCorners[i] = Vector2.new(screenPos.X, screenPos.Y)
+                            if not vis then allVisible = false end
+                        end
+                        if allVisible then
+                            drawings.Outline.PointA = screenCorners[1]
+                            drawings.Outline.PointB = screenCorners[2]
+                            drawings.Outline.PointC = screenCorners[3]
+                            drawings.Outline.PointD = screenCorners[4]
+                            drawings.Outline.Visible = true
+                        else
+                            drawings.Outline.Visible = false
+                        end
+                    else
+                        drawings.Outline.Visible = false
+                    end
                 else
                     for _, drawing in pairs(drawings) do
                         if type(drawing) == "table" then
@@ -639,6 +627,13 @@ local flySpeed = 75
 local controlSpeed = 10000
 local noClipEnabled = false
 local infiniteJumpEnabled = false
+local speedEnabled = false
+local speedMultiplier = 1
+local highJumpEnabled = false
+local jumpHeight = 7.6
+local tpAuraEnabled = false
+local saveLastPositionEnabled = false
+local lastPosition = nil
 
 local FlyToggle = Instance.new("TextButton")
 FlyToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -678,6 +673,130 @@ FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
 FlySpeedKnob.BackgroundTransparency = 1
 FlySpeedKnob.Parent = FlySpeedSlider
 
+local SpeedToggle = Instance.new("TextButton")
+SpeedToggle.Size = UDim2.new(0, 100, 0, 30)
+SpeedToggle.Position = UDim2.new(0, 10, 0, 100)
+SpeedToggle.Text = "Speed: OFF"
+SpeedToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SpeedToggle.BackgroundTransparency = 1
+SpeedToggle.TextTransparency = 1
+SpeedToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+SpeedToggle.Font = Enum.Font.SourceSans
+SpeedToggle.TextSize = 16
+SpeedToggle.Parent = tabContents["Exploits"]
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(0, 100, 0, 20)
+SpeedLabel.Position = UDim2.new(0, 10, 0, 140)
+SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.TextTransparency = 1
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.Font = Enum.Font.SourceSans
+SpeedLabel.TextSize = 16
+SpeedLabel.Parent = tabContents["Exploits"]
+
+local SpeedSlider = Instance.new("TextButton")
+SpeedSlider.Size = UDim2.new(0, 200, 0, 20)
+SpeedSlider.Position = UDim2.new(0, 10, 0, 160)
+SpeedSlider.Text = ""
+SpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+SpeedSlider.BackgroundTransparency = 1
+SpeedSlider.Parent = tabContents["Exploits"]
+
+local SpeedKnob = Instance.new("Frame")
+SpeedKnob.Size = UDim2.new(0, 10, 1, 0)
+SpeedKnob.Position = UDim2.new((speedMultiplier - 1) / 9, 0, 0, 0) -- Range 1 to 10
+SpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
+SpeedKnob.BackgroundTransparency = 1
+SpeedKnob.Parent = SpeedSlider
+
+local HighJumpToggle = Instance.new("TextButton")
+HighJumpToggle.Size = UDim2.new(0, 100, 0, 30)
+HighJumpToggle.Position = UDim2.new(0, 10, 0, 190)
+HighJumpToggle.Text = "High Jump: OFF"
+HighJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+HighJumpToggle.BackgroundTransparency = 1
+HighJumpToggle.TextTransparency = 1
+HighJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+HighJumpToggle.Font = Enum.Font.SourceSans
+HighJumpToggle.TextSize = 16
+HighJumpToggle.Parent = tabContents["Exploits"]
+
+local JumpHeightLabel = Instance.new("TextLabel")
+JumpHeightLabel.Size = UDim2.new(0, 100, 0, 20)
+JumpHeightLabel.Position = UDim2.new(0, 10, 0, 230)
+JumpHeightLabel.Text = "Jump Height: " .. jumpHeight
+JumpHeightLabel.BackgroundTransparency = 1
+JumpHeightLabel.TextTransparency = 1
+JumpHeightLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+JumpHeightLabel.Font = Enum.Font.SourceSans
+JumpHeightLabel.TextSize = 16
+JumpHeightLabel.Parent = tabContents["Exploits"]
+
+local JumpHeightSlider = Instance.new("TextButton")
+JumpHeightSlider.Size = UDim2.new(0, 200, 0, 20)
+JumpHeightSlider.Position = UDim2.new(0, 10, 0, 250)
+JumpHeightSlider.Text = ""
+JumpHeightSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+JumpHeightSlider.BackgroundTransparency = 1
+JumpHeightSlider.Parent = tabContents["Exploits"]
+
+local JumpHeightKnob = Instance.new("Frame")
+JumpHeightKnob.Size = UDim2.new(0, 10, 1, 0)
+JumpHeightKnob.Position = UDim2.new((jumpHeight - 5) / 15, 0, 0, 0) -- Range 5 to 20
+JumpHeightKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
+JumpHeightKnob.BackgroundTransparency = 1
+JumpHeightKnob.Parent = JumpHeightSlider
+
+local TpAuraToggle = Instance.new("TextButton")
+TpAuraToggle.Size = UDim2.new(0, 100, 0, 30)
+TpAuraToggle.Position = UDim2.new(0, 10, 0, 280)
+TpAuraToggle.Text = "TP Aura: OFF"
+TpAuraToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TpAuraToggle.BackgroundTransparency = 1
+TpAuraToggle.TextTransparency = 1
+TpAuraToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+TpAuraToggle.Font = Enum.Font.SourceSans
+TpAuraToggle.TextSize = 16
+TpAuraToggle.Parent = tabContents["Exploits"]
+
+local SaveLastPositionToggle = Instance.new("TextButton")
+SaveLastPositionToggle.Size = UDim2.new(0, 100, 0, 30)
+SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 310)
+SaveLastPositionToggle.Text = "Save Pos: OFF"
+SaveLastPositionToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SaveLastPositionToggle.BackgroundTransparency = 1
+SaveLastPositionToggle.TextTransparency = 1
+SaveLastPositionToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+SaveLastPositionToggle.Font = Enum.Font.SourceSans
+SaveLastPositionToggle.TextSize = 16
+SaveLastPositionToggle.Parent = tabContents["Exploits"]
+
+local NoClipToggle = Instance.new("TextButton")
+NoClipToggle.Size = UDim2.new(0, 100, 0, 340)
+NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
+NoClipToggle.Text = "NoClip: OFF"
+NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+NoClipToggle.BackgroundTransparency = 1
+NoClipToggle.TextTransparency = 1
+NoClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+NoClipToggle.Font = Enum.Font.SourceSans
+NoClipToggle.TextSize = 16
+NoClipToggle.Parent = tabContents["Exploits"]
+
+local InfiniteJumpToggle = Instance.new("TextButton")
+InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
+InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 140)
+InfiniteJumpToggle.Text = "Inf Jump: OFF"
+InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+InfiniteJumpToggle.BackgroundTransparency = 1
+InfiniteJumpToggle.TextTransparency = 1
+InfiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+InfiniteJumpToggle.Font = Enum.Font.SourceSans
+InfiniteJumpToggle.TextSize = 16
+InfiniteJumpToggle.Parent = tabContents["Exploits"]
+
 local draggingSlider = false
 FlySpeedSlider.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -691,15 +810,57 @@ FlySpeedSlider.InputEnded:Connect(function(input)
     end
 end)
 
+SpeedSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = true
+    end
+end)
+
+SpeedSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = false
+    end
+end)
+
+JumpHeightSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = true
+    end
+end)
+
+JumpHeightSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = false
+    end
+end)
+
 RunService.RenderStepped:Connect(function()
     if draggingSlider then
         local mouseX = UserInputService:GetMouseLocation().X
-        local sliderPos = FlySpeedSlider.AbsolutePosition.X
-        local sliderWidth = FlySpeedSlider.AbsoluteSize.X
-        local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
-        FlySpeedKnob.Position = UDim2.new(newPos, 0, 0, 0)
-        flySpeed = math.floor(10 + (newPos * 190))
+
+        -- Fly Speed Slider
+        local flySliderPos = FlySpeedSlider.AbsolutePosition.X
+        local flySliderWidth = FlySpeedSlider.AbsoluteSize.X
+        local flyNewPos = math.clamp((mouseX - flySliderPos) / flySliderWidth, 0, 1)
+        FlySpeedKnob.Position = UDim2.new(flyNewPos, 0, 0, 0)
+        flySpeed = math.floor(10 + (flyNewPos * 190))
         FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
+
+        -- Speed Slider
+        local speedSliderPos = SpeedSlider.AbsolutePosition.X
+        local speedSliderWidth = SpeedSlider.AbsoluteSize.X
+        local speedNewPos = math.clamp((mouseX - speedSliderPos) / speedSliderWidth, 0, 1)
+        SpeedKnob.Position = UDim2.new(speedNewPos, 0, 0, 0)
+        speedMultiplier = math.floor(1 + (speedNewPos * 9))
+        SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
+
+        -- Jump Height Slider
+        local jumpSliderPos = JumpHeightSlider.AbsolutePosition.X
+        local jumpSliderWidth = JumpHeightSlider.AbsoluteSize.X
+        local jumpNewPos = math.clamp((mouseX - jumpSliderPos) / jumpSliderWidth, 0, 1)
+        JumpHeightKnob.Position = UDim2.new(jumpNewPos, 0, 0, 0)
+        jumpHeight = math.floor(5 + (jumpNewPos * 15))
+        JumpHeightLabel.Text = "Jump Height: " .. jumpHeight
     end
 end)
 
@@ -711,6 +872,10 @@ local function toggleFly()
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
     local humanoid = character:WaitForChild("Humanoid")
+    
+    if flyEnabled and saveLastPositionEnabled then
+        lastPosition = rootPart.Position
+    end
     
     if flyEnabled then
         humanoid:ChangeState(Enum.HumanoidStateType.Physics)
@@ -763,7 +928,16 @@ local function toggleFly()
             if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
             if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            if saveLastPositionEnabled and lastPosition then
+                rootPart.Position = lastPosition
+                lastPosition = nil
+            end
         end)
+    else
+        if saveLastPositionEnabled and lastPosition then
+            rootPart.Position = lastPosition
+            lastPosition = nil
+        end
     end
 end
 
@@ -776,18 +950,6 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         toggleFly()
     end
 end)
-
-local NoClipToggle = Instance.new("TextButton")
-NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
-NoClipToggle.Position = UDim2.new(0, 10, 0, 100)
-NoClipToggle.Text = "NoClip: OFF"
-NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-NoClipToggle.BackgroundTransparency = 1
-NoClipToggle.TextTransparency = 1
-NoClipToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-NoClipToggle.Font = Enum.Font.SourceSans
-NoClipToggle.TextSize = 16
-NoClipToggle.Parent = tabContents["Exploits"]
 
 local function toggleNoClip()
     noClipEnabled = not noClipEnabled
@@ -815,18 +977,6 @@ end
 
 NoClipToggle.MouseButton1Click:Connect(toggleNoClip)
 
-local InfiniteJumpToggle = Instance.new("TextButton")
-InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
-InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 140)
-InfiniteJumpToggle.Text = "Inf Jump: OFF"
-InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-InfiniteJumpToggle.BackgroundTransparency = 1
-InfiniteJumpToggle.TextTransparency = 1
-InfiniteJumpToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-InfiniteJumpToggle.Font = Enum.Font.SourceSans
-InfiniteJumpToggle.TextSize = 16
-InfiniteJumpToggle.Parent = tabContents["Exploits"]
-
 UserInputService.JumpRequest:Connect(function()
     if infiniteJumpEnabled then
         local character = getCharacter()
@@ -839,6 +989,141 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     infiniteJumpEnabled = not infiniteJumpEnabled
     InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
+local function toggleSpeed()
+    speedEnabled = not speedEnabled
+    SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
+    SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    
+    if speedEnabled and saveLastPositionEnabled then
+        lastPosition = getCharacter().HumanoidRootPart.Position
+    end
+    
+    if speedEnabled then
+        spawn(function()
+            while speedEnabled do
+                local character = getCharacter()
+                local humanoid = character:WaitForChild("Humanoid")
+                local rootPart = character:WaitForChild("HumanoidRootPart")
+                local moveDirection = humanoid.MoveDirection
+                if moveDirection.Magnitude > 0 then
+                    rootPart.Velocity = moveDirection * (humanoid.WalkSpeed * speedMultiplier)
+                end
+                wait()
+            end
+            if saveLastPositionEnabled and lastPosition then
+                getCharacter().HumanoidRootPart.Position = lastPosition
+                lastPosition = nil
+            end
+        end)
+    else
+        if saveLastPositionEnabled and lastPosition then
+            getCharacter().HumanoidRootPart.Position = lastPosition
+            lastPosition = nil
+        end
+    end
+end
+
+SpeedToggle.MouseButton1Click:Connect(toggleSpeed)
+
+local function toggleHighJump()
+    highJumpEnabled = not highJumpEnabled
+    HighJumpToggle.Text = "High Jump: " .. (highJumpEnabled and "ON" or "OFF")
+    HighJumpToggle.TextColor3 = highJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    
+    if highJumpEnabled and saveLastPositionEnabled then
+        lastPosition = getCharacter().HumanoidRootPart.Position
+    end
+    
+    local humanoid = getCharacter():WaitForChild("Humanoid")
+    humanoid.JumpPower = highJumpEnabled and jumpHeight or 7.6 -- Default Roblox JumpPower
+    
+    if not highJumpEnabled and saveLastPositionEnabled and lastPosition then
+        getCharacter().HumanoidRootPart.Position = lastPosition
+        lastPosition = nil
+    end
+end
+
+HighJumpToggle.MouseButton1Click:Connect(toggleHighJump)
+
+local function toggleTpAura()
+    tpAuraEnabled = not tpAuraEnabled
+    TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
+    TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    
+    if tpAuraEnabled and saveLastPositionEnabled then
+        lastPosition = getCharacter().HumanoidRootPart.Position
+    end
+    
+    if tpAuraEnabled then
+        spawn(function()
+            while tpAuraEnabled do
+                local nearestPlayer = getNearestPlayer()
+                if nearestPlayer and nearestPlayer.Character and nearestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local targetRoot = nearestPlayer.Character.HumanoidRootPart
+                    local angles = {0, 90, 180, 270} -- Four directions around the player
+                    local success = false
+                    
+                    for _, angle in ipairs(angles) do
+                        local rad = math.rad(angle)
+                        local offset = Vector3.new(math.cos(rad) * 3, 0, math.sin(rad) * 3) -- 3 studs away
+                        local newPos = targetRoot.Position + offset
+                        
+                        -- Check if position is above ground and not in walls
+                        local ray = Ray.new(newPos + Vector3.new(0, 5, 0), Vector3.new(0, -10, 0)) -- Raycast downward
+                        local hit, pos = workspace:FindPartOnRay(ray, getCharacter())
+                        if hit and (pos.Y > newPos.Y - 1) then -- Ensure not underground
+                            local region = Region3.new(newPos - Vector3.new(1, 1, 1), newPos + Vector3.new(1, 1, 1))
+                            local parts = workspace:FindPartsInRegion3(region, nil, 10)
+                            local isInWall = false
+                            for _, part in pairs(parts) do
+                                if part.CanCollide and part.Transparency < 1 then
+                                    isInWall = true
+                                    break
+                                end
+                            end
+                            if not isInWall then
+                                -- Check if target is visible from new position
+                                local humanoidRootPart = getCharacter():WaitForChild("HumanoidRootPart")
+                                local direction = (targetRoot.Position - newPos).Unit
+                                local ray2 = Ray.new(newPos + Vector3.new(0, 3, 0), direction * 10)
+                                local hit2, _ = workspace:FindPartOnRayWithIgnoreList(ray2, {getCharacter(), nearestPlayer.Character})
+                                if not hit2 then
+                                    humanoidRootPart.Position = newPos
+                                    success = true
+                                    break
+                                end
+                            end
+                        end
+                    end
+                    if not success then
+                        tpAuraEnabled = false
+                        TpAuraToggle.Text = "TP Aura: OFF"
+                        TpAuraToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+                    end
+                end
+                wait(0.1)
+            end
+            if saveLastPositionEnabled and lastPosition then
+                getCharacter().HumanoidRootPart.Position = lastPosition
+                lastPosition = nil
+            end
+        end)
+    else
+        if saveLastPositionEnabled and lastPosition then
+            getCharacter().HumanoidRootPart.Position = lastPosition
+            lastPosition = nil
+        end
+    end
+end
+
+TpAuraToggle.MouseButton1Click:Connect(toggleTpAura)
+
+SaveLastPositionToggle.MouseButton1Click:Connect(function()
+    saveLastPositionEnabled = not saveLastPositionEnabled
+    SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
+    SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
 -- GUI Animation Setup
@@ -858,7 +1143,7 @@ local function animateGui(isVisible)
         local fadeInTab = TweenService:Create(TabFrame, fadeInInfo, {BackgroundTransparency = 0})
         local fadeInContent = TweenService:Create(ContentFrame, fadeInInfo, {BackgroundTransparency = 0})
         MainFrame.Size = UDim2.new(0, 400, 0, 0)
-        local scaleIn = TweenService:Create(MainFrame, scaleInInfo, {Size = UDim2.new(0, 400, 0, 300)})
+        local scaleIn = TweenService:Create(MainFrame, scaleInInfo, {Size = UDim2.new(0, 400, 0, 400)}) -- Increased height for more options
 
         fadeIn:Play()
         fadeInTab:Play()
