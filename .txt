@@ -90,6 +90,7 @@ end
 -- Aimbot Tab
 local aimbotEnabled = false
 local aimlockEnabled = false
+local triggerbotEnabled = false
 local targetPlayer = nil
 local aimlockGyro = nil  -- To store the BodyGyro instance
 
@@ -116,6 +117,18 @@ AimlockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 AimlockToggle.Font = Enum.Font.SourceSans
 AimlockToggle.TextSize = 16
 AimlockToggle.Parent = tabContents["Aimbot"]
+
+local TriggerbotToggle = Instance.new("TextButton")
+TriggerbotToggle.Size = UDim2.new(0, 100, 0, 30)
+TriggerbotToggle.Position = UDim2.new(0, 10, 0, 90)
+TriggerbotToggle.Text = "Triggerbot: OFF"
+TriggerbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TriggerbotToggle.BackgroundTransparency = 1
+TriggerbotToggle.TextTransparency = 1
+TriggerbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+TriggerbotToggle.Font = Enum.Font.SourceSans
+TriggerbotToggle.TextSize = 16
+TriggerbotToggle.Parent = tabContents["Aimbot"]
 
 local function getNearestPlayer()
     local nearestDistance = math.huge
@@ -160,6 +173,15 @@ AimlockToggle.MouseButton1Click:Connect(function()
         if character and character:FindFirstChild("Humanoid") then
             character.Humanoid.AutoRotate = true
         end
+    end
+end)
+
+TriggerbotToggle.MouseButton1Click:Connect(function()
+    triggerbotEnabled = not triggerbotEnabled
+    TriggerbotToggle.Text = "Triggerbot: " .. (triggerbotEnabled and "ON" or "OFF")
+    TriggerbotToggle.TextColor3 = triggerbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    if not triggerbotEnabled then
+        RunService:UnbindFromRenderStep("TriggerbotFire")
     end
 end)
 
@@ -226,6 +248,39 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
+-- Triggerbot Logic
+local lastFireTime = 0
+local fireCooldown = 0.1 -- Cooldown between shots in seconds
+
+RunService.RenderStepped:Connect(function()
+    if triggerbotEnabled then
+        local mousePos = UserInputService:GetMouseLocation()
+        local currentTime = tick()
+
+        for _, player in pairs(PlayersService:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                local head = player.Character.Head
+                local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                
+                if onScreen then
+                    local headScreenPos = Vector2.new(screenPos.X, screenPos.Y)
+                    local distance = (headScreenPos - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
+                    
+                    -- Check if the mouse is over the head (within a small radius)
+                    if distance < 20 and (currentTime - lastFireTime) >= fireCooldown then
+                        -- Simulate a mouse click to fire
+                        mouse1press()
+                        wait()
+                        mouse1release()
+                        lastFireTime = currentTime
+                        break
+                    end
+                end
+            end
+        end
+    end
+end)
+
 LocalPlayer.CharacterAdded:Connect(function(char)
     if aimbotEnabled and targetPlayer then
         local rootPart = char:WaitForChild("HumanoidRootPart")
@@ -277,14 +332,13 @@ local function DrawESP(plr)
         Box = Drawing.new("Quad"),
         Name = Drawing.new("Text"),
         Distance = Drawing.new("Text"),
-        HealthBar = Drawing.new("Line"), -- Health bar foreground
-        HealthBarBg = Drawing.new("Line"), -- Health bar background
+        HealthBar = Drawing.new("Line"),
+        HealthBarBg = Drawing.new("Line"),
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {}
     }
     
-    -- Configure drawings
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
     drawings.Box.Thickness = 1
     drawings.Box.Transparency = 1
@@ -302,15 +356,14 @@ local function DrawESP(plr)
 
     drawings.HealthBar.Thickness = 12
     drawings.HealthBar.Visible = false
-    drawings.HealthBarBg.Thickness = 14 -- Slightly thicker background
-    drawings.HealthBarBg.Color = Color3.fromRGB(50, 50, 50) -- Dark background
+    drawings.HealthBarBg.Thickness = 14
+    drawings.HealthBarBg.Color = Color3.fromRGB(50, 50, 50)
     drawings.HealthBarBg.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
 
-    -- Skeleton bones
     local bones = {
         {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
         {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
@@ -326,7 +379,6 @@ local function DrawESP(plr)
         drawings.Skeleton[pair[1] .. pair[2]] = line
     end
 
-    -- 3D Box edges
     local box3DIndices = {
         {1, 2}, {2, 3}, {3, 4}, {4, 1},
         {5, 6}, {6, 7}, {7, 8}, {8, 5},
@@ -360,7 +412,6 @@ local function DrawESP(plr)
                         headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true
                     end
 
-                    -- Box ESP
                     if espToggles.Box then
                         drawings.Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
                         drawings.Box.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
@@ -371,17 +422,15 @@ local function DrawESP(plr)
                         drawings.Box.Visible = false
                     end
 
-                    -- Name ESP (Centered above head)
                     if espToggles.Name and headVis then
-                        local nameWidth = drawings.Name.TextBounds.X -- Get the width of the text
-                        drawings.Name.Position = Vector2.new(headPos.X - (nameWidth / 2), headPos.Y - 30) -- Center and offset above head
+                        local nameWidth = drawings.Name.TextBounds.X
+                        drawings.Name.Position = Vector2.new(headPos.X - (nameWidth / 2), headPos.Y - 30)
                         drawings.Name.Text = plr.Name
                         drawings.Name.Visible = true
                     else
                         drawings.Name.Visible = false
                     end
 
-                    -- Distance ESP
                     if espToggles.Distance then
                         local playerDistance = (rootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
                         drawings.Distance.Position = Vector2.new(BottomRight.X, BottomRight.Y + 5)
@@ -391,25 +440,22 @@ local function DrawESP(plr)
                         drawings.Distance.Visible = false
                     end
 
-                    -- Health Bar ESP with Background
                     if espToggles.HealthBar and headVis then
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
                             local barWidth = 100
                             local barHeight = 12
-                            local barX = headPos.X - (barWidth / 2) -- Center the bar
+                            local barX = headPos.X - (barWidth / 2)
                             local barY = headPos.Y - 10
 
-                            -- Health bar background
                             drawings.HealthBarBg.From = Vector2.new(barX, barY)
                             drawings.HealthBarBg.To = Vector2.new(barX + barWidth, barY)
                             drawings.HealthBarBg.Visible = true
 
-                            -- Health bar foreground (green, based on health)
                             drawings.HealthBar.From = Vector2.new(barX, barY)
                             drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), barY)
-                            drawings.HealthBar.Color = Color3.fromRGB(0, 255 * healthPercent, 0) -- Green to red gradient
+                            drawings.HealthBar.Color = Color3.fromRGB(0, 255 * healthPercent, 0)
                             drawings.HealthBar.Visible = true
                         end
                     else
@@ -417,7 +463,6 @@ local function DrawESP(plr)
                         drawings.HealthBarBg.Visible = false
                     end
 
-                    -- Tracer ESP
                     if espToggles.Tracer then
                         local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso")
                         if chest then
@@ -436,7 +481,6 @@ local function DrawESP(plr)
                         drawings.Tracer.Visible = false
                     end
 
-                    -- Skeleton ESP
                     if espToggles.Skeleton then
                         for _, pair in ipairs(bones) do
                             local p1 = plr.Character:FindFirstChild(pair[1])
@@ -460,7 +504,6 @@ local function DrawESP(plr)
                         end
                     end
 
-                    -- 3D Box ESP
                     if espToggles.Box3D then
                         local size = plr.Character:GetExtentsSize() * 1.1
                         local cf = plr.Character.PrimaryPart.CFrame
@@ -653,7 +696,7 @@ local function toggleFly()
         humanoid:ChangeState(Enum.HumanoidStateType.Physics)
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxTorque = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
+        bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed) -- Changed MaxTorque to MaxForce
         bv.Parent = rootPart
         
         local bg = Instance.new("BodyGyro")
@@ -670,18 +713,30 @@ local function toggleFly()
                 local hum = char:WaitForChild("Humanoid")
                 local cam = workspace.CurrentCamera
                 local move = Vector3.new(0, 0, 0)
+                
+                -- Horizontal movement
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then move = move + Vector3.new(0, -1, 0) end
+                
+                -- Vertical movement
+                local verticalMove = 0
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                    verticalMove = 1
+                elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
+                    verticalMove = -1
+                else
+                    verticalMove = 0 -- No vertical movement if neither Space nor Shift is pressed
+                end
+                move = move + Vector3.new(0, verticalMove, 0)
                 
                 if move.Magnitude > 0 then
                     move = move.Unit * flySpeed
                     bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
                     bg.CFrame = cam.CFrame
                 else
+                    -- When no movement keys are pressed, maintain position (no vertical velocity)
                     bv.Velocity = Vector3.new(0, 0, 0)
                 end
                 wait()
