@@ -16,7 +16,7 @@ local function getCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
--- GUI Setup
+-- GUI Setup (unchanged)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -91,7 +91,8 @@ end
 local aimbotEnabled = false
 local aimlockEnabled = false
 local targetPlayer = nil
-local aimlockGyro = nil  -- To store the BodyGyro instance
+local aimlockGyro = nil
+local aimAtPart = "Head"  -- Default to Head as per your request
 
 local AimbotToggle = Instance.new("TextButton")
 AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -117,22 +118,31 @@ AimlockToggle.Font = Enum.Font.SourceSans
 AimlockToggle.TextSize = 16
 AimlockToggle.Parent = tabContents["Aimbot"]
 
-local function getNearestPlayer()
-    local nearestDistance = math.huge
-    local nearestPlayer = nil
+-- Aimbot/Aimlock Functions (Adapted from OrionLib Script)
+local function getClosestTarget()
     local character = getCharacter()
-    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local localRoot = character:WaitForChild("HumanoidRootPart")
+    local nearestTarget = nil
+    local shortestDistance = math.huge
 
-    for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
-        if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("Head") then
-            local distance = (rootPart.Position - otherPlayer.Character.Head.Position).Magnitude
-            if distance < nearestDistance then
-                nearestDistance = distance
-                nearestPlayer = otherPlayer
+    for _, player in pairs(PlayersService:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(aimAtPart) then
+            local targetRoot = player.Character[aimAtPart]
+            local distance = (targetRoot.Position - localRoot.Position).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                nearestTarget = player
             end
         end
     end
-    return nearestPlayer
+
+    return nearestTarget
+end
+
+local function lookAt(targetPosition)
+    if targetPosition then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPosition)
+    end
 end
 
 AimbotToggle.MouseButton1Click:Connect(function()
@@ -165,43 +175,40 @@ end)
 
 UserInputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        targetPlayer = getNearestPlayer()
-        
+        targetPlayer = getClosestTarget()
+
         -- Aimbot (Snap to Head)
         if aimbotEnabled and targetPlayer then
             RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                    local targetPos = targetPlayer.Character.Head.Position
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild(aimAtPart) then
+                    local targetPos = targetPlayer.Character[aimAtPart].Position
                     if targetPos.Magnitude < 10000 then
-                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                        lookAt(targetPos)
                     end
                 end
             end)
         end
-        
+
         -- Aimlock (Persistent Lock-on with Character Rotation)
         if aimlockEnabled and targetPlayer then
             local character = getCharacter()
             local rootPart = character:WaitForChild("HumanoidRootPart")
             local humanoid = character:WaitForChild("Humanoid")
-            humanoid.AutoRotate = false  -- Disable default rotation
-            
-            -- Create BodyGyro if it doesn't exist
+            humanoid.AutoRotate = false
+
             if not aimlockGyro then
                 aimlockGyro = Instance.new("BodyGyro")
-                aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)  -- Strong enough to override movement
-                aimlockGyro.P = 10000  -- High power for instant response
-                aimlockGyro.D = 500  -- Damping to prevent oscillation
+                aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)
+                aimlockGyro.P = 10000
+                aimlockGyro.D = 500
                 aimlockGyro.Parent = rootPart
             end
 
             RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                    local targetPos = targetPlayer.Character.Head.Position
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild(aimAtPart) then
+                    local targetPos = targetPlayer.Character[aimAtPart].Position
                     if targetPos.Magnitude < 10000 then
-                        -- Update camera
-                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                        -- Update BodyGyro to rotate character
+                        lookAt(targetPos)
                         aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
                     end
                 end
@@ -221,7 +228,7 @@ UserInputService.InputEnded:Connect(function(input)
         end
         local character = getCharacter()
         if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.AutoRotate = true  -- Restore normal rotation
+            character.Humanoid.AutoRotate = true
         end
     end
 end)
@@ -230,10 +237,10 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     if aimbotEnabled and targetPlayer then
         local rootPart = char:WaitForChild("HumanoidRootPart")
         RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function()
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                local targetPos = targetPlayer.Character.Head.Position
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild(aimAtPart) then
+                local targetPos = targetPlayer.Character[aimAtPart].Position
                 if targetPos.Magnitude < 10000 then
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                    lookAt(targetPos)
                 end
             end
         end)
@@ -249,10 +256,10 @@ LocalPlayer.CharacterAdded:Connect(function(char)
             aimlockGyro.Parent = rootPart
         end
         RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                local targetPos = targetPlayer.Character.Head.Position
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild(aimAtPart) then
+                local targetPos = targetPlayer.Character[aimAtPart].Position
                 if targetPos.Magnitude < 10000 then
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                    lookAt(targetPos)
                     aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
                 end
             end
@@ -260,7 +267,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Visuals Tab
+-- Visuals Tab (unchanged)
 local espToggles = {
     Box = false,
     Name = false,
@@ -628,8 +635,8 @@ local function toggleFly()
     if flyEnabled then
         humanoid:ChangeState(Enum.HumanoidStateType.Physics)
         local bv = Instance.new("BodyVelocity")
-        bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxTorque = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
+        bv.Velocity = Vector3.new(0, 0, 0)  -- Start with zero velocity
+        bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
         bv.Parent = rootPart
         
         local bg = Instance.new("BodyGyro")
@@ -643,21 +650,25 @@ local function toggleFly()
             while flyEnabled do
                 local char = getCharacter()
                 local root = char:WaitForChild("HumanoidRootPart")
-                local hum = char:WaitForChild("Humanoid")
                 local cam = workspace.CurrentCamera
                 local move = Vector3.new(0, 0, 0)
+                
+                -- Movement controls
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
                 if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then move = move + Vector3.new(0, -1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then 
+                    move = move + Vector3.new(0, -1, 0) 
+                end
                 
                 if move.Magnitude > 0 then
                     move = move.Unit * flySpeed
                     bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
                     bg.CFrame = cam.CFrame
                 else
+                    -- Hold position when no keys are pressed
                     bv.Velocity = Vector3.new(0, 0, 0)
                 end
                 wait()
@@ -743,7 +754,7 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
--- GUI Animation Setup
+-- GUI Animation Setup (unchanged)
 local isGuiVisible = false
 local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
