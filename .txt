@@ -18,14 +18,12 @@ local function getCharacter()
 end
 
 -- Config System
-local configFolder = "NettlwareConfigs"
+local configFolder = "NettlewareConfigs"
 if not isfolder(configFolder) then
     makefolder(configFolder)
 end
 local defaultConfig = {
     aimbotEnabled = false,
-    aimlockEnabled = false,
-    aimbotV2Enabled = false,
     deadCheck = false,
     teamCheck = false,
     espToggles = {
@@ -85,45 +83,46 @@ local function loadConfig(filename)
     end
 end
 
--- GUI Setup with Dragging and Title
+-- GUI Setup with ImGui Style and Animations
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NettlwareGUI"
+ScreenGui.Name = "NettlewareGUI"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 430)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -165)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -215)
 MainFrame.BackgroundColor3 = Color3.fromRGB(config.guiColor.R, config.guiColor.G, config.guiColor.B)
 MainFrame.BackgroundTransparency = 0
-MainFrame.BorderSizePixel = 0
+MainFrame.BorderSizePixel = 1
+MainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
 MainFrame.Parent = ScreenGui
 MainFrame.Visible = true -- Active upon injection
 
 local TitleBar = Instance.new("TextLabel")
-TitleBar.Size = UDim2.new(1, 0, 0, 30)
+TitleBar.Size = UDim2.new(1, 0, 0, 25)
 TitleBar.Position = UDim2.new(0, 0, 0, 0)
 TitleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-TitleBar.Text = "Nettlware alpha discord.gg/Y4mu9Fe97X"
-TitleBar.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleBar.Font = Enum.Font.SourceSansBold
-TitleBar.TextSize = 18
+TitleBar.Text = "Nettleware alpha discord.gg/Y4mu9Fe97X"
+TitleBar.TextColor3 = Color3.fromRGB(200, 200, 200)
+TitleBar.Font = Enum.Font.SourceSans
+TitleBar.TextSize = 14
 TitleBar.TextTransparency = 0
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = MainFrame
 
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 30)
-TabFrame.Position = UDim2.new(0, 0, 0, 30)
-TabFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+TabFrame.Position = UDim2.new(0, 0, 0, 25)
+TabFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 TabFrame.BackgroundTransparency = 0
 TabFrame.BorderSizePixel = 0
 TabFrame.Parent = MainFrame
 
 local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, 0, 1, -60)
-ContentFrame.Position = UDim2.new(0, 0, 0, 60)
+ContentFrame.Size = UDim2.new(1, 0, 1, -55)
+ContentFrame.Position = UDim2.new(0, 0, 0, 55)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 ContentFrame.BackgroundTransparency = 0
 ContentFrame.BorderSizePixel = 0
@@ -165,12 +164,28 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- GUI Toggle with Q Key
+-- GUI Toggle with Q Key and Animation
+MainFrame.Position = UDim2.new(0.5, -200, 1, 0) -- Start off-screen
+MainFrame.Visible = true
+local guiOpen = true
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+
+local function toggleGui()
+    guiOpen = not guiOpen
+    local targetPos = guiOpen and UDim2.new(0.5, -200, 0.5, -215) or UDim2.new(0.5, -200, 1, 0)
+    local tween = TweenService:Create(MainFrame, tweenInfo, {Position = targetPos})
+    tween:Play()
+end
+
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Q then
-        MainFrame.Visible = not MainFrame.Visible
+        toggleGui()
     end
 end)
+
+-- Initial animation on injection
+local openTween = TweenService:Create(MainFrame, tweenInfo, {Position = UDim2.new(0.5, -200, 0.5, -215)})
+openTween:Play()
 
 local tabs = {"Aimbot", "Visuals", "Exploits", "Settings"}
 local currentTab = nil
@@ -181,13 +196,14 @@ for i, tabName in ipairs(tabs) do
     TabButton.Size = UDim2.new(0, 100, 1, 0)
     TabButton.Position = UDim2.new(0, (i-1) * 100, 0, 0)
     TabButton.Text = tabName
-    TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    TabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     TabButton.BackgroundTransparency = 0
     TabButton.TextTransparency = 0
-    TabButton.BorderSizePixel = 0
+    TabButton.BorderSizePixel = 1
+    TabButton.BorderColor3 = Color3.fromRGB(60, 60, 60)
     TabButton.Font = Enum.Font.SourceSans
-    TabButton.TextSize = 18
+    TabButton.TextSize = 14
     TabButton.Parent = TabFrame
 
     local Content = Instance.new("Frame")
@@ -199,91 +215,79 @@ for i, tabName in ipairs(tabs) do
 
     TabButton.MouseButton1Click:Connect(function()
         if currentTab ~= tabName then
+            local previousTab = currentTab
             currentTab = tabName
             for _, content in pairs(tabContents) do
-                content.Visible = false
-            end
-            tabContents[tabName].Visible = true
-            for _, button in pairs(TabFrame:GetChildren()) do
-                if button:IsA("TextButton") then
-                    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                if content.Visible then
+                    local fadeOut = TweenService:Create(content, TweenInfo.new(0.2), {BackgroundTransparency = 1})
+                    fadeOut:Play()
+                    content.Visible = false
                 end
             end
-            TabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            local newContent = tabContents[tabName]
+            newContent.BackgroundTransparency = 1
+            newContent.Visible = true
+            local fadeIn = TweenService:Create(newContent, TweenInfo.new(0.2), {BackgroundTransparency = 0})
+            fadeIn:Play()
+            for _, button in pairs(TabFrame:GetChildren()) do
+                if button:IsA("TextButton") then
+                    button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                end
+            end
+            TabButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         end
     end)
 end
 
--- Aimbot Tab (unchanged)
+-- Aimbot Tab (Removed Aimbot V2 and Aimlock)
 local aimbotEnabled = config.aimbotEnabled
-local aimlockEnabled = config.aimlockEnabled
-local aimbotV2Enabled = config.aimbotV2Enabled
 local deadCheck = config.deadCheck
 local teamCheck = config.teamCheck
 local targetPlayer = nil
-local aimlockGyro = nil
 
 local AimbotToggle = Instance.new("TextButton")
-AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
+AimbotToggle.Size = UDim2.new(0, 100, 0, 25)
 AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
 AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
-AimbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+AimbotToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 AimbotToggle.BackgroundTransparency = 0
 AimbotToggle.TextTransparency = 0
 AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 AimbotToggle.Font = Enum.Font.SourceSans
-AimbotToggle.TextSize = 16
+AimbotToggle.TextSize = 14
+AimbotToggle.BorderSizePixel = 1
+AimbotToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 AimbotToggle.Parent = tabContents["Aimbot"]
 
-local AimlockToggle = Instance.new("TextButton")
-AimlockToggle.Size = UDim2.new(0, 100, 0, 30)
-AimlockToggle.Position = UDim2.new(0, 10, 0, 50)
-AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
-AimlockToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimlockToggle.BackgroundTransparency = 0
-AimlockToggle.TextTransparency = 0
-AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-AimlockToggle.Font = Enum.Font.SourceSans
-AimlockToggle.TextSize = 16
-AimlockToggle.Parent = tabContents["Aimbot"]
-
-local AimbotV2Toggle = Instance.new("TextButton")
-AimbotV2Toggle.Size = UDim2.new(0, 100, 0, 30)
-AimbotV2Toggle.Position = UDim2.new(0, 10, 0, 90)
-AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
-AimbotV2Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimbotToggle.BackgroundTransparency = 0
-AimbotToggle.TextTransparency = 0
-AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-AimbotV2Toggle.Font = Enum.Font.SourceSans
-AimbotV2Toggle.TextSize = 16
-AimbotV2Toggle.Parent = tabContents["Aimbot"]
-
 local DeadCheckToggle = Instance.new("TextButton")
-DeadCheckToggle.Size = UDim2.new(0, 100, 0, 30)
-DeadCheckToggle.Position = UDim2.new(0, 10, 0, 130)
+DeadCheckToggle.Size = UDim2.new(0, 100, 0, 25)
+DeadCheckToggle.Position = UDim2.new(0, 10, 0, 45)
 DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
-DeadCheckToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+DeadCheckToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 DeadCheckToggle.BackgroundTransparency = 0
 DeadCheckToggle.TextTransparency = 0
 DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 DeadCheckToggle.Font = Enum.Font.SourceSans
-DeadCheckToggle.TextSize = 16
+DeadCheckToggle.TextSize = 14
+DeadCheckToggle.BorderSizePixel = 1
+DeadCheckToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 DeadCheckToggle.Parent = tabContents["Aimbot"]
 
 local TeamCheckToggle = Instance.new("TextButton")
-TeamCheckToggle.Size = UDim2.new(0, 100, 0, 30)
-TeamCheckToggle.Position = UDim2.new(0, 10, 0, 170)
+TeamCheckToggle.Size = UDim2.new(0, 100, 0, 25)
+TeamCheckToggle.Position = UDim2.new(0, 10, 0, 80)
 TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
-TeamCheckToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TeamCheckToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 TeamCheckToggle.BackgroundTransparency = 0
 TeamCheckToggle.TextTransparency = 0
 TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 TeamCheckToggle.Font = Enum.Font.SourceSans
-TeamCheckToggle.TextSize = 16
+TeamCheckToggle.TextSize = 14
+TeamCheckToggle.BorderSizePixel = 1
+TeamCheckToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 TeamCheckToggle.Parent = tabContents["Aimbot"]
 
--- Aimbot Logic (unchanged)
+-- Aimbot Logic
 local function getNearestPlayer()
     local nearestDistance = math.huge
     local nearestPlayer = nil
@@ -315,20 +319,7 @@ AimbotToggle.MouseButton1Click:Connect(function()
     AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.aimbotEnabled = aimbotEnabled
-end)
-
-AimlockToggle.MouseButton1Click:Connect(function()
-    aimlockEnabled = not aimlockEnabled
-    AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
-    AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    config.aimlockEnabled = aimlockEnabled
-end)
-
-AimbotV2Toggle.MouseButton1Click:Connect(function()
-    aimbotV2Enabled = not aimbotV2Enabled
-    AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
-    AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    config.aimbotV2Enabled = aimbotV2Enabled
+    saveConfig("default")
 end)
 
 DeadCheckToggle.MouseButton1Click:Connect(function()
@@ -336,6 +327,7 @@ DeadCheckToggle.MouseButton1Click:Connect(function()
     DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
     DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.deadCheck = deadCheck
+    saveConfig("default")
 end)
 
 TeamCheckToggle.MouseButton1Click:Connect(function()
@@ -343,6 +335,7 @@ TeamCheckToggle.MouseButton1Click:Connect(function()
     TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
     TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.teamCheck = teamCheck
+    saveConfig("default")
 end)
 
 UserInputService.InputBegan:Connect(function(input)
@@ -365,78 +358,13 @@ UserInputService.InputBegan:Connect(function(input)
                 end
             end)
         end
-        
-        if aimlockEnabled and targetPlayer then
-            local character = getCharacter()
-            local rootPart = character:WaitForChild("HumanoidRootPart")
-            local humanoid = character:WaitForChild("Humanoid")
-            humanoid.AutoRotate = false
-            
-            if not aimlockGyro then
-                aimlockGyro = Instance.new("BodyGyro")
-                aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)
-                aimlockGyro.P = 10000
-                aimlockGyro.D = 500
-                aimlockGyro.Parent = rootPart
-            end
-
-            RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                    local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-                    if humanoid and (not deadCheck or humanoid.Health > 0) then
-                        local targetPos = targetPlayer.Character.Head.Position
-                        if targetPos.Magnitude < 10000 then
-                            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                            aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
-                        end
-                    else
-                        targetPlayer = nil
-                        RunService:UnbindFromRenderStep("AimlockPersist")
-                        if aimlockGyro then
-                            aimlockGyro:Destroy()
-                            aimlockGyro = nil
-                        end
-                        humanoid.AutoRotate = true
-                    end
-                end
-            end)
-        end
-        
-        if aimbotV2Enabled and targetPlayer then
-            RunService:BindToRenderStep("AimbotV2Move", Enum.RenderPriority.Camera.Value + 1, function()
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                    local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-                    if humanoid and (not deadCheck or humanoid.Health > 0) then
-                        local targetPos = Camera:WorldToViewportPoint(targetPlayer.Character.Head.Position)
-                        UserInputService.MouseDeltaSensitivity = 1
-                        local currentMousePos = UserInputService:GetMouseLocation()
-                        local deltaX = targetPos.X - currentMousePos.X
-                        local deltaY = targetPos.Y - currentMousePos.Y
-                        UserInputService.MouseMoveRelative(Vector2.new(deltaX, deltaY))
-                    else
-                        targetPlayer = nil
-                        RunService:UnbindFromRenderStep("AimbotV2Move")
-                    end
-                end
-            end)
-        end
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         RunService:UnbindFromRenderStep("AimbotSnap")
-        RunService:UnbindFromRenderStep("AimlockPersist")
-        RunService:UnbindFromRenderStep("AimbotV2Move")
         targetPlayer = nil
-        if aimlockGyro then
-            aimlockGyro:Destroy()
-            aimlockGyro = nil
-        end
-        local character = getCharacter()
-        if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.AutoRotate = true
-        end
     end
 end)
 
@@ -454,33 +382,10 @@ LocalPlayer.CharacterAdded:Connect(function(char)
                 end
             end
         end)
-    elseif aimlockEnabled and targetPlayer then
-        local rootPart = char:WaitForChild("HumanoidRootPart")
-        local humanoid = char:WaitForChild("Humanoid")
-        humanoid.AutoRotate = false
-        if not aimlockGyro then
-            aimlockGyro = Instance.new("BodyGyro")
-            aimlockGyro.MaxTorque = Vector3.new(0, 400000, 0)
-            aimlockGyro.P = 10000
-            aimlockGyro.D = 500
-            aimlockGyro.Parent = rootPart
-        end
-        RunService:BindToRenderStep("AimlockPersist", Enum.RenderPriority.Camera.Value + 1, function()
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid and (not deadCheck or humanoid.Health > 0) then
-                    local targetPos = targetPlayer.Character.Head.Position
-                    if targetPos.Magnitude < 10000 then
-                        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                        aimlockGyro.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
-                    end
-                end
-            end
-        end)
     end
 end)
 
--- Visuals Tab (unchanged)
+-- Visuals Tab
 local espToggles = config.espToggles or defaultConfig.espToggles
 local espPlayers = {}
 local lastPositions = {}
@@ -778,15 +683,17 @@ end)
 local yOffset = 10
 for feature, enabled in pairs(espToggles) do
     local Toggle = Instance.new("TextButton")
-    Toggle.Size = UDim2.new(0, 100, 0, 30)
+    Toggle.Size = UDim2.new(0, 100, 0, 25)
     Toggle.Position = UDim2.new(0, 10, 0, yOffset)
     Toggle.Text = feature .. ": " .. (enabled and "ON" or "OFF")
-    Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     Toggle.BackgroundTransparency = 0
     Toggle.TextTransparency = 0
     Toggle.TextColor3 = enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     Toggle.Font = Enum.Font.SourceSans
-    Toggle.TextSize = 16
+    Toggle.TextSize = 14
+    Toggle.BorderSizePixel = 1
+    Toggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
     Toggle.Parent = tabContents["Visuals"]
 
     Toggle.MouseButton1Click:Connect(function()
@@ -794,11 +701,12 @@ for feature, enabled in pairs(espToggles) do
         Toggle.Text = feature .. ": " .. (espToggles[feature] and "ON" or "OFF")
         Toggle.TextColor3 = espToggles[feature] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
         config.espToggles[feature] = espToggles[feature]
+        saveConfig("default")
     end)
-    yOffset = yOffset + 40
+    yOffset = yOffset + 35
 end
 
--- Exploits Tab (unchanged)
+-- Exploits Tab
 local flyEnabled = config.flyEnabled
 local flySpeed = config.flySpeed
 local controlSpeed = 10000
@@ -811,251 +719,378 @@ local saveLastPositionEnabled = config.saveLastPositionEnabled
 local lastPosition = nil
 
 local FlyToggle = Instance.new("TextButton")
-FlyToggle.Size = UDim2.new(0, 100, 0, 30)
+FlyToggle.Size = UDim2.new(0, 100, 0, 25)
 FlyToggle.Position = UDim2.new(0, 10, 0, 10)
 FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
-FlyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+FlyToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 FlyToggle.BackgroundTransparency = 0
 FlyToggle.TextTransparency = 0
 FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 FlyToggle.Font = Enum.Font.SourceSans
-FlyToggle.TextSize = 16
+FlyToggle.TextSize = 14
+FlyToggle.BorderSizePixel = 1
+FlyToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 FlyToggle.Parent = tabContents["Exploits"]
 
 local FlySpeedLabel = Instance.new("TextLabel")
 FlySpeedLabel.Size = UDim2.new(0, 100, 0, 20)
-FlySpeedLabel.Position = UDim2.new(0, 10, 0, 40)
+FlySpeedLabel.Position = UDim2.new(0, 10, 0, 45)
 FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
 FlySpeedLabel.BackgroundTransparency = 1
 FlySpeedLabel.TextTransparency = 0
-FlySpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlySpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 FlySpeedLabel.Font = Enum.Font.SourceSans
-FlySpeedLabel.TextSize = 16
+FlySpeedLabel.TextSize = 14
 FlySpeedLabel.Parent = tabContents["Exploits"]
 
 local FlySpeedSlider = Instance.new("TextButton")
-FlySpeedSlider.Size = UDim2.new(0, 200, 0, 20)
-FlySpeedSlider.Position = UDim2.new(0, 10, 0, 60)
+FlySpeedSlider.Size = UDim2.new(0, 200, 0, 15)
+FlySpeedSlider.Position = UDim2.new(0, 10, 0, 65)
 FlySpeedSlider.Text = ""
-FlySpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+FlySpeedSlider.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 FlySpeedSlider.BackgroundTransparency = 0
+FlySpeedSlider.BorderSizePixel = 1
+FlySpeedSlider.BorderColor3 = Color3.fromRGB(60, 60, 60)
 FlySpeedSlider.Parent = tabContents["Exploits"]
 
 local FlySpeedKnob = Instance.new("Frame")
 FlySpeedKnob.Size = UDim2.new(0, 10, 1, 0)
 FlySpeedKnob.Position = UDim2.new((flySpeed - 10) / 190, 0, 0, 0)
-FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
+FlySpeedKnob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 FlySpeedKnob.BackgroundTransparency = 0
+FlySpeedKnob.BorderSizePixel = 0
 FlySpeedKnob.Parent = FlySpeedSlider
 
 local InfiniteJumpToggle = Instance.new("TextButton")
-InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 30)
+InfiniteJumpToggle.Size = UDim2.new(0, 100, 0, 25)
 InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 90)
 InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
-InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 InfiniteJumpToggle.BackgroundTransparency = 0
 InfiniteJumpToggle.TextTransparency = 0
 InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 InfiniteJumpToggle.Font = Enum.Font.SourceSans
-InfiniteJumpToggle.TextSize = 16
+InfiniteJumpToggle.TextSize = 14
+InfiniteJumpToggle.BorderSizePixel = 1
+InfiniteJumpToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 InfiniteJumpToggle.Parent = tabContents["Exploits"]
 
 local NoClipToggle = Instance.new("TextButton")
-NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
-NoClipToggle.Position = UDim2.new(0, 10, 0, 130)
+NoClipToggle.Size = UDim2.new(0, 100, 0, 25)
+NoClipToggle.Position = UDim2.new(0, 10, 0, 125)
 NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
-NoClipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+NoClipToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 NoClipToggle.BackgroundTransparency = 0
 NoClipToggle.TextTransparency = 0
 NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 NoClipToggle.Font = Enum.Font.SourceSans
-NoClipToggle.TextSize = 16
+NoClipToggle.TextSize = 14
+NoClipToggle.BorderSizePixel = 1
+NoClipToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 NoClipToggle.Parent = tabContents["Exploits"]
 
 local SpeedToggle = Instance.new("TextButton")
-SpeedToggle.Size = UDim2.new(0, 100, 0, 30)
-SpeedToggle.Position = UDim2.new(0, 10, 0, 170)
+SpeedToggle.Size = UDim2.new(0, 100, 0, 25)
+SpeedToggle.Position = UDim2.new(0, 10, 0, 160)
 SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
-SpeedToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SpeedToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 SpeedToggle.BackgroundTransparency = 0
 SpeedToggle.TextTransparency = 0
 SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 SpeedToggle.Font = Enum.Font.SourceSans
-SpeedToggle.TextSize = 16
+SpeedToggle.TextSize = 14
+SpeedToggle.BorderSizePixel = 1
+SpeedToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 SpeedToggle.Parent = tabContents["Exploits"]
 
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Size = UDim2.new(0, 100, 0, 20)
-SpeedLabel.Position = UDim2.new(0, 10, 0, 200)
+SpeedLabel.Position = UDim2.new(0, 10, 0, 195)
 SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.TextTransparency = 0
-SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 SpeedLabel.Font = Enum.Font.SourceSans
-SpeedLabel.TextSize = 16
+SpeedLabel.TextSize = 14
 SpeedLabel.Parent = tabContents["Exploits"]
 
 local SpeedSlider = Instance.new("TextButton")
-SpeedSlider.Size = UDim2.new(0, 200, 0, 20)
-SpeedSlider.Position = UDim2.new(0, 10, 0, 220)
+SpeedSlider.Size = UDim2.new(0, 200, 0, 15)
+SpeedSlider.Position = UDim2.new(0, 10, 0, 215)
 SpeedSlider.Text = ""
-SpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+SpeedSlider.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 SpeedSlider.BackgroundTransparency = 0
+SpeedSlider.BorderSizePixel = 1
+SpeedSlider.BorderColor3 = Color3.fromRGB(60, 60, 60)
 SpeedSlider.Parent = tabContents["Exploits"]
 
 local SpeedKnob = Instance.new("Frame")
 SpeedKnob.Size = UDim2.new(0, 10, 1, 0)
 SpeedKnob.Position = UDim2.new((speedMultiplier - 1) / 9, 0, 0, 0)
-SpeedKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
+SpeedKnob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 SpeedKnob.BackgroundTransparency = 0
+SpeedKnob.BorderSizePixel = 0
 SpeedKnob.Parent = SpeedSlider
 
 local TpAuraToggle = Instance.new("TextButton")
-TpAuraToggle.Size = UDim2.new(0, 100, 0, 30)
-TpAuraToggle.Position = UDim2.new(0, 10, 0, 250)
+TpAuraToggle.Size = UDim2.new(0, 100, 0, 25)
+TpAuraToggle.Position = UDim2.new(0, 10, 0, 240)
 TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
-TpAuraToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TpAuraToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 TpAuraToggle.BackgroundTransparency = 0
 TpAuraToggle.TextTransparency = 0
 TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 TpAuraToggle.Font = Enum.Font.SourceSans
-TpAuraToggle.TextSize = 16
+TpAuraToggle.TextSize = 14
+TpAuraToggle.BorderSizePixel = 1
+TpAuraToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 TpAuraToggle.Parent = tabContents["Exploits"]
 
 local SaveLastPositionToggle = Instance.new("TextButton")
-SaveLastPositionToggle.Size = UDim2.new(0, 100, 0, 30)
-SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 290)
+SaveLastPositionToggle.Size = UDim2.new(0, 100, 0, 25)
+SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 275)
 SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
-SaveLastPositionToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SaveLastPositionToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 SaveLastPositionToggle.BackgroundTransparency = 0
 SaveLastPositionToggle.TextTransparency = 0
 SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 SaveLastPositionToggle.Font = Enum.Font.SourceSans
-SaveLastPositionToggle.TextSize = 16
+SaveLastPositionToggle.TextSize = 14
+SaveLastPositionToggle.BorderSizePixel = 1
+SaveLastPositionToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
--- Settings Tab with Color Wheel
+-- Settings Tab with New Color Picker
 local PlayerListToggle = Instance.new("TextButton")
-PlayerListToggle.Size = UDim2.new(0, 100, 0, 30)
+PlayerListToggle.Size = UDim2.new(0, 100, 0, 25)
 PlayerListToggle.Position = UDim2.new(0, 10, 0, 10)
 PlayerListToggle.Text = "Player List: " .. (config.playerListEnabled and "ON" or "OFF")
-PlayerListToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+PlayerListToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 PlayerListToggle.BackgroundTransparency = 0
 PlayerListToggle.TextTransparency = 0
 PlayerListToggle.TextColor3 = config.playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 PlayerListToggle.Font = Enum.Font.SourceSans
-PlayerListToggle.TextSize = 16
+PlayerListToggle.TextSize = 14
+PlayerListToggle.BorderSizePixel = 1
+PlayerListToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 PlayerListToggle.Parent = tabContents["Settings"]
 
 local ColorToggle = Instance.new("TextButton")
-ColorToggle.Size = UDim2.new(0, 100, 0, 30)
-ColorToggle.Position = UDim2.new(0, 10, 0, 50)
-ColorToggle.Text = "Color Wheel: OFF"
-ColorToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ColorToggle.Size = UDim2.new(0, 100, 0, 25)
+ColorToggle.Position = UDim2.new(0, 10, 0, 45)
+ColorToggle.Text = "Color Picker: OFF"
+ColorToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 ColorToggle.BackgroundTransparency = 0
 ColorToggle.TextTransparency = 0
 ColorToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 ColorToggle.Font = Enum.Font.SourceSans
-ColorToggle.TextSize = 16
+ColorToggle.TextSize = 14
+ColorToggle.BorderSizePixel = 1
+ColorToggle.BorderColor3 = Color3.fromRGB(60, 60, 60)
 ColorToggle.Parent = tabContents["Settings"]
 
 local ConfigNameBox = Instance.new("TextBox")
-ConfigNameBox.Size = UDim2.new(0, 150, 0, 30)
-ConfigNameBox.Position = UDim2.new(0, 10, 0, 90)
+ConfigNameBox.Size = UDim2.new(0, 150, 0, 25)
+ConfigNameBox.Position = UDim2.new(0, 10, 0, 80)
 ConfigNameBox.Text = "default"
-ConfigNameBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-ConfigNameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConfigNameBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ConfigNameBox.TextColor3 = Color3.fromRGB(200, 200, 200)
 ConfigNameBox.Font = Enum.Font.SourceSans
-ConfigNameBox.TextSize = 16
+ConfigNameBox.TextSize = 14
+ConfigNameBox.BorderSizePixel = 1
+ConfigNameBox.BorderColor3 = Color3.fromRGB(60, 60, 60)
 ConfigNameBox.Parent = tabContents["Settings"]
 
 local SaveButton = Instance.new("TextButton")
-SaveButton.Size = UDim2.new(0, 100, 0, 30)
-SaveButton.Position = UDim2.new(0, 170, 0, 90)
+SaveButton.Size = UDim2.new(0, 100, 0, 25)
+SaveButton.Position = UDim2.new(0, 170, 0, 80)
 SaveButton.Text = "Save"
-SaveButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SaveButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 SaveButton.BackgroundTransparency = 0
 SaveButton.TextTransparency = 0
-SaveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SaveButton.TextColor3 = Color3.fromRGB(200, 200, 200)
 SaveButton.Font = Enum.Font.SourceSans
-SaveButton.TextSize = 16
+SaveButton.TextSize = 14
+SaveButton.BorderSizePixel = 1
+SaveButton.BorderColor3 = Color3.fromRGB(60, 60, 60)
 SaveButton.Parent = tabContents["Settings"]
 
 local LoadButton = Instance.new("TextButton")
-LoadButton.Size = UDim2.new(0, 100, 0, 30)
-LoadButton.Position = UDim2.new(0, 10, 0, 130)
+LoadButton.Size = UDim2.new(0, 100, 0, 25)
+LoadButton.Position = UDim2.new(0, 10, 0, 115)
 LoadButton.Text = "Load"
-LoadButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+LoadButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 LoadButton.BackgroundTransparency = 0
 LoadButton.TextTransparency = 0
-LoadButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoadButton.TextColor3 = Color3.fromRGB(200, 200, 200)
 LoadButton.Font = Enum.Font.SourceSans
-LoadButton.TextSize = 16
+LoadButton.TextSize = 14
+LoadButton.BorderSizePixel = 1
+LoadButton.BorderColor3 = Color3.fromRGB(60, 60, 60)
 LoadButton.Parent = tabContents["Settings"]
 
 local LoadListFrame = Instance.new("ScrollingFrame")
 LoadListFrame.Size = UDim2.new(0, 200, 0, 200)
-LoadListFrame.Position = UDim2.new(0, 120, 0, 130)
-LoadListFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+LoadListFrame.Position = UDim2.new(0, 120, 0, 115)
+LoadListFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 LoadListFrame.ScrollBarThickness = 5
 LoadListFrame.Visible = false
+LoadListFrame.BorderSizePixel = 1
+LoadListFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
 LoadListFrame.Parent = tabContents["Settings"]
 
--- Color Wheel Setup
-local ColorWheelFrame = Instance.new("Frame")
-ColorWheelFrame.Size = UDim2.new(0, 200, 0, 200)
-ColorWheelFrame.Position = UDim2.new(0, 120, 0, 50)
-ColorWheelFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ColorWheelFrame.Visible = false
-ColorWheelFrame.Parent = tabContents["Settings"]
+-- Color Picker Setup
+local ColorPickerFrame = Instance.new("Frame")
+ColorPickerFrame.Size = UDim2.new(0, 260, 0, 200)
+ColorPickerFrame.Position = UDim2.new(0, 120, 0, 45)
+ColorPickerFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ColorPickerFrame.Visible = false
+ColorPickerFrame.BorderSizePixel = 1
+ColorPickerFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
+ColorPickerFrame.Parent = tabContents["Settings"]
 
-local ColorWheel = Instance.new("ImageLabel")
-ColorWheel.Size = UDim2.new(0, 180, 0, 180)
-ColorWheel.Position = UDim2.new(0, 10, 0, 10)
-ColorWheel.BackgroundTransparency = 1
-ColorWheel.Image = "rbxassetid://6020299385" -- Roblox color wheel asset
-ColorWheel.Parent = ColorWheelFrame
+local ColorSquare = Instance.new("Frame")
+ColorSquare.Size = UDim2.new(0, 150, 0, 150)
+ColorSquare.Position = UDim2.new(0, 10, 0, 10)
+ColorSquare.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Will be updated dynamically
+ColorSquare.Parent = ColorPickerFrame
 
-local ColorPicker = Instance.new("Frame")
-ColorPicker.Size = UDim2.new(0, 10, 0, 10)
-ColorPicker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ColorPicker.BorderSizePixel = 0
-ColorPicker.Parent = ColorWheel
+-- Create a gradient for the color square (Hue-Saturation)
+local SquareGradient = Instance.new("UIGradient")
+SquareGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+})
+SquareGradient.Rotation = 0
+SquareGradient.Parent = ColorSquare
 
-local function updateGuiColor(color)
+local SaturationGradient = Instance.new("UIGradient")
+SaturationGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+})
+SaturationGradient.Rotation = 90
+SaturationGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0),
+    NumberSequenceKeypoint.new(1, 1)
+})
+SaturationGradient.Parent = ColorSquare
+
+local ColorSquarePicker = Instance.new("Frame")
+ColorSquarePicker.Size = UDim2.new(0, 10, 0, 10)
+ColorSquarePicker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ColorSquarePicker.BorderSizePixel = 1
+ColorSquarePicker.BorderColor3 = Color3.fromRGB(0, 0, 0)
+ColorSquarePicker.Parent = ColorSquare
+
+local BrightnessSlider = Instance.new("Frame")
+BrightnessSlider.Size = UDim2.new(0, 20, 0, 150)
+BrightnessSlider.Position = UDim2.new(0, 170, 0, 10)
+BrightnessSlider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+BrightnessSlider.Parent = ColorPickerFrame
+
+local BrightnessGradient = Instance.new("UIGradient")
+BrightnessGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+})
+BrightnessGradient.Rotation = 90
+BrightnessGradient.Parent = BrightnessSlider
+
+local BrightnessKnob = Instance.new("Frame")
+BrightnessKnob.Size = UDim2.new(1, 0, 0, 5)
+BrightnessKnob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+BrightnessKnob.BorderSizePixel = 1
+BrightnessKnob.BorderColor3 = Color3.fromRGB(0, 0, 0)
+BrightnessKnob.Parent = BrightnessSlider
+
+local PreviewLabel = Instance.new("TextLabel")
+PreviewLabel.Size = UDim2.new(0, 60, 0, 20)
+PreviewLabel.Position = UDim2.new(0, 190, 0, 170)
+PreviewLabel.Text = "Preview:"
+PreviewLabel.BackgroundTransparency = 1
+PreviewLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+PreviewLabel.Font = Enum.Font.SourceSans
+PreviewLabel.TextSize = 14
+PreviewLabel.Parent = ColorPickerFrame
+
+local ColorPreview = Instance.new("Frame")
+ColorPreview.Size = UDim2.new(0, 40, 0, 20)
+ColorPreview.Position = UDim2.new(0, 210, 0, 170)
+ColorPreview.BackgroundColor3 = Color3.fromRGB(config.guiColor.R, config.guiColor.G, config.guiColor.B)
+ColorPreview.BorderSizePixel = 1
+ColorPreview.BorderColor3 = Color3.fromRGB(60, 60, 60)
+ColorPreview.Parent = ColorPickerFrame
+
+local hue = 0
+local saturation = 1
+local brightness = 1
+
+local function updateColor()
+    local color = Color3.fromHSV(hue, saturation, brightness)
+    ColorPreview.BackgroundColor3 = color
+    SquareGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromHSV(hue, 1, 1))
+    })
     MainFrame.BackgroundColor3 = color
     config.guiColor = {R = math.floor(color.R * 255), G = math.floor(color.G * 255), B = math.floor(color.B * 255)}
+    saveConfig("default")
 end
 
 ColorToggle.MouseButton1Click:Connect(function()
-    ColorWheelFrame.Visible = not ColorWheelFrame.Visible
-    ColorToggle.Text = "Color Wheel: " .. (ColorWheelFrame.Visible and "ON" or "OFF")
-    ColorToggle.TextColor3 = ColorWheelFrame.Visible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    ColorPickerFrame.Visible = not ColorPickerFrame.Visible
+    ColorToggle.Text = "Color Picker: " .. (ColorPickerFrame.Visible and "ON" or "OFF")
+    ColorToggle.TextColor3 = ColorPickerFrame.Visible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
-ColorWheel.InputBegan:Connect(function(input)
+local draggingColorSquare = false
+ColorSquare.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local mousePos = UserInputService:GetMouseLocation()
-        local wheelPos = ColorWheel.AbsolutePosition
-        local wheelSize = ColorWheel.AbsoluteSize
-        local relativeX = mousePos.X - wheelPos.X
-        local relativeY = mousePos.Y - wheelPos.Y
-        
-        if relativeX >= 0 and relativeX <= wheelSize.X and relativeY >= 0 and relativeY <= wheelSize.Y then
-            local centerX = wheelSize.X / 2
-            local centerY = wheelSize.Y / 2
-            local dx = relativeX - centerX
-            local dy = relativeY - centerY
-            local distance = math.sqrt(dx * dx + dy * dy)
-            
-            if distance <= centerX then
-                ColorPicker.Position = UDim2.new(0, relativeX - 5, 0, relativeY - 5)
-                local color = ColorWheel.ImageColor3 -- Simplified; in practice, you'd sample the color from the wheel
-                local h, s, v = Color3.toHSV(Color3.fromRGB(relativeX / wheelSize.X * 255, relativeY / wheelSize.Y * 255, 255))
-                local newColor = Color3.fromHSV(h, s, 1)
-                updateGuiColor(newColor)
-            end
-        end
+        draggingColorSquare = true
+    end
+end)
+
+ColorSquare.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingColorSquare = false
+    end
+end)
+
+local draggingBrightnessSlider = false
+BrightnessSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingBrightnessSlider = true
+    end
+end)
+
+BrightnessSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingBrightnessSlider = false
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    local mousePos = UserInputService:GetMouseLocation()
+    
+    if draggingColorSquare then
+        local squarePos = ColorSquare.AbsolutePosition
+        local squareSize = ColorSquare.AbsoluteSize
+        local relativeX = math.clamp(mousePos.X - squarePos.X, 0, squareSize.X)
+        local relativeY = math.clamp(mousePos.Y - squarePos.Y, 0, squareSize.Y)
+        ColorSquarePicker.Position = UDim2.new(0, relativeX - 5, 0, relativeY - 5)
+        hue = relativeX / squareSize.X
+        saturation = 1 - (relativeY / squareSize.Y)
+        updateColor()
+    end
+    
+    if draggingBrightnessSlider then
+        local sliderPos = BrightnessSlider.AbsolutePosition
+        local sliderSize = BrightnessSlider.AbsoluteSize
+        local relativeY = math.clamp(mousePos.Y - sliderPos.Y, 0, sliderSize.Y)
+        BrightnessKnob.Position = UDim2.new(0, 0, 0, relativeY - 2.5)
+        brightness = 1 - (relativeY / sliderSize.Y)
+        updateColor()
     end
 end)
 
@@ -1071,13 +1106,15 @@ local function updateLoadList()
         if file:match("%.json$") then
             local configName = file:match("([^/\\]+)%.json$")
             local LoadConfigButton = Instance.new("TextButton")
-            LoadConfigButton.Size = UDim2.new(1, -10, 0, 30)
+            LoadConfigButton.Size = UDim2.new(1, -10, 0, 25)
             LoadConfigButton.Position = UDim2.new(0, 5, 0, yPos)
             LoadConfigButton.Text = configName
-            LoadConfigButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            LoadConfigButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            LoadConfigButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            LoadConfigButton.TextColor3 = Color3.fromRGB(200, 200, 200)
             LoadConfigButton.Font = Enum.Font.SourceSans
-            LoadConfigButton.TextSize = 16
+            LoadConfigButton.TextSize = 14
+            LoadConfigButton.BorderSizePixel = 1
+            LoadConfigButton.BorderColor3 = Color3.fromRGB(60, 60, 60)
             LoadConfigButton.Parent = LoadListFrame
             LoadConfigButton.MouseButton1Click:Connect(function()
                 if loadConfig(configName) then
@@ -1086,7 +1123,7 @@ local function updateLoadList()
                 end
                 LoadListFrame.Visible = false
             end)
-            yPos = yPos + 35
+            yPos = yPos + 30
         end
     end
     LoadListFrame.CanvasSize = UDim2.new(0, 0, 0, yPos)
@@ -1109,13 +1146,14 @@ LoadButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Player List GUI (unchanged)
+-- Player List GUI
 local PlayerListFrame = Instance.new("Frame")
 PlayerListFrame.Size = UDim2.new(0, 200, 0, 300)
 PlayerListFrame.Position = UDim2.new(1, -210, 0, 10)
 PlayerListFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 PlayerListFrame.BackgroundTransparency = 0
-PlayerListFrame.BorderSizePixel = 0
+PlayerListFrame.BorderSizePixel = 1
+PlayerListFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
 PlayerListFrame.Visible = config.playerListEnabled
 PlayerListFrame.Parent = ScreenGui
 
@@ -1156,9 +1194,9 @@ local function updatePlayerList()
         nameLabel.Position = UDim2.new(0, 40, 0, 0)
         nameLabel.Text = player.Name
         nameLabel.BackgroundTransparency = 1
-        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
         nameLabel.Font = Enum.Font.SourceSans
-        nameLabel.TextSize = 16
+        nameLabel.TextSize = 14
         nameLabel.TextXAlignment = Enum.TextXAlignment.Left
         nameLabel.Parent = entryFrame
 
@@ -1167,9 +1205,9 @@ local function updatePlayerList()
         healthLabel.Position = UDim2.new(0, 40, 0, 20)
         healthLabel.Text = "Health: N/A"
         healthLabel.BackgroundTransparency = 1
-        healthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        healthLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
         healthLabel.Font = Enum.Font.SourceSans
-        healthLabel.TextSize = 16
+        healthLabel.TextSize = 14
         healthLabel.TextXAlignment = Enum.TextXAlignment.Left
         healthLabel.Parent = entryFrame
 
@@ -1192,12 +1230,11 @@ PlayerListToggle.MouseButton1Click:Connect(function()
     if config.playerListEnabled then
         updatePlayerList()
     end
+    saveConfig("default")
 end)
 
 local function applyLoadedConfig()
     aimbotEnabled = config.aimbotEnabled
-    aimlockEnabled = config.aimlockEnabled
-    aimbotV2Enabled = config.aimbotV2Enabled
     deadCheck = config.deadCheck
     teamCheck = config.teamCheck
     espToggles = config.espToggles or defaultConfig.espToggles
@@ -1212,10 +1249,6 @@ local function applyLoadedConfig()
 
     AimbotToggle.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    AimlockToggle.Text = "Aimlock: " .. (aimlockEnabled and "ON" or "OFF")
-    AimlockToggle.TextColor3 = aimlockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    AimbotV2Toggle.Text = "AimbotV2: " .. (aimbotV2Enabled and "ON" or "OFF")
-    AimbotV2Toggle.TextColor3 = aimbotV2Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     DeadCheckToggle.Text = "Dead Check: " .. (deadCheck and "ON" or "OFF")
     DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     TeamCheckToggle.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
@@ -1261,7 +1294,19 @@ local function applyLoadedConfig()
     PlayerListFrame.Visible = config.playerListEnabled
     if config.playerListEnabled then updatePlayerList() end
 
-    MainFrame.BackgroundColor3 = Color3.fromRGB(config.guiColor.R, config.guiColor.G, config.guiColor.B)
+    local loadedColor = Color3.fromRGB(config.guiColor.R, config.guiColor.G, config.guiColor.B)
+    MainFrame.BackgroundColor3 = loadedColor
+    ColorPreview.BackgroundColor3 = loadedColor
+    local h, s, v = Color3.toHSV(loadedColor)
+    hue = h
+    saturation = s
+    brightness = v
+    ColorSquarePicker.Position = UDim2.new(h, -5, 1 - s, -5)
+    BrightnessKnob.Position = UDim2.new(0, 0, 1 - v, -2.5)
+    SquareGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromHSV(hue, 1, 1))
+    })
 end
 
 PlayersService.PlayerAdded:Connect(function(player)
@@ -1290,7 +1335,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Exploits Logic (unchanged)
+-- Exploits Logic
 local draggingFlySlider = false
 local draggingSpeedSlider = false
 
@@ -1329,6 +1374,7 @@ RunService.RenderStepped:Connect(function()
         flySpeed = math.floor(10 + (flyNewPos * 190))
         FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
         config.flySpeed = flySpeed
+        saveConfig("default")
     end
 
     if draggingSpeedSlider then
@@ -1339,6 +1385,7 @@ RunService.RenderStepped:Connect(function()
         speedMultiplier = math.floor(1 + (speedNewPos * 9))
         SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
         config.speedMultiplier = speedMultiplier
+        saveConfig("default")
     end
 end)
 
@@ -1347,6 +1394,7 @@ function toggleFly()
     FlyToggle.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
     FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.flyEnabled = flyEnabled
+    saveConfig("default")
     
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
@@ -1433,6 +1481,7 @@ function toggleNoClip()
     NoClipToggle.Text = "NoClip: " .. (noClipEnabled and "ON" or "OFF")
     NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.noClipEnabled = noClipEnabled
+    saveConfig("default")
     
     spawn(function()
         while noClipEnabled do
@@ -1468,6 +1517,7 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     InfiniteJumpToggle.Text = "Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.infiniteJumpEnabled = infiniteJumpEnabled
+    saveConfig("default")
 end)
 
 function toggleSpeed()
@@ -1475,35 +1525,24 @@ function toggleSpeed()
     SpeedToggle.Text = "Speed: " .. (speedEnabled and "ON" or "OFF")
     SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.speedEnabled = speedEnabled
+    saveConfig("default")
     
-    if speedEnabled and saveLastPositionEnabled then
-        lastPosition = getCharacter().HumanoidRootPart.Position
-    end
+    local character = getCharacter()
+    local humanoid = character:WaitForChild("Humanoid")
     
     if speedEnabled then
+        humanoid.WalkSpeed = 16 * speedMultiplier -- Default walkspeed is 16
         spawn(function()
             while speedEnabled do
-                local character = getCharacter()
-                local humanoid = character:WaitForChild("Humanoid")
-                local rootPart = character:WaitForChild("HumanoidRootPart")
-                local moveDirection = humanoid.MoveDirection
-                if moveDirection.Magnitude > 0 then
-                    rootPart.Velocity = moveDirection * (humanoid.WalkSpeed * speedMultiplier)
-                end
                 wait()
+                if humanoid and humanoid.Parent then
+                    humanoid.WalkSpeed = 16 * speedMultiplier
+                end
             end
-            if saveLastPositionEnabled and lastPosition then
-                local rootPart = getCharacter().HumanoidRootPart
-                rootPart.CFrame = CFrame.new(lastPosition)
-                lastPosition = nil
-            end
+            humanoid.WalkSpeed = 16 -- Reset to default when disabled
         end)
     else
-        if saveLastPositionEnabled and lastPosition then
-            local rootPart = getCharacter().HumanoidRootPart
-            rootPart.CFrame = CFrame.new(lastPosition)
-            lastPosition = nil
-        end
+        humanoid.WalkSpeed = 16
     end
 end
 
@@ -1514,14 +1553,11 @@ function toggleTpAura()
     TpAuraToggle.Text = "TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
     TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.tpAuraEnabled = tpAuraEnabled
-    
-    if tpAuraEnabled and saveLastPositionEnabled then
-        lastPosition = getCharacter().HumanoidRootPart.Position
-    end
+    saveConfig("default")
     
     if tpAuraEnabled then
         spawn(function()
-                        while tpAuraEnabled do
+            while tpAuraEnabled do
                 local character = getCharacter()
                 local rootPart = character:WaitForChild("HumanoidRootPart")
                 local closestPlayer = getNearestPlayer()
@@ -1572,7 +1608,7 @@ SaveLastPositionToggle.MouseButton1Click:Connect(function()
     SaveLastPositionToggle.Text = "Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
     SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     config.saveLastPositionEnabled = saveLastPositionEnabled
-    saveConfig("default") -- Save to default config when toggled
+    saveConfig("default")
     
     if saveLastPositionEnabled then
         local character = getCharacter()
@@ -1612,7 +1648,7 @@ if tabContents["Aimbot"] then
     tabContents["Aimbot"].Visible = true
     for _, button in pairs(TabFrame:GetChildren()) do
         if button:IsA("TextButton") and button.Text == "Aimbot" then
-            button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         end
     end
 end
@@ -1636,11 +1672,9 @@ ScreenGui.Destroying:Connect(function()
         end
     end
     RunService:UnbindFromRenderStep("AimbotSnap")
-    RunService:UnbindFromRenderStep("AimlockPersist")
-    RunService:UnbindFromRenderStep("AimbotV2Move")
     if aimlockGyro then
         aimlockGyro:Destroy()
     end
 end)
 
-print("Nettlware Alpha Loaded Successfully!")
+print("Nettleware Alpha Loaded Successfully!")
