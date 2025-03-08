@@ -279,7 +279,7 @@ local function DrawESP(plr)
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {},
-        Normal = {}
+        Normal = Drawing.new("Quad") -- Updated to a single Quad for the entire character outline
     }
     
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
@@ -310,6 +310,11 @@ local function DrawESP(plr)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
 
+    drawings.Normal.Color = Color3.fromRGB(255, 0, 0) -- Red outline to match the image
+    drawings.Normal.Thickness = 2 -- Slightly thicker outline for visibility
+    drawings.Normal.Transparency = 1
+    drawings.Normal.Visible = false
+
     local bones = {
         {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
         {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
@@ -336,20 +341,6 @@ local function DrawESP(plr)
         line.Thickness = 1
         line.Visible = false
         drawings.Box3D[i] = line
-    end
-
-    local highlightParts = {"Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg"}
-    for _, partName in ipairs(highlightParts) do
-        local lineTop = Drawing.new("Line")
-        local lineBottom = Drawing.new("Line")
-        local lineLeft = Drawing.new("Line")
-        local lineRight = Drawing.new("Line")
-        for _, line in ipairs({lineTop, lineBottom, lineLeft, lineRight}) do
-            line.Color = Color3.fromRGB(255, 0, 0)
-            line.Thickness = 2
-            line.Visible = false
-        end
-        drawings.Normal[partName] = {Top = lineTop, Bottom = lineBottom, Left = lineLeft, Right = lineRight}
     end
 
     local function Update()
@@ -510,55 +501,39 @@ local function DrawESP(plr)
                     end
 
                     if espToggles.Normal then
-                        for _, partName in ipairs(highlightParts) do
-                            local part = plr.Character:FindFirstChild(partName)
-                            if part then
-                                local size = part.Size
-                                local cf = part.CFrame
-                                local topLeft = Camera:WorldToViewportPoint((cf * CFrame.new(-size.X/2, size.Y/2, 0)).p)
-                                local topRight = Camera:WorldToViewportPoint((cf * CFrame.new(size.X/2, size.Y/2, 0)).p)
-                                local bottomLeft = Camera:WorldToViewportPoint((cf * CFrame.new(-size.X/2, -size.Y/2, 0)).p)
-                                local bottomRight = Camera:WorldToViewportPoint((cf * CFrame.new(size.X/2, -size.Y/2, 0)).p)
-                                local lines = drawings.Normal[partName]
-                                if topLeft.Z > 0 and topRight.Z > 0 and bottomLeft.Z > 0 and bottomRight.Z > 0 then
-                                    lines.Top.From = Vector2.new(topLeft.X, topLeft.Y)
-                                    lines.Top.To = Vector2.new(topRight.X, topRight.Y)
-                                    lines.Top.Visible = true
+                        local character = plr.Character
+                        if character and character.PrimaryPart then
+                            local extents = character:GetExtentsSize() * 1.1 -- Slightly larger box for better visibility
+                            local cf = character.PrimaryPart.CFrame
 
-                                    lines.Bottom.From = Vector2.new(bottomLeft.X, bottomLeft.Y)
-                                    lines.Bottom.To = Vector2.new(bottomRight.X, bottomRight.Y)
-                                    lines.Bottom.Visible = true
+                            local TopLeft = Camera:WorldToViewportPoint((cf * CFrame.new(-extents.X/2, extents.Y/2, 0)).p)
+                            local TopRight = Camera:WorldToViewportPoint((cf * CFrame.new(extents.X/2, extents.Y/2, 0)).p)
+                            local BottomLeft = Camera:WorldToViewportPoint((cf * CFrame.new(-extents.X/2, -extents.Y/2, 0)).p)
+                            local BottomRight = Camera:WorldToViewportPoint((cf * CFrame.new(extents.X/2, -extents.Y/2, 0)).p)
 
-                                    lines.Left.From = Vector2.new(topLeft.X, topLeft.Y)
-                                    lines.Left.To = Vector2.new(bottomLeft.X, bottomLeft.Y)
-                                    lines.Left.Visible = true
-
-                                    lines.Right.From = Vector2.new(topRight.X, topRight.Y)
-                                    lines.Right.To = Vector2.new(bottomRight.X, bottomRight.Y)
-                                    lines.Right.Visible = true
-                                else
-                                    for _, line in pairs(lines) do
-                                        line.Visible = false
-                                    end
-                                end
+                            if TopLeft.Z > 0 and TopRight.Z > 0 and BottomLeft.Z > 0 and BottomRight.Z > 0 then
+                                drawings.Normal.PointA = Vector2.new(TopRight.X, TopRight.Y)
+                                drawings.Normal.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
+                                drawings.Normal.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
+                                drawings.Normal.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
+                                drawings.Normal.Visible = true
                             else
-                                for _, line in pairs(drawings.Normal[partName]) do
-                                    line.Visible = false
-                                end
+                                drawings.Normal.Visible = false
                             end
+                        else
+                            drawings.Normal.Visible = false
                         end
                     else
-                        for _, partLines in pairs(drawings.Normal) do
-                            for _, line in pairs(partLines) do
-                                line.Visible = false
-                            end
-                        end
+                        drawings.Normal.Visible = false
                     end
+
                 else
-                    for _, drawing in pairs(drawings) do
+                    for key, drawing in pairs(drawings) do
                         if type(drawing) == "table" then
                             for _, line in pairs(drawing) do
-                                if type(line) == "table" then
+                                if key == "Normal" then
+                                    drawing.Visible = false
+                                elseif type(line) == "table" then
                                     for _, subLine in pairs(line) do
                                         subLine.Visible = false
                                     end
@@ -572,10 +547,12 @@ local function DrawESP(plr)
                     end
                 end
             else
-                for _, drawing in pairs(drawings) do
+                for key, drawing in pairs(drawings) do
                     if type(drawing) == "table" then
                         for _, line in pairs(drawing) do
-                            if type(line) == "table" then
+                            if key == "Normal" then
+                                drawing.Visible = false
+                            elseif type(line) == "table" then
                                 for _, subLine in pairs(line) do
                                     subLine.Visible = false
                                 end
