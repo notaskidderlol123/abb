@@ -277,12 +277,14 @@ local function DrawESP(plr)
         Box = Drawing.new("Quad"),
         Name = Drawing.new("Text"),
         Distance = Drawing.new("Text"),
-        HealthBar = Drawing.new("Line"),
+        HealthBar = Drawing.new("Line"), -- Health bar foreground
+        HealthBarBg = Drawing.new("Line"), -- Health bar background
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {}
     }
     
+    -- Configure drawings
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
     drawings.Box.Thickness = 1
     drawings.Box.Transparency = 1
@@ -300,11 +302,15 @@ local function DrawESP(plr)
 
     drawings.HealthBar.Thickness = 12
     drawings.HealthBar.Visible = false
+    drawings.HealthBarBg.Thickness = 14 -- Slightly thicker background
+    drawings.HealthBarBg.Color = Color3.fromRGB(50, 50, 50) -- Dark background
+    drawings.HealthBarBg.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 255, 0)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
 
+    -- Skeleton bones
     local bones = {
         {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
         {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
@@ -320,6 +326,7 @@ local function DrawESP(plr)
         drawings.Skeleton[pair[1] .. pair[2]] = line
     end
 
+    -- 3D Box edges
     local box3DIndices = {
         {1, 2}, {2, 3}, {3, 4}, {4, 1},
         {5, 6}, {6, 7}, {7, 8}, {8, 5},
@@ -353,6 +360,7 @@ local function DrawESP(plr)
                         headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true
                     end
 
+                    -- Box ESP
                     if espToggles.Box then
                         drawings.Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
                         drawings.Box.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
@@ -363,14 +371,17 @@ local function DrawESP(plr)
                         drawings.Box.Visible = false
                     end
 
+                    -- Name ESP (Centered above head)
                     if espToggles.Name and headVis then
-                        drawings.Name.Position = Vector2.new(TopRight.X, TopRight.Y - 20)
+                        local nameWidth = drawings.Name.TextBounds.X -- Get the width of the text
+                        drawings.Name.Position = Vector2.new(headPos.X - (nameWidth / 2), headPos.Y - 30) -- Center and offset above head
                         drawings.Name.Text = plr.Name
                         drawings.Name.Visible = true
                     else
                         drawings.Name.Visible = false
                     end
 
+                    -- Distance ESP
                     if espToggles.Distance then
                         local playerDistance = (rootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
                         drawings.Distance.Position = Vector2.new(BottomRight.X, BottomRight.Y + 5)
@@ -380,22 +391,33 @@ local function DrawESP(plr)
                         drawings.Distance.Visible = false
                     end
 
+                    -- Health Bar ESP with Background
                     if espToggles.HealthBar and headVis then
                         local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             local healthPercent = humanoid.Health / humanoid.MaxHealth
                             local barWidth = 100
                             local barHeight = 12
-                            local barX = headPos.X - barWidth / 2
-                            drawings.HealthBar.From = Vector2.new(barX, headPos.Y - 10)
-                            drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), headPos.Y - 10)
-                            drawings.HealthBar.Color = Color3.fromRGB(0, 255, 0)
+                            local barX = headPos.X - (barWidth / 2) -- Center the bar
+                            local barY = headPos.Y - 10
+
+                            -- Health bar background
+                            drawings.HealthBarBg.From = Vector2.new(barX, barY)
+                            drawings.HealthBarBg.To = Vector2.new(barX + barWidth, barY)
+                            drawings.HealthBarBg.Visible = true
+
+                            -- Health bar foreground (green, based on health)
+                            drawings.HealthBar.From = Vector2.new(barX, barY)
+                            drawings.HealthBar.To = Vector2.new(barX + (barWidth * healthPercent), barY)
+                            drawings.HealthBar.Color = Color3.fromRGB(0, 255 * healthPercent, 0) -- Green to red gradient
                             drawings.HealthBar.Visible = true
                         end
                     else
                         drawings.HealthBar.Visible = false
+                        drawings.HealthBarBg.Visible = false
                     end
 
+                    -- Tracer ESP
                     if espToggles.Tracer then
                         local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso")
                         if chest then
@@ -414,6 +436,7 @@ local function DrawESP(plr)
                         drawings.Tracer.Visible = false
                     end
 
+                    -- Skeleton ESP
                     if espToggles.Skeleton then
                         for _, pair in ipairs(bones) do
                             local p1 = plr.Character:FindFirstChild(pair[1])
@@ -437,6 +460,7 @@ local function DrawESP(plr)
                         end
                     end
 
+                    -- 3D Box ESP
                     if espToggles.Box3D then
                         local size = plr.Character:GetExtentsSize() * 1.1
                         local cf = plr.Character.PrimaryPart.CFrame
