@@ -451,7 +451,6 @@ end)
 local espToggles = config.espToggles
 local espPlayers = {}
 local lastPositions = {}
-local lastKnownPositions = {} -- For persistent tracers
 
 local function DrawESP(plr)
     local drawings = {
@@ -528,7 +527,6 @@ local function DrawESP(plr)
         connection = RunService.RenderStepped:Connect(function()
             if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
                 local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
-                lastKnownPositions[plr] = plr.Character.PrimaryPart.Position
                 if vis then
                     local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
                     local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
@@ -604,14 +602,13 @@ local function DrawESP(plr)
                         local chest = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso")
                         if chest then
                             local chestPos, chestVis = Camera:WorldToViewportPoint(chest.Position)
-                            drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                            drawings.Tracer.To = Vector2.new(chestPos.X, chestPos.Y)
-                            drawings.Tracer.Visible = true
-                        elseif lastKnownPositions[plr] then
-                            local lastPos = Camera:WorldToViewportPoint(lastKnownPositions[plr])
-                            drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                            drawings.Tracer.To = Vector2.new(lastPos.X, lastPos.Y)
-                            drawings.Tracer.Visible = true
+                            if chestVis then
+                                drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                                drawings.Tracer.To = Vector2.new(chestPos.X, chestPos.Y)
+                                drawings.Tracer.Visible = true
+                            else
+                                drawings.Tracer.Visible = false
+                            end
                         else
                             drawings.Tracer.Visible = false
                         end
@@ -680,24 +677,20 @@ local function DrawESP(plr)
                         end
                     end
                 else
-                    if espToggles.Tracer and lastKnownPositions[plr] then
-                        local lastPos = Camera:WorldToViewportPoint(lastKnownPositions[plr])
-                        drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                        drawings.Tracer.To = Vector2.new(lastPos.X, lastPos.Y)
-                        drawings.Tracer.Visible = true
-                    else
-                        drawings.Tracer.Visible = false
-                    end
-                    drawings.Box.Visible = false
-                    drawings.Name.Visible = false
-                    drawings.Speed.Visible = false
-                    drawings.HealthText.Visible = false
-                    drawings.HealthBar.Visible = false
-                    for _, line in pairs(drawings.Skeleton) do
-                        line.Visible = false
-                    end
-                    for _, line in ipairs(drawings.Box3D) do
-                        line.Visible = false
+                    for key, drawing in pairs(drawings) do
+                        if type(drawing) == "table" then
+                            for _, line in pairs(drawing) do
+                                if type(line) == "table" then
+                                    for _, subLine in pairs(line) do
+                                        subLine.Visible = false
+                                    end
+                                else
+                                    line.Visible = false
+                                end
+                            end
+                        else
+                            drawing.Visible = false
+                        end
                     end
                 end
             else
