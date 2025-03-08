@@ -279,7 +279,7 @@ local function DrawESP(plr)
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {},
-        Normal = Drawing.new("Quad") -- Updated to a single Quad for the entire character outline
+        Normal = {} -- Changed to a table to hold multiple Quads for character outline
     }
     
     drawings.Box.Color = Color3.fromRGB(255, 255, 255)
@@ -310,10 +310,16 @@ local function DrawESP(plr)
     drawings.Tracer.Thickness = 1
     drawings.Tracer.Visible = false
 
-    drawings.Normal.Color = Color3.fromRGB(255, 0, 0) -- Red outline to match the image
-    drawings.Normal.Thickness = 2 -- Slightly thicker outline for visibility
-    drawings.Normal.Transparency = 1
-    drawings.Normal.Visible = false
+    -- Define parts to highlight for the "Normal" ESP
+    local highlightParts = {"Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg"}
+    for _, partName in ipairs(highlightParts) do
+        local quad = Drawing.new("Quad")
+        quad.Color = Color3.fromRGB(255, 0, 0) -- Red highlight
+        quad.Thickness = 2
+        quad.Transparency = 0.5 -- Semi-transparent to show the character underneath
+        quad.Visible = false
+        drawings.Normal[partName] = quad
+    end
 
     local bones = {
         {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
@@ -501,30 +507,41 @@ local function DrawESP(plr)
                     end
 
                     if espToggles.Normal then
-                        local character = plr.Character
-                        if character and character.PrimaryPart then
-                            local extents = character:GetExtentsSize() * 1.1 -- Slightly larger box for better visibility
-                            local cf = character.PrimaryPart.CFrame
-
-                            local TopLeft = Camera:WorldToViewportPoint((cf * CFrame.new(-extents.X/2, extents.Y/2, 0)).p)
-                            local TopRight = Camera:WorldToViewportPoint((cf * CFrame.new(extents.X/2, extents.Y/2, 0)).p)
-                            local BottomLeft = Camera:WorldToViewportPoint((cf * CFrame.new(-extents.X/2, -extents.Y/2, 0)).p)
-                            local BottomRight = Camera:WorldToViewportPoint((cf * CFrame.new(extents.X/2, -extents.Y/2, 0)).p)
-
-                            if TopLeft.Z > 0 and TopRight.Z > 0 and BottomLeft.Z > 0 and BottomRight.Z > 0 then
-                                drawings.Normal.PointA = Vector2.new(TopRight.X, TopRight.Y)
-                                drawings.Normal.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
-                                drawings.Normal.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
-                                drawings.Normal.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
-                                drawings.Normal.Visible = true
+                        for partName, quad in pairs(drawings.Normal) do
+                            local part = plr.Character:FindFirstChild(partName)
+                            if part then
+                                local size = part.Size
+                                local cf = part.CFrame
+                                local corners = {
+                                    Camera:WorldToViewportPoint((cf * CFrame.new(-size.X/2, size.Y/2, 0)).p),
+                                    Camera:WorldToViewportPoint((cf * CFrame.new(size.X/2, size.Y/2, 0)).p),
+                                    Camera:WorldToViewportPoint((cf * CFrame.new(size.X/2, -size.Y/2, 0)).p),
+                                    Camera:WorldToViewportPoint((cf * CFrame.new(-size.X/2, -size.Y/2, 0)).p)
+                                }
+                                local allVisible = true
+                                for _, corner in ipairs(corners) do
+                                    if corner.Z <= 0 then
+                                        allVisible = false
+                                        break
+                                    end
+                                end
+                                if allVisible then
+                                    quad.PointA = Vector2.new(corners[2].X, corners[2].Y) -- TopRight
+                                    quad.PointB = Vector2.new(corners[1].X, corners[1].Y) -- TopLeft
+                                    quad.PointC = Vector2.new(corners[3].X, corners[3].Y) -- BottomRight
+                                    quad.PointD = Vector2.new(corners[4].X, corners[4].Y) -- BottomLeft
+                                    quad.Visible = true
+                                else
+                                    quad.Visible = false
+                                end
                             else
-                                drawings.Normal.Visible = false
+                                quad.Visible = false
                             end
-                        else
-                            drawings.Normal.Visible = false
                         end
                     else
-                        drawings.Normal.Visible = false
+                        for _, quad in pairs(drawings.Normal) do
+                            quad.Visible = false
+                        end
                     end
 
                 else
@@ -532,7 +549,7 @@ local function DrawESP(plr)
                         if type(drawing) == "table" then
                             for _, line in pairs(drawing) do
                                 if key == "Normal" then
-                                    drawing.Visible = false
+                                    line.Visible = false
                                 elseif type(line) == "table" then
                                     for _, subLine in pairs(line) do
                                         subLine.Visible = false
@@ -551,7 +568,7 @@ local function DrawESP(plr)
                     if type(drawing) == "table" then
                         for _, line in pairs(drawing) do
                             if key == "Normal" then
-                                drawing.Visible = false
+                                line.Visible = false
                             elseif type(line) == "table" then
                                 for _, subLine in pairs(line) do
                                     subLine.Visible = false
