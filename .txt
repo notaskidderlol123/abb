@@ -16,7 +16,7 @@ local function getCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
--- GUI Setup (unchanged)
+-- GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomExecutor"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -87,19 +87,19 @@ for i, tabName in ipairs(tabs) do
     end)
 end
 
--- Aimbot Tab (Updated with Document's Logic, No Smoothness)
+-- Aimbot Tab (Simplified to Aimbot and Aim Lock)
 local aimbotEnabled = false
-local aimbotFovSize = 50
+local aimLockEnabled = false
+local lockedTarget = nil
 local aimbotAimPart = "Head"
 local aimbotKeybind = Enum.UserInputType.MouseButton2
 local aimbotPredictionEnabled = false
 local aimbotPredictionStrengthX = 0
 local aimbotPredictionStrengthY = 0
 local aimbotStickyAimEnabled = false
-local lockedTarget = nil
 
 local AimbotToggle = Instance.new("TextButton")
-AimbotToggle.Size = UDim2.new(0, 100, 0, 30)
+AimbotToggle.Size = UDim2.new(0, 200, 0, 40)
 AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
 AimbotToggle.Text = "Aimbot: OFF"
 AimbotToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -107,8 +107,20 @@ AimbotToggle.BackgroundTransparency = 1
 AimbotToggle.TextTransparency = 1
 AimbotToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
 AimbotToggle.Font = Enum.Font.SourceSans
-AimbotToggle.TextSize = 16
+AimbotToggle.TextSize = 18
 AimbotToggle.Parent = tabContents["Aimbot"]
+
+local AimLockToggle = Instance.new("TextButton")
+AimLockToggle.Size = UDim2.new(0, 200, 0, 40)
+AimLockToggle.Position = UDim2.new(0, 10, 0, 60)
+AimLockToggle.Text = "Aim Lock: OFF"
+AimLockToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+AimLockToggle.BackgroundTransparency = 1
+AimLockToggle.TextTransparency = 1
+AimLockToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+AimLockToggle.Font = Enum.Font.SourceSans
+AimLockToggle.TextSize = 18
+AimLockToggle.Parent = tabContents["Aimbot"]
 
 local function aimbot()
     if not aimbotEnabled or not aimbotKeybind then
@@ -128,7 +140,7 @@ local function aimbot()
     end
 
     local mouse = LocalPlayer:GetMouse()
-    if lockedTarget and aimbotStickyAimEnabled then
+    if lockedTarget and aimbotStickyAimEnabled and aimLockEnabled then
         if lockedTarget.Character and lockedTarget.Character:FindFirstChild(aimbotAimPart) then
             local part = lockedTarget.Character[aimbotAimPart]
             local predictedPosition = part.Position
@@ -152,7 +164,7 @@ local function aimbot()
     end
 
     local closestPlayer = nil
-    local closestDistance = aimbotFovSize
+    local closestDistance = 50 -- Default FOV size
 
     for _, player in pairs(PlayersService:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(aimbotAimPart) then
@@ -203,218 +215,13 @@ AimbotToggle.MouseButton1Click:Connect(function()
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end)
 
+AimLockToggle.MouseButton1Click:Connect(function()
+    aimLockEnabled = not aimLockEnabled
+    AimLockToggle.Text = "Aim Lock: " .. (aimLockEnabled and "ON" or "OFF")
+    AimLockToggle.TextColor3 = aimLockEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end)
+
 RunService.RenderStepped:Connect(aimbot)
-
-local FovCircle = Drawing.new("Circle")
-FovCircle.Color = Color3.fromRGB(255, 255, 255)
-FovCircle.Thickness = 1
-FovCircle.Transparency = 1
-FovCircle.Filled = false
-
-local ShowFovToggle = Instance.new("TextButton")
-ShowFovToggle.Size = UDim2.new(0, 100, 0, 30)
-ShowFovToggle.Position = UDim2.new(0, 10, 0, 50)
-ShowFovToggle.Text = "Show FOV: OFF"
-ShowFovToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-ShowFovToggle.BackgroundTransparency = 1
-ShowFovToggle.TextTransparency = 1
-ShowFovToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-ShowFovToggle.Font = Enum.Font.SourceSans
-ShowFovToggle.TextSize = 16
-ShowFovToggle.Parent = tabContents["Aimbot"]
-
-local showFov = false
-ShowFovToggle.MouseButton1Click:Connect(function()
-    showFov = not showFov
-    ShowFovToggle.Text = "Show FOV: " .. (showFov and "ON" or "OFF")
-    ShowFovToggle.TextColor3 = showFov and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-end)
-
-local function updateFovCircle()
-    if showFov then
-        local mousePos = UserInputService:GetMouseLocation()
-        FovCircle.Radius = aimbotFovSize
-        FovCircle.Position = Vector2.new(mousePos.X, mousePos.Y)
-        FovCircle.Visible = true
-    else
-        FovCircle.Visible = false
-    end
-end
-
-RunService.RenderStepped:Connect(updateFovCircle)
-
-local PredictionToggle = Instance.new("TextButton")
-PredictionToggle.Size = UDim2.new(0, 100, 0, 30)
-PredictionToggle.Position = UDim2.new(0, 10, 0, 90)
-PredictionToggle.Text = "Prediction: OFF"
-PredictionToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-PredictionToggle.BackgroundTransparency = 1
-PredictionToggle.TextTransparency = 1
-PredictionToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-PredictionToggle.Font = Enum.Font.SourceSans
-PredictionToggle.TextSize = 16
-PredictionToggle.Parent = tabContents["Aimbot"]
-
-PredictionToggle.MouseButton1Click:Connect(function()
-    aimbotPredictionEnabled = not aimbotPredictionEnabled
-    PredictionToggle.Text = "Prediction: " .. (aimbotPredictionEnabled and "ON" or "OFF")
-    PredictionToggle.TextColor3 = aimbotPredictionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-end)
-
-local StickyAimToggle = Instance.new("TextButton")
-StickyAimToggle.Size = UDim2.new(0, 100, 0, 30)
-StickyAimToggle.Position = UDim2.new(0, 10, 0, 130)
-StickyAimToggle.Text = "Sticky Aim: OFF"
-StickyAimToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-StickyAimToggle.BackgroundTransparency = 1
-StickyAimToggle.TextTransparency = 1
-StickyAimToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-StickyAimToggle.Font = Enum.Font.SourceSans
-StickyAimToggle.TextSize = 16
-StickyAimToggle.Parent = tabContents["Aimbot"]
-
-StickyAimToggle.MouseButton1Click:Connect(function()
-    aimbotStickyAimEnabled = not aimbotStickyAimEnabled
-    StickyAimToggle.Text = "Sticky Aim: " .. (aimbotStickyAimEnabled and "ON" or "OFF")
-    StickyAimToggle.TextColor3 = aimbotStickyAimEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-end)
-
-local FovSizeSlider = Instance.new("TextButton")
-FovSizeSlider.Size = UDim2.new(0, 200, 0, 20)
-FovSizeSlider.Position = UDim2.new(0, 10, 0, 170)
-FovSizeSlider.Text = ""
-FovSizeSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-FovSizeSlider.BackgroundTransparency = 1
-FovSizeSlider.Parent = tabContents["Aimbot"]
-
-local FovSizeKnob = Instance.new("Frame")
-FovSizeKnob.Size = UDim2.new(0, 10, 1, 0)
-FovSizeKnob.Position = UDim2.new((aimbotFovSize / 100), 0, 0, 0)
-FovSizeKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
-FovSizeKnob.BackgroundTransparency = 1
-FovSizeKnob.Parent = FovSizeSlider
-
-local draggingFovSlider = false
-FovSizeSlider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingFovSlider = true
-    end
-end)
-
-FovSizeSlider.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingFovSlider = false
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if draggingFovSlider then
-        local mouseX = UserInputService:GetMouseLocation().X
-        local sliderPos = FovSizeSlider.AbsolutePosition.X
-        local sliderWidth = FovSizeSlider.AbsoluteSize.X
-        local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
-        FovSizeKnob.Position = UDim2.new(newPos, 0, 0, 0)
-        aimbotFovSize = math.floor(newPos * 100)
-    end
-end)
-
-local AimPartDropdown = Instance.new("TextButton")
-AimPartDropdown.Size = UDim2.new(0, 100, 0, 30)
-AimPartDropdown.Position = UDim2.new(0, 10, 0, 200)
-AimPartDropdown.Text = "Aim Part: Head"
-AimPartDropdown.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimPartDropdown.BackgroundTransparency = 1
-AimPartDropdown.TextTransparency = 1
-AimPartDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
-AimPartDropdown.Font = Enum.Font.SourceSans
-AimPartDropdown.TextSize = 16
-AimPartDropdown.Parent = tabContents["Aimbot"]
-
-local aimPartIndex = 1
-local aimParts = {"Head", "HumanoidRootPart"}
-AimPartDropdown.MouseButton1Click:Connect(function()
-    aimPartIndex = aimPartIndex % #aimParts + 1
-    aimbotAimPart = aimParts[aimPartIndex]
-    AimPartDropdown.Text = "Aim Part: " .. aimbotAimPart
-end)
-
-local PredictionStrengthXSlider = Instance.new("TextButton")
-PredictionStrengthXSlider.Size = UDim2.new(0, 200, 0, 20)
-PredictionStrengthXSlider.Position = UDim2.new(0, 10, 0, 240)
-PredictionStrengthXSlider.Text = ""
-PredictionStrengthXSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-PredictionStrengthXSlider.BackgroundTransparency = 1
-PredictionStrengthXSlider.Parent = tabContents["Aimbot"]
-
-local PredictionStrengthXKnob = Instance.new("Frame")
-PredictionStrengthXKnob.Size = UDim2.new(0, 10, 1, 0)
-PredictionStrengthXKnob.Position = UDim2.new(aimbotPredictionStrengthX, 0, 0, 0)
-PredictionStrengthXKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
-PredictionStrengthXKnob.BackgroundTransparency = 1
-PredictionStrengthXKnob.Parent = PredictionStrengthXSlider
-
-local draggingPredXSlider = false
-PredictionStrengthXSlider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingPredXSlider = true
-    end
-end)
-
-PredictionStrengthXSlider.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingPredXSlider = false
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if draggingPredXSlider then
-        local mouseX = UserInputService:GetMouseLocation().X
-        local sliderPos = PredictionStrengthXSlider.AbsolutePosition.X
-        local sliderWidth = PredictionStrengthXSlider.AbsoluteSize.X
-        local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
-        PredictionStrengthXKnob.Position = UDim2.new(newPos, 0, 0, 0)
-        aimbotPredictionStrengthX = newPos
-    end
-end)
-
-local PredictionStrengthYSlider = Instance.new("TextButton")
-PredictionStrengthYSlider.Size = UDim2.new(0, 200, 0, 20)
-PredictionStrengthYSlider.Position = UDim2.new(0, 10, 0, 270)
-PredictionStrengthYSlider.Text = ""
-PredictionStrengthYSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-PredictionStrengthYSlider.BackgroundTransparency = 1
-PredictionStrengthYSlider.Parent = tabContents["Aimbot"]
-
-local PredictionStrengthYKnob = Instance.new("Frame")
-PredictionStrengthYKnob.Size = UDim2.new(0, 10, 1, 0)
-PredictionStrengthYKnob.Position = UDim2.new(aimbotPredictionStrengthY, 0, 0, 0)
-PredictionStrengthYKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 252)
-PredictionStrengthYKnob.BackgroundTransparency = 1
-PredictionStrengthYKnob.Parent = PredictionStrengthYSlider
-
-local draggingPredYSlider = false
-PredictionStrengthYSlider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingPredYSlider = true
-    end
-end)
-
-PredictionStrengthYSlider.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingPredYSlider = false
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if draggingPredYSlider then
-        local mouseX = UserInputService:GetMouseLocation().X
-        local sliderPos = PredictionStrengthYSlider.AbsolutePosition.X
-        local sliderWidth = PredictionStrengthYSlider.AbsoluteSize.X
-        local newPos = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
-        PredictionStrengthYKnob.Position = UDim2.new(newPos, 0, 0, 0)
-        aimbotPredictionStrengthY = newPos
-    end
-end)
 
 -- Visuals Tab (Unchanged)
 local espToggles = {
@@ -725,7 +532,7 @@ for feature, enabled in pairs(espToggles) do
     yOffset = yOffset + 40
 end
 
--- Exploits Tab (Updated with Document's Loop TP)
+-- Exploits Tab (Fixed Loop TP)
 local flyEnabled = false
 local flySpeed = 75
 local controlSpeed = 10000
@@ -734,6 +541,7 @@ local infiniteJumpEnabled = false
 local teleporting = false
 local tpBehindOffset = 5
 local tpBehindHeight = 0
+local selectedPlayer = nil
 
 local FlyToggle = Instance.new("TextButton")
 FlyToggle.Size = UDim2.new(0, 100, 0, 30)
@@ -939,7 +747,6 @@ TeleportTargetInput.Font = Enum.Font.SourceSans
 TeleportTargetInput.TextSize = 16
 TeleportTargetInput.Parent = tabContents["Exploits"]
 
-local selectedPlayer = nil
 TeleportTargetInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         local inputValue = TeleportTargetInput.Text:lower()
@@ -984,9 +791,9 @@ StopLoopTPButton.Parent = tabContents["Exploits"]
 local function loopBehind(targetPlayer)
     teleporting = true
     local player = PlayersService.LocalPlayer
-    while teleporting do
+    while teleporting and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") do
         local targetCharacter = targetPlayer.Character
-        local targetHumanoidRootPart = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
+        local targetHumanoidRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
         local playerCharacter = player.Character
         local playerHumanoidRootPart = playerCharacter and playerCharacter:FindFirstChild("HumanoidRootPart")
         if playerHumanoidRootPart and targetHumanoidRootPart then
@@ -996,13 +803,20 @@ local function loopBehind(targetPlayer)
             local newPosition = targetPosition - (targetLookVector * tpBehindOffset) + Vector3.new(0, tpBehindHeight, 0)
             playerHumanoidRootPart.CFrame = CFrame.new(newPosition, newPosition + targetLookVector)
         end
-        task.wait()
+        task.wait(0.01) -- Faster update for better locking
     end
+    teleporting = false
 end
 
 StartLoopTPButton.MouseButton1Click:Connect(function()
-    if selectedPlayer then
+    if selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        if teleporting then
+            teleporting = false -- Stop any existing loop
+            wait(0.1) -- Brief pause to ensure stop
+        end
         loopBehind(selectedPlayer)
+    else
+        warn("Invalid target or target not found!")
     end
 end)
 
@@ -1016,14 +830,13 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         toggleFly()
         toggleFly()
     end
-    if teleporting then
+    if teleporting and selectedPlayer then
         wait(0.1)
         loopBehind(selectedPlayer)
-        loopBehind(selectedPlayer) -- Toggle off and on to restart
     end
 end)
 
--- GUI Animation Setup (unchanged)
+-- GUI Animation Setup
 local isGuiVisible = false
 local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
