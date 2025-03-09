@@ -23,7 +23,7 @@ local success, err = pcall(function()
         aimbotSmoothness = 0.5,
         aimbotFovEnabled = false,
         aimbotFovSize = 100,
-        aimbotBone = "Head", -- Default aim bone
+        aimbotBone = "Head",
         espToggles = {
             Box = false,
             Name = false,
@@ -166,38 +166,13 @@ local success, err = pcall(function()
         end
     end)
 
-    -- GUI Toggle with Destroy Instead of Transparency
+    -- GUI Toggle with Visibility
     local guiVisible = true
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if not gameProcessed and input.KeyCode == Enum.KeyCode.Q then
-            if guiVisible then
-                ScreenGui:Destroy()
-                guiVisible = false
-                print("GUI destroyed. Press 'Q' to recreate.")
-            else
-                -- Recreate GUI
-                ScreenGui = Instance.new("ScreenGui")
-                ScreenGui.Name = "NettlewareGUI"
-                ScreenGui.ResetOnSpawn = false
-                ScreenGui.IgnoreGuiInset = true
-                local successRecreate, errRecreate = pcall(function()
-                    ScreenGui.Parent = game:GetService("CoreGui")
-                end)
-                if not successRecreate then
-                    warn("Failed to parent to CoreGui: " .. tostring(errRecreate))
-                    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-                    print("Falling back to PlayerGui for GUI parenting.")
-                end
-                MainFrame.Parent = ScreenGui
-                CircuitBackground.Parent = MainFrame
-                NeonPulse.Parent = MainFrame
-                TitleLabel.Parent = MainFrame
-                for _, tabName in pairs({"Aimbot", "Visuals", "Exploits", "Settings"}) do
-                    tabContents[tabName].Parent = MainFrame
-                end
-                guiVisible = true
-                print("GUI recreated.")
-            end
+            guiVisible = not guiVisible
+            MainFrame.Visible = guiVisible
+            print("GUI toggled to " .. (guiVisible and "visible" or "hidden") .. ". Press 'Q' to toggle.")
         end
     end)
 
@@ -308,7 +283,7 @@ local success, err = pcall(function()
     local aimbotSmoothness = settings.aimbotSmoothness
     local aimbotFovEnabled = settings.aimbotFovEnabled
     local aimbotFovSize = settings.aimbotFovSize
-    local aimbotBone = settings.aimbotBone -- Added aim bone setting
+    local aimbotBone = settings.aimbotBone
     local targetPlayer = nil
 
     local CategoryLabelAimbot = Instance.new("TextLabel")
@@ -550,7 +525,7 @@ local success, err = pcall(function()
             local rightFoot = player.Character:FindFirstChild("RightFoot")
             return leftFoot or rightFoot or player.Character:FindFirstChild("HumanoidRootPart")
         end
-        return player.Character:FindFirstChild("Head") -- Default fallback
+        return player.Character:FindFirstChild("Head")
     end
 
     AimbotToggle.MouseButton1Click:Connect(function()
@@ -773,7 +748,8 @@ local success, err = pcall(function()
             local rootPart = character:WaitForChild("HumanoidRootPart")
             connection = RunService.RenderStepped:Connect(function()
                 if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                    local headPos, headVis = Camera:WorldToViewportPoint((plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart).Position + Vector3.new(0, 1.5, 0))
+                    local head = plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart
+                    local headPos, headVis = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0)) -- 2.5 studs above head
                     if headVis then
                         local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
                         local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
@@ -820,7 +796,7 @@ local success, err = pcall(function()
                                 local barWidth = 60
                                 local barHeight = 10
                                 local barX = headPos.X - (barWidth / 2)
-                                local barY = headPos.Y - 50 -- Fixed position above head
+                                local barY = headPos.Y -- Fixed screen Y based on world offset
 
                                 local healthText = math.floor(healthPercent * 100) .. "%"
                                 local textWidth = drawings.HealthText.TextBounds.X
@@ -1440,7 +1416,7 @@ local success, err = pcall(function()
             if character and character:FindFirstChild("HumanoidRootPart") then
                 local rootPart = character.HumanoidRootPart
                 lastPosition = rootPart.CFrame
-                print("Last position saved: " .. tostring(lastPosition)) -- Debug print
+                print("Last position saved: " .. tostring(lastPosition))
             else
                 warn("No character or HumanoidRootPart found to save position.")
             end
@@ -1470,7 +1446,7 @@ local success, err = pcall(function()
     PlayerListToggle.TextSize = 16
     PlayerListToggle.Parent = tabContents["Settings"]
 
-    -- Separate Player List GUI (Top-Right)
+        -- Separate Player List GUI (Top-Right)
     local PlayerListGui = Instance.new("ScreenGui")
     PlayerListGui.Name = "PlayerListGui"
     PlayerListGui.ResetOnSpawn = false
