@@ -79,6 +79,9 @@ end
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NettlewareGUI"
 ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.Enabled = true
+MainFrame.Visible = true
+MainFrame.BackgroundTransparency = 0
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 
@@ -1660,3 +1663,7 @@ SaveLastPositionToggle.MouseButton1Click:Connect(toggleSaveLastPosition)
 -- Initial tab activation
 tabContents["Aimbot"].Visible = true
 currentTab = "Aimbot"
+
+print("GUI Loaded Successfully!")
+
+toggleGui()
