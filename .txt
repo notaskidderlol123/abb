@@ -79,9 +79,7 @@ local function initializeScript()
     -- GUI Setup with Custom Design
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "NettlewareGUI"
-    print("Creating ScreenGui: NettlewareGUI")
     ScreenGui.Parent = game:GetService("CoreGui")
-    print("Parented ScreenGui to CoreGui")
     ScreenGui.ResetOnSpawn = false
     ScreenGui.IgnoreGuiInset = true
 
@@ -1071,7 +1069,7 @@ local function initializeScript()
     FlyToggle.TextSize = 16
     FlyToggle.Parent = tabContents["Exploits"]
 
-       local FlySpeedLabel = Instance.new("TextLabel")
+    local FlySpeedLabel = Instance.new("TextLabel")
     FlySpeedLabel.Size = UDim2.new(0, 280, 0, 30)
     FlySpeedLabel.Position = UDim2.new(0, 10, 0, 90)
     FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
@@ -1444,8 +1442,7 @@ local function initializeScript()
             FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
             settings.flySpeed = flySpeed
             saveSettings()
-        end
-    end)
+            end)
 
     -- NoClip Toggle Logic
     function toggleNoClip()
