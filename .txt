@@ -79,7 +79,9 @@ local function initializeScript()
     -- GUI Setup with Custom Design
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "NettlewareGUI"
+    print("Creating ScreenGui: NettlewareGUI")
     ScreenGui.Parent = game:GetService("CoreGui")
+    print("Parented ScreenGui to CoreGui")
     ScreenGui.ResetOnSpawn = false
     ScreenGui.IgnoreGuiInset = true
 
@@ -90,48 +92,6 @@ local function initializeScript()
     MainFrame.BackgroundTransparency = 0
     MainFrame.BorderSizePixel = 0
     MainFrame.Parent = ScreenGui
-
-    -- Draggable Functionality
-    local dragging, dragInput, dragStart, startPos
-    local function update(input)
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-
-    MainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    MainFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
-    end)
-
-    -- Bind GUI to 'Q'
-    local guiVisible = true
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and input.KeyCode == Enum.KeyCode.Q then
-            guiVisible = not guiVisible
-            MainFrame.Visible = guiVisible
-        end
-    end)
 
     -- Background with Circuit Pattern
     local CircuitBackground = Instance.new("ImageLabel")
@@ -444,6 +404,7 @@ local function initializeScript()
         settings.aimbotSmoothnessEnabled = aimbotSmoothnessEnabled
         saveSettings()
 
+        -- Adjust positions of FOV elements based on smoothness visibility
         FovCircleToggle.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 290 or 210)
         FovCircleLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 330 or 250)
         FovCircleSlider.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 370 or 290)
@@ -514,6 +475,7 @@ local function initializeScript()
             saveSettings()
         end
 
+        -- Update FOV circle position to stay centered
         fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     end)
 
@@ -587,6 +549,7 @@ local function initializeScript()
                 end
             end)
         end
+        -- Reapply fly state on character respawn
         if settings.flyEnabled then
             wait(0.1)
             if not flyEnabled then
@@ -1039,6 +1002,7 @@ local function initializeScript()
     -- Exploits Tab Content
     local flyEnabled = settings.flyEnabled
     local flySpeed = settings.flySpeed
+    local controlSpeed = 10000
     local noClipEnabled = settings.noClipEnabled
     local infiniteJumpEnabled = settings.infiniteJumpEnabled
     local speedEnabled = settings.speedEnabled
@@ -1245,7 +1209,11 @@ local function initializeScript()
     TpAuraPositionDropdown.MouseButton1Click:Connect(function()
         dropdownOpen = not dropdownOpen
         dropdownFrame.Visible = dropdownOpen
-        SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, dropdownOpen and 510 + (#dropdownOptions * 30) or 510)
+        if dropdownOpen then
+            SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 510 + (#dropdownOptions * 30))
+        else
+            SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 510)
+        end
     end)
 
     local SaveLastPositionToggle = Instance.new("TextButton")
@@ -1258,9 +1226,8 @@ local function initializeScript()
     SaveLastPositionToggle.TextSize = 16
     SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
-    -- Settings Tab Content (Player List)
+    -- Settings Tab Content
     local playerListEnabled = settings.playerListEnabled
-    local playerEntries = {}
 
     local CategoryLabelSettings = Instance.new("TextLabel")
     CategoryLabelSettings.Size = UDim2.new(0, 280, 0, 30)
@@ -1282,15 +1249,35 @@ local function initializeScript()
     PlayerListToggle.TextSize = 16
     PlayerListToggle.Parent = tabContents["Settings"]
 
-    local PlayerListFrame = Instance.new("ScrollingFrame")
-    PlayerListFrame.Size = UDim2.new(0, 280, 0, 300)
-    PlayerListFrame.Position = UDim2.new(0, 10, 0, 90)
+    -- Player List GUI
+    local PlayerListFrame = Instance.new("Frame")
+    PlayerListFrame.Size = UDim2.new(0, 300, 0, 400)
+    PlayerListFrame.Position = UDim2.new(1, -310, 0.5, -200)
     PlayerListFrame.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
     PlayerListFrame.BackgroundTransparency = 0
-    PlayerListFrame.BorderSizePixel = 0
     PlayerListFrame.Visible = playerListEnabled
-    PlayerListFrame.ScrollBarThickness = 5
-    PlayerListFrame.Parent = tabContents["Settings"]
+    PlayerListFrame.Parent = ScreenGui
+
+    local PlayerListTitle = Instance.new("TextLabel")
+    PlayerListTitle.Size = UDim2.new(1, 0, 0, 40)
+    PlayerListTitle.Position = UDim2.new(0, 0, 0, 0)
+    PlayerListTitle.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
+    PlayerListTitle.Text = "Player List"
+    PlayerListTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+    PlayerListTitle.Font = Enum.Font.SourceSansBold
+    PlayerListTitle.TextSize = 18
+    PlayerListTitle.TextTransparency = 0
+    PlayerListTitle.BorderSizePixel = 0
+    PlayerListTitle.Parent = PlayerListFrame
+
+    local PlayerListScrolling = Instance.new("ScrollingFrame")
+    PlayerListScrolling.Size = UDim2.new(1, -10, 1, -40)
+    PlayerListScrolling.Position = UDim2.new(0, 5, 0, 40)
+    PlayerListScrolling.BackgroundTransparency = 1
+    PlayerListScrolling.ScrollBarThickness = 5
+    PlayerListScrolling.Parent = PlayerListFrame
+
+    local playerEntries = {}
 
     local function updatePlayerList()
         for _, entry in pairs(playerEntries) do
@@ -1300,42 +1287,56 @@ local function initializeScript()
 
         local yOffset = 0
         for _, player in pairs(PlayersService:GetPlayers()) do
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -10, 0, 50)
-            frame.Position = UDim2.new(0, 5, 0, yOffset)
-            frame.BackgroundTransparency = 1
-            frame.Parent = PlayerListFrame
+            local entryFrame = Instance.new("Frame")
+            entryFrame.Size = UDim2.new(1, -10, 0, 50)
+            entryFrame.Position = UDim2.new(0, 5, 0, yOffset)
+            entryFrame.BackgroundTransparency = 1
+            entryFrame.Parent = PlayerListScrolling
+
+            local thumbnail = Instance.new("ImageLabel")
+            thumbnail.Size = UDim2.new(0, 40, 0, 40)
+            thumbnail.Position = UDim2.new(0, 5, 0, 5)
+            thumbnail.BackgroundTransparency = 1
+            local thumbType = Enum.ThumbnailType.HeadShot
+            local thumbSize = Enum.ThumbnailSize.Size48x48
+            local content, isReady = PlayersService:GetUserThumbnailAsync(player.UserId, thumbType, thumbSize)
+            thumbnail.Image = (isReady and content) or "rbxasset://textures/ui/GuiImagePlaceholder.png"
+            thumbnail.Parent = entryFrame
 
             local nameLabel = Instance.new("TextLabel")
-            nameLabel.Size = UDim2.new(1, 0, 0, 20)
-            nameLabel.Position = UDim2.new(0, 0, 0, 0)
+            nameLabel.Size = UDim2.new(0, 150, 0, 20)
+            nameLabel.Position = UDim2.new(0, 50, 0, 5)
             nameLabel.Text = player.Name
-            nameLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
             nameLabel.BackgroundTransparency = 1
+            nameLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
             nameLabel.Font = Enum.Font.SourceSans
             nameLabel.TextSize = 16
             nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-            nameLabel.Parent = frame
+            nameLabel.Parent = entryFrame
 
             local healthLabel = Instance.new("TextLabel")
-            healthLabel.Size = UDim2.new(1, 0, 0, 20)
-            healthLabel.Position = UDim2.new(0, 0, 0, 20)
+            healthLabel.Size = UDim2.new(0, 150, 0, 20)
+            healthLabel.Position = UDim2.new(0, 50, 0, 25)
             healthLabel.Text = "Health: N/A"
-            healthLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
             healthLabel.BackgroundTransparency = 1
+            healthLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
             healthLabel.Font = Enum.Font.SourceSans
-            healthLabel.TextSize = 16
+            healthLabel.TextSize = 14
             healthLabel.TextXAlignment = Enum.TextXAlignment.Left
-            healthLabel.Parent = frame
+            healthLabel.Parent = entryFrame
 
-            playerEntries[player] = {Frame = frame, HealthLabel = healthLabel}
-            yOffset = yOffset + 60
+            if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                healthLabel.Text = "Health: " .. math.floor(humanoid.Health) .. "/" .. humanoid.MaxHealth
+            end
+
+            playerEntries[player] = {Frame = entryFrame, HealthLabel = healthLabel}
+            yOffset = yOffset + 55
         end
-
-        PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+        PlayerListScrolling.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     end
 
-    PlayerListToggle.MouseButton1Click:Connect(function()
+        PlayerListToggle.MouseButton1Click:Connect(function()
         playerListEnabled = not playerListEnabled
         PlayerListToggle.Text = "☐ Player List: " .. (playerListEnabled and "ON" or "OFF")
         PlayerListToggle.TextColor3 = playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
@@ -1365,7 +1366,7 @@ local function initializeScript()
         end
     end)
 
-    -- Fly Toggle Logic (Simplified)
+    -- Fly Toggle Logic
     function toggleFly()
         flyEnabled = not flyEnabled
         FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
@@ -1373,44 +1374,57 @@ local function initializeScript()
         settings.flyEnabled = flyEnabled
         saveSettings()
 
-        local character = getCharacter()
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            local rootPart = character.HumanoidRootPart
-            if flyEnabled then
-                local bodyVelocity = Instance.new("BodyVelocity")
-                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-                bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-                bodyVelocity.Parent = rootPart
+        if flyEnabled then
+            local character = getCharacter()
+            local rootPart = character:WaitForChild("HumanoidRootPart")
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            bodyVelocity.Parent = rootPart
 
-                local bodyGyro = Instance.new("BodyGyro")
-                bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-                bodyGyro.P = 10000
-                bodyGyro.Parent = rootPart
+            local bodyGyro = Instance.new("BodyGyro")
+            bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+            bodyGyro.P = 10000
+            bodyGyro.Parent = rootPart
 
-                RunService:BindToRenderStep("FlyControl", Enum.RenderPriority.Last.Value, function()
-                    if flyEnabled then
-                        local moveDirection = Vector3.new()
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - Camera.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Camera.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
-                        bodyVelocity.Velocity = moveDirection.Unit * flySpeed
-                        bodyGyro.CFrame = Camera.CFrame
-                    else
-                        bodyVelocity:Destroy()
-                        bodyGyro:Destroy()
-                        RunService:UnbindFromRenderStep("FlyControl")
+            RunService.RenderStepped:Connect(function(deltaTime)
+                if flyEnabled and character and character:FindFirstChild("HumanoidRootPart") then
+                    local moveDirection = Vector3.new()
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                        moveDirection = moveDirection + Camera.CFrame.LookVector
                     end
-                end)
-            else
-                for _, v in pairs(rootPart:GetChildren()) do
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                        moveDirection = moveDirection - Camera.CFrame.LookVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                        moveDirection = moveDirection - Camera.CFrame.RightVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                        moveDirection = moveDirection + Camera.CFrame.RightVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                        moveDirection = moveDirection + Vector3.new(0, 1, 0)
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                        moveDirection = moveDirection - Vector3.new(0, 1, 0)
+                    end
+
+                    moveDirection = moveDirection.Unit * flySpeed
+                    bodyVelocity.Velocity = Vector3.new(moveDirection.X, moveDirection.Y, moveDirection.Z)
+                    bodyGyro.CFrame = Camera.CFrame
+                else
+                    if bodyVelocity then bodyVelocity:Destroy() end
+                    if bodyGyro then bodyGyro:Destroy() end
+                end
+            end)
+        else
+            local character = getCharacter()
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                for _, v in pairs(character.HumanoidRootPart:GetChildren()) do
                     if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then
                         v:Destroy()
                     end
                 end
-                RunService:UnbindFromRenderStep("FlyControl")
             end
         end
     end
@@ -1442,7 +1456,8 @@ local function initializeScript()
             FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
             settings.flySpeed = flySpeed
             saveSettings()
-            end)
+        end
+    end)
 
     -- NoClip Toggle Logic
     function toggleNoClip()
@@ -1452,25 +1467,26 @@ local function initializeScript()
         settings.noClipEnabled = noClipEnabled
         saveSettings()
 
-        local character = getCharacter()
-        if character then
-            local connection
-            connection = RunService.Stepped:Connect(function()
-                if noClipEnabled then
+        if noClipEnabled then
+            local character = getCharacter()
+            RunService.Stepped:Connect(function()
+                if noClipEnabled and character then
                     for _, part in pairs(character:GetDescendants()) do
                         if part:IsA("BasePart") then
                             part.CanCollide = false
                         end
                     end
-                else
-                    for _, part in pairs(character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = true
-                        end
-                    end
-                    connection:Disconnect()
                 end
             end)
+        else
+            local character = getCharacter()
+            if character then
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
         end
     end
 
@@ -1505,10 +1521,18 @@ local function initializeScript()
         settings.speedEnabled = speedEnabled
         saveSettings()
 
-        local character = getCharacter()
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = speedEnabled and (16 * speedMultiplier) or 16
+        if speedEnabled then
+            local character = getCharacter()
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 16 * speedMultiplier
+            end
+        else
+            local character = getCharacter()
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 16
+            end
         end
     end
 
@@ -1549,7 +1573,7 @@ local function initializeScript()
         end
     end)
 
-    -- TP Aura Toggle Logic (Simplified)
+    -- TP Aura Toggle Logic
     function toggleTpAura()
         tpAuraEnabled = not tpAuraEnabled
         TpAuraToggle.Text = "☐ TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
@@ -1560,28 +1584,46 @@ local function initializeScript()
         if tpAuraEnabled then
             local character = getCharacter()
             local rootPart = character:WaitForChild("HumanoidRootPart")
-            local tpConnection = RunService.RenderStepped:Connect(function()
+            RunService.RenderStepped:Connect(function()
                 if tpAuraEnabled and character and character:FindFirstChild("HumanoidRootPart") then
                     local nearestPlayer = nil
                     local nearestDistance = math.huge
+                    local localTeam = LocalPlayer.Team
+
                     for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
                         if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                            local distance = (rootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance < nearestDistance and distance <= tpAuraDistance then
-                                nearestDistance = distance
-                                nearestPlayer = otherPlayer
+                            local humanoid = otherPlayer.Character:FindFirstChildOfClass("Humanoid")
+                            if humanoid and humanoid.Health > 0 then
+                                local distance = (rootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
+                                if distance < nearestDistance and (not teamCheck or (localTeam and otherPlayer.Team and localTeam ~= otherPlayer.Team)) then
+                                    nearestDistance = distance
+                                    nearestPlayer = otherPlayer
+                                end
                             end
                         end
                     end
-                    if nearestPlayer then
-                        local targetRoot = nearestPlayer.Character.HumanoidRootPart
-                        if saveLastPositionEnabled then
-                            lastPosition = rootPart.Position
+
+                    if nearestPlayer and nearestDistance <= tpAuraDistance then
+                        local targetRoot = nearestPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if targetRoot then
+                            local offset = Vector3.new(0, 0, 0)
+                            if tpAuraPosition == "Random" then
+                                offset = Vector3.new(math.random(-tpAuraDistance, tpAuraDistance), math.random(-tpAuraDistance, tpAuraDistance), math.random(-tpAuraDistance, tpAuraDistance))
+                            elseif tpAuraPosition == "Back" then
+                                offset = -Camera.CFrame.LookVector * tpAuraDistance
+                            elseif tpAuraPosition == "Front" then
+                                offset = Camera.CFrame.LookVector * tpAuraDistance
+                            elseif tpAuraPosition == "Top" then
+                                offset = Vector3.new(0, tpAuraDistance, 0)
+                            elseif tpAuraPosition == "Bottom" then
+                                offset = Vector3.new(0, -tpAuraDistance, 0)
+                            end
+                            if saveLastPositionEnabled then
+                                lastPosition = rootPart.Position
+                            end
+                            rootPart.CFrame = CFrame.new(targetRoot.Position + offset)
                         end
-                        rootPart.CFrame = targetRoot.CFrame + (targetRoot.CFrame.LookVector * (tpAuraPosition == "Back" and -tpAuraDistance or tpAuraPosition == "Front" and tpAuraDistance or 0)) + Vector3.new(0, tpAuraPosition == "Top" and tpAuraDistance or tpAuraPosition == "Bottom" and -tpAuraDistance or 0, 0)
                     end
-                else
-                    tpConnection:Disconnect()
                 end
             end)
         end
