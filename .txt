@@ -117,9 +117,18 @@ local success, err = pcall(function()
     -- GUI Setup
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "NettlewareGUI"
-    ScreenGui.Parent = game:GetService("CoreGui")
     ScreenGui.ResetOnSpawn = false
     ScreenGui.IgnoreGuiInset = true
+
+    -- Fallback to PlayerGui if CoreGui fails
+    local successCoreGui, errCoreGui = pcall(function()
+        ScreenGui.Parent = game:GetService("CoreGui")
+    end)
+    if not successCoreGui then
+        warn("Failed to parent to CoreGui: " .. tostring(errCoreGui))
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+        print("Falling back to PlayerGui for GUI parenting.")
+    end
 
     local MainFrame = Instance.new("Frame")
     MainFrame.Size = UDim2.new(0, 600, 0, 600)
@@ -128,6 +137,7 @@ local success, err = pcall(function()
     MainFrame.BackgroundTransparency = 0
     MainFrame.BorderSizePixel = 0
     MainFrame.Parent = ScreenGui
+    print("MainFrame created and parented to ScreenGui.")
 
     -- Draggable Functionality
     local dragging, dragInput, dragStart, startPos
@@ -168,6 +178,7 @@ local success, err = pcall(function()
         if not gameProcessed and input.KeyCode == Enum.KeyCode.Q then
             guiVisible = not guiVisible
             MainFrame.Visible = guiVisible
+            print("GUI visibility toggled to: " .. tostring(guiVisible))
         end
     end)
 
@@ -1262,6 +1273,7 @@ local success, err = pcall(function()
         dropdownOpen = not dropdownOpen
         dropdownFrame.Visible = dropdownOpen
         SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, dropdownOpen and 510 + (#dropdownOptions * 30) or 510)
+        TpToLastPositionButton.Position = UDim2.new(0, 10, 0, dropdownOpen and 550 + (#dropdownOptions * 30) or 550)
     end)
 
     local SaveLastPositionToggle = Instance.new("TextButton")
@@ -1273,6 +1285,18 @@ local success, err = pcall(function()
     SaveLastPositionToggle.Font = Enum.Font.SourceSans
     SaveLastPositionToggle.TextSize = 16
     SaveLastPositionToggle.Parent = tabContents["Exploits"]
+
+    local TpToLastPositionButton = Instance.new("TextButton")
+    TpToLastPositionButton.Size = UDim2.new(0, 280, 0, 30)
+    TpToLastPositionButton.Position = UDim2.new(0, 10, 0, 550)
+    TpToLastPositionButton.Text = "Teleport to Last Pos"
+    TpToLastPositionButton.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
+    TpToLastPositionButton.BackgroundTransparency = 0
+    TpToLastPositionButton.TextColor3 = Color3.fromRGB(0, 200, 255)
+    TpToLastPositionButton.Font = Enum.Font.SourceSans
+    TpToLastPositionButton.TextSize = 16
+    TpToLastPositionButton.BorderSizePixel = 0
+    TpToLastPositionButton.Parent = tabContents["Exploits"]
 
     -- Fly Toggle Logic
     local function toggleFly()
@@ -1408,7 +1432,7 @@ local success, err = pcall(function()
         if infiniteJumpEnabled then
             local character = getCharacter()
             local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
+                       if humanoid then
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end
@@ -1425,7 +1449,11 @@ local success, err = pcall(function()
         local character = getCharacter()
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if humanoid then
-            humanoid.WalkSpeed = speedEnabled and (16 * speedMultiplier) or 16
+            if speedEnabled then
+                humanoid.WalkSpeed = 16 * speedMultiplier
+            else
+                humanoid.WalkSpeed = 16
+            end
         end
     end
 
@@ -1451,7 +1479,7 @@ local success, err = pcall(function()
             local speedSliderPos = SpeedSlider.AbsolutePosition.X
             local speedSliderWidth = SpeedSlider.AbsoluteSize.X
             local speedNewPos = math.clamp((mouseX - speedSliderPos) / speedSliderWidth, 0, 1)
-            SpeedKnob.Position = UDim2.new(speedNewPos            , 0, 0, 0)
+            SpeedKnob.Position = UDim2.new(speedNewPos, 0, 0, 0)
             speedMultiplier = math.floor(1 + (speedNewPos * 9))
             SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
             if speedEnabled then
@@ -1566,8 +1594,24 @@ local success, err = pcall(function()
             if character then
                 local rootPart = character:WaitForChild("HumanoidRootPart")
                 lastPosition = rootPart.CFrame
-                print("Last position saved: ", lastPosition) -- For debugging
+                print("Last position saved: ", lastPosition) -- Debug print
             end
+        end
+    end)
+
+    -- Teleport to Last Position Logic
+    TpToLastPositionButton.MouseButton1Click:Connect(function()
+        if lastPosition and saveLastPositionEnabled then
+            local character = getCharacter()
+            if character then
+                local rootPart = character:WaitForChild("HumanoidRootPart")
+                rootPart.CFrame = lastPosition
+                print("Teleported to last position: ", lastPosition) -- Debug print
+            else
+                warn("No character found to teleport.")
+            end
+        else
+            warn("No last position saved or Save Last Position is disabled.")
         end
     end)
 
@@ -1633,6 +1677,7 @@ local success, err = pcall(function()
             playerLabel.TextSize = 14
             playerLabel.Parent = PlayerListFrame
         end
+        print("Player list updated with " .. #PlayersService:GetPlayers() .. " players.") -- Debug print
     end
 
     updatePlayerList()
@@ -1642,10 +1687,11 @@ local success, err = pcall(function()
     -- Initial tab activation
     tabContents["Aimbot"].Visible = true
     currentTab = "Aimbot"
+    print("Initial tab set to Aimbot, GUI ready.") -- Debug print
 end)
 
 if not success then
-    warn("Script execution failed: " .. err)
+    warn("Script execution failed: " .. tostring(err))
 else
     print("Nettleware script loaded successfully!")
 end
