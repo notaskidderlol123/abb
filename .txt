@@ -1734,28 +1734,13 @@ end
     end)
 
     -- Initial Tab Switch
-    switchTab("Exploits")
+switchTab("Exploits")
 
-    -- Cleanup
-    game:BindToClose(function()
-        if flyConnection then flyConnection:Disconnect() end
-        if noClipConnection then noClipConnection:Disconnect() end
-        if infiniteJumpConnection then infiniteJumpConnection:Disconnect() end
-        for _, espData in pairs(espPlayers) do
-            for _, drawing in pairs(espData) do
-                if typeof(drawing) == "table" then
-                    for _, subDrawing in pairs(drawing) do
-                        subDrawing:Remove()
-                    end
-                else
-                    drawing:Remove()
-                end
-            end
-        end
-        NettlewareGui:Destroy()
-    end)
+-- Cleanup (BindToClose removed as it can only be called on the server)
+-- If cleanup is needed, it can be handled manually or via the exploit environment.
+-- For example, you can destroy the GUI and disconnect connections manually if your exploit supports it.
 
-    print("Script initialized successfully.")
+print("Script initialized successfully.")
 end)
 
 if not success then
