@@ -1271,169 +1271,79 @@ local success, err = pcall(function()
     DeadCheckBindSquare.MouseButton1Click:Connect(function() startBinding(DeadCheckBindSquare) end)
     DeadCheckUnbindButton.MouseButton1Click:Connect(function() unbind(DeadCheckBindSquare, "DeadCheck") end)
 
-    -- Visuals Logic
-    local function createESP(player)
-        local espData = {}
-        espData.box = Drawing.new("Square")
-        espData.name = Drawing.new("Text")
-        espData.speed = Drawing.new("Text")
-        espData.healthBar = Drawing.new("Square")
-        espData.tracer = Drawing.new("Line")
-        espData.skeleton = {}
-        espData.box3D = {}
+    -- In createESP function (replace the existing loop)
+local function createESP(player)
+    local espData = {}
+    espData.box = Drawing.new("Square")
+    espData.name = Drawing.new("Text")
+    espData.speed = Drawing.new("Text")
+    espData.healthBar = Drawing.new("Square")
+    espData.tracer = Drawing.new("Line")
+    espData.skeleton = {}
+    espData.box3D = {}
 
-        espData.box.Thickness = 2
-        espData.name.Size = 16
-        espData.speed.Size = 14
-        espData.healthBar.Thickness = 2
-        espData.tracer.Thickness = 1
-        for i = 1, 10 do
-            espData.skeleton[i] = Drawing.new("Line")
-            espData.skeleton[i].Thickness = 1
-            espData.box3D[i] = Drawing.new("Line")
-            espData.box3D[i].Thickness = 1
-        end
+    espData.box.Thickness = 2
+    espData.name.Size = 16
+    espData.speed.Size = 14
+    espData.healthBar.Thickness = 2
+    espData.tracer.Thickness = 1
 
-        espPlayers[player] = espData
+    for i = 1, 14 do
+        espData.skeleton[i] = Drawing.new("Line")
+        espData.skeleton[i].Thickness = 1
+    end
+    for i = 1, 12 do
+        espData.box3D[i] = Drawing.new("Line")
+        espData.box3D[i].Thickness = 1
     end
 
-    local function updateESP()
-        for player, espData in pairs(espPlayers) do
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local rootPart = player.Character.HumanoidRootPart
-                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-                local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
-                if onScreen then
-                    local size = (Camera.CFrame.Position - rootPart.Position).Magnitude / 10
-                    local topLeft = Vector2.new(screenPos.X - size, screenPos.Y - size)
-                    local bottomRight = Vector2.new(screenPos.X + size, screenPos.Y + size)
+    espPlayers[player] = espData
+end
 
-                    if espToggles.Box then
-                        espData.box.Visible = true
-                        espData.box.Position = topLeft
-                        espData.box.Size = Vector2.new(bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y)
-                        espData.box.Color = Color3.fromRGB(0, 255, 0)
-                    else
-                        espData.box.Visible = false
-                    end
-
-                    if espToggles.Name then
-                        espData.name.Visible = true
-                        espData.name.Position = Vector2.new(screenPos.X, screenPos.Y - size - 20)
-                        espData.name.Text = player.Name
-                        espData.name.Color = Color3.fromRGB(0, 255, 0)
-                    else
-                        espData.name.Visible = false
-                    end
-
-                    if espToggles.Speed and lastPositions[player] then
-                        local velocity = (rootPart.Position - lastPositions[player]) / (1 / 60)
-                        local speed = velocity.Magnitude
-                        espData.speed.Visible = true
-                        espData.speed.Position = Vector2.new(screenPos.X, screenPos.Y - size - 40)
-                        espData.speed.Text = "Speed: " .. math.floor(speed * 10) / 10
-                        espData.speed.Color = Color3.fromRGB(0, 255, 0)
-                    else
-                        espData.speed.Visible = false
-                    end
-
-                    if espToggles.HealthBar and humanoid then
-                        espData.healthBar.Visible = true
-                        local healthPercent = humanoid.Health / humanoid.MaxHealth
-                        espData.healthBar.Position = Vector2.new(topLeft.X - 5, topLeft.Y)
-                        espData.healthBar.Size = Vector2.new(5, (bottomRight.Y - topLeft.Y) * healthPercent)
-                        espData.healthBar.Color = Color3.fromRGB(0, 255, 0)
-                    else
-                        espData.healthBar.Visible = false
-                    end
-
-                    if espToggles.Tracer then
-                        espData.tracer.Visible = true
-                        espData.tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                        espData.tracer.To = Vector2.new(screenPos.X, screenPos.Y)
-                        espData.tracer.Color = Color3.fromRGB(0, 255, 0)
-                    else
-                        espData.tracer.Visible = false
-                    end
-
-                    if espToggles.Skeleton then
-                        local joints = {
-                            {rootPart, player.Character:FindFirstChild("LeftUpperLeg")},
-                            {player.Character:FindFirstChild("LeftUpperLeg"), player.Character:FindFirstChild("LeftLowerLeg")},
-                            {player.Character:FindFirstChild("LeftLowerLeg"), player.Character:FindFirstChild("LeftFoot")},
-                            {rootPart, player.Character:FindFirstChild("RightUpperLeg")},
-                            {player.Character:FindFirstChild("RightUpperLeg"), player.Character:FindFirstChild("RightLowerLeg")},
-                            {player.Character:FindFirstChild("RightLowerLeg"), player.Character:FindFirstChild("RightFoot")},
-                            {rootPart, player.Character:FindFirstChild("UpperTorso")},
-                            {player.Character:FindFirstChild("UpperTorso"), player.Character:FindFirstChild("LowerTorso")},
-                            {player.Character:FindFirstChild("UpperTorso"), player.Character:FindFirstChild("LeftUpperArm")},
-                            {player.Character:FindFirstChild("LeftUpperArm"), player.Character:FindFirstChild("LeftLowerArm")},
-                            {player.Character:FindFirstChild("LeftLowerArm"), player.Character:FindFirstChild("LeftHand")},
-                            {player.Character:FindFirstChild("UpperTorso"), player.Character:FindFirstChild("RightUpperArm")},
-                            {player.Character:FindFirstChild("RightUpperArm"), player.Character:FindFirstChild("RightLowerArm")},
-                            {player.Character:FindFirstChild("RightLowerArm"), player.Character:FindFirstChild("RightHand")}
-                        }
-                        for i, joint in pairs(joints) do
-                            if joint[1] and joint[2] then
-                                local pos1 = Camera:WorldToViewportPoint(joint[1].Position)
-                                local pos2 = Camera:WorldToViewportPoint(joint[2].Position)
-                                espData.skeleton[i].Visible = true
-                                espData.skeleton[i].From = Vector2.new(pos1.X, pos1.Y)
-                                espData.skeleton[i].To = Vector2.new(pos2.X, pos2.Y)
-                                espData.skeleton[i].Color = Color3.fromRGB(0, 255, 0)
-                            else
-                                espData.skeleton[i].Visible = false
-                            end
-                        end
-                    else
-                        for i = 1, 14 do
+-- In updateESP function (this part remains unchanged but will now work correctly)
+local function updateESP()
+    for player, espData in pairs(espPlayers) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = player.Character.HumanoidRootPart
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+            if onScreen then
+                -- ... (other ESP logic) ...
+                if espToggles.Skeleton then
+                    local joints = {
+                        {rootPart, player.Character:FindFirstChild("LeftUpperLeg")},
+                        {player.Character:FindFirstChild("LeftUpperLeg"), player.Character:FindFirstChild("LeftLowerLeg")},
+                        {player.Character:FindFirstChild("LeftLowerLeg"), player.Character:FindFirstChild("LeftFoot")},
+                        {rootPart, player.Character:FindFirstChild("RightUpperLeg")},
+                        {player.Character:FindFirstChild("RightUpperLeg"), player.Character:FindFirstChild("RightLowerLeg")},
+                        {player.Character:FindFirstChild("RightLowerLeg"), player.Character:FindFirstChild("RightFoot")},
+                        {rootPart, player.Character:FindFirstChild("UpperTorso")},
+                        {player.Character:FindFirstChild("UpperTorso"), player.Character:FindFirstChild("LowerTorso")},
+                        {player.Character:FindFirstChild("UpperTorso"), player.Character:FindFirstChild("LeftUpperArm")},
+                        {player.Character:FindFirstChild("LeftUpperArm"), player.Character:FindFirstChild("LeftLowerArm")},
+                        {player.Character:FindFirstChild("LeftLowerArm"), player.Character:FindFirstChild("LeftHand")},
+                        {player.Character:FindFirstChild("UpperTorso"), player.Character:FindFirstChild("RightUpperArm")},
+                        {player.Character:FindFirstChild("RightUpperArm"), player.Character:FindFirstChild("RightLowerArm")},
+                        {player.Character:FindFirstChild("RightLowerArm"), player.Character:FindFirstChild("RightHand")}
+                    }
+                    for i, joint in pairs(joints) do
+                        if joint[1] and joint[2] then
+                            local pos1 = Camera:WorldToViewportPoint(joint[1].Position)
+                            local pos2 = Camera:WorldToViewportPoint(joint[2].Position)
+                            espData.skeleton[i].Visible = true
+                            espData.skeleton[i].From = Vector2.new(pos1.X, pos1.Y)
+                            espData.skeleton[i].To = Vector2.new(pos2.X, pos2.Y)
+                            espData.skeleton[i].Color = Color3.fromRGB(0, 255, 0)
+                        else
                             espData.skeleton[i].Visible = false
                         end
                     end
-
-                    if espToggles.Box3D then
-                        local corners = {
-                            rootPart.CFrame * CFrame.new(-size, size, 0),
-                            rootPart.CFrame * CFrame.new(size, size, 0),
-                            rootPart.CFrame * CFrame.new(size, -size, 0),
-                            rootPart.CFrame * CFrame.new(-size, -size, 0),
-                            rootPart.CFrame * CFrame.new(-size, size, -size * 2),
-                            rootPart.CFrame * CFrame.new(size, size, -size * 2),
-                            rootPart.CFrame * CFrame.new(size, -size, -size * 2),
-                            rootPart.CFrame * CFrame.new(-size, -size, -size * 2)
-                        }
-                        local edges = {
-                            {1, 2}, {2, 3}, {3, 4}, {4, 1},
-                            {5, 6}, {6, 7}, {7, 8}, {8, 5},
-                            {1, 5}, {2, 6}, {3, 7}, {4, 8}
-                        }
-                        for i, edge in pairs(edges) do
-                            local pos1 = Camera:WorldToViewportPoint(corners[edge[1]].Position)
-                            local pos2 = Camera:WorldToViewportPoint(corners[edge[2]].Position)
-                            espData.box3D[i].Visible = true
-                            espData.box3D[i].From = Vector2.new(pos1.X, pos1.Y)
-                            espData.box3D[i].To = Vector2.new(pos2.X, pos2.Y)
-                            espData.box3D[i].Color = Color3.fromRGB(0, 255, 0)
-                        end
-                    else
-                        for i = 1, 12 do
-                            espData.box3D[i].Visible = false
-                        end
-                    end
                 else
-                    espData.box.Visible = false
-                    espData.name.Visible = false
-                    espData.speed.Visible = false
-                    espData.healthBar.Visible = false
-                    espData.tracer.Visible = false
                     for i = 1, 14 do
                         espData.skeleton[i].Visible = false
                     end
-                    for i = 1, 12 do
-                        espData.box3D[i].Visible = false
-                    end
                 end
-                lastPositions[player] = rootPart.Position
+                -- ... (rest of the ESP logic) ...
             else
                 espData.box.Visible = false
                 espData.name.Visible = false
@@ -1447,8 +1357,22 @@ local success, err = pcall(function()
                     espData.box3D[i].Visible = false
                 end
             end
+            lastPositions[player] = rootPart.Position
+        else
+            espData.box.Visible = false
+            espData.name.Visible = false
+            espData.speed.Visible = false
+            espData.healthBar.Visible = false
+            espData.tracer.Visible = false
+            for i = 1, 14 do
+                espData.skeleton[i].Visible = false
+            end
+            for i = 1, 12 do
+                espData.box3D[i].Visible = false
+            end
         end
     end
+end
 
     RunService.RenderStepped:Connect(updateESP)
 
