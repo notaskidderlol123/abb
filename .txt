@@ -2009,7 +2009,19 @@ local success, err = pcall(function()
         saveSettings()
     end)
 end)
+-- GUI Toggle
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+    if input.KeyCode == settings.guiBind then
+        MainFrame.Visible = not MainFrame.Visible
+        print("GUI toggled to: " .. tostring(MainFrame.Visible)) -- Debug print
+    end
+end)
 
+-- Initial Tab Switch
+switchTab("Exploits")
+
+print("Script initialized successfully.")
 if not success then
     warn("Script failed to initialize: " .. tostring(err))
 end
