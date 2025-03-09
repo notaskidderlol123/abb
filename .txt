@@ -23,6 +23,7 @@ local success, err = pcall(function()
         aimbotSmoothness = 0.5,
         aimbotFovEnabled = false,
         aimbotFovSize = 100,
+        aimbotBone = "Head", -- Default aim bone
         espToggles = {
             Box = false,
             Name = false,
@@ -40,9 +41,6 @@ local success, err = pcall(function()
         infiniteJumpEnabled = false,
         speedEnabled = false,
         speedMultiplier = 1,
-        tpAuraEnabled = false,
-        tpAuraDistance = 5,
-        tpAuraPosition = "Random",
         saveLastPositionEnabled = false,
         playerListEnabled = false
     }
@@ -132,7 +130,6 @@ local success, err = pcall(function()
     MainFrame.Size = UDim2.new(0, 600, 0, 600)
     MainFrame.Position = UDim2.new(0.5, -300, 0.5, -300)
     MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
-    MainFrame.BackgroundTransparency = 1 -- Start invisible for fade animation
     MainFrame.BorderSizePixel = 0
     MainFrame.Parent = ScreenGui
     print("MainFrame created and parented to ScreenGui.")
@@ -169,20 +166,38 @@ local success, err = pcall(function()
         end
     end)
 
-    -- GUI Toggle with Fade Animation
+    -- GUI Toggle with Destroy Instead of Transparency
     local guiVisible = true
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if not gameProcessed and input.KeyCode == Enum.KeyCode.Q then
-            guiVisible = not guiVisible
-            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad)
             if guiVisible then
-                local tween = TweenService:Create(MainFrame, tweenInfo, {BackgroundTransparency = 0})
-                tween:Play()
+                ScreenGui:Destroy()
+                guiVisible = false
+                print("GUI destroyed. Press 'Q' to recreate.")
             else
-                local tween = TweenService:Create(MainFrame, tweenInfo, {BackgroundTransparency = 1})
-                tween:Play()
+                -- Recreate GUI
+                ScreenGui = Instance.new("ScreenGui")
+                ScreenGui.Name = "NettlewareGUI"
+                ScreenGui.ResetOnSpawn = false
+                ScreenGui.IgnoreGuiInset = true
+                local successRecreate, errRecreate = pcall(function()
+                    ScreenGui.Parent = game:GetService("CoreGui")
+                end)
+                if not successRecreate then
+                    warn("Failed to parent to CoreGui: " .. tostring(errRecreate))
+                    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+                    print("Falling back to PlayerGui for GUI parenting.")
+                end
+                MainFrame.Parent = ScreenGui
+                CircuitBackground.Parent = MainFrame
+                NeonPulse.Parent = MainFrame
+                TitleLabel.Parent = MainFrame
+                for _, tabName in pairs({"Aimbot", "Visuals", "Exploits", "Settings"}) do
+                    tabContents[tabName].Parent = MainFrame
+                end
+                guiVisible = true
+                print("GUI recreated.")
             end
-            print("GUI visibility toggled to: " .. tostring(guiVisible))
         end
     end)
 
@@ -293,6 +308,7 @@ local success, err = pcall(function()
     local aimbotSmoothness = settings.aimbotSmoothness
     local aimbotFovEnabled = settings.aimbotFovEnabled
     local aimbotFovSize = settings.aimbotFovSize
+    local aimbotBone = settings.aimbotBone -- Added aim bone setting
     local targetPlayer = nil
 
     local CategoryLabelAimbot = Instance.new("TextLabel")
@@ -411,6 +427,66 @@ local success, err = pcall(function()
     FovCircleKnob.BorderSizePixel = 0
     FovCircleKnob.Parent = FovCircleSlider
 
+    -- Aimbot Bone Dropdown
+    local AimbotBoneLabel = Instance.new("TextLabel")
+    AimbotBoneLabel.Size = UDim2.new(0, 280, 0, 30)
+    AimbotBoneLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 410 or 330)
+    AimbotBoneLabel.Text = "Aim Bone: " .. aimbotBone
+    AimbotBoneLabel.BackgroundTransparency = 1
+    AimbotBoneLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
+    AimbotBoneLabel.Font = Enum.Font.SourceSans
+    AimbotBoneLabel.TextSize = 16
+    AimbotBoneLabel.Parent = tabContents["Aimbot"]
+
+    local AimbotBoneDropdown = Instance.new("TextButton")
+    AimbotBoneDropdown.Size = UDim2.new(0, 280, 0, 30)
+    AimbotBoneDropdown.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 450 or 370)
+    AimbotBoneDropdown.Text = "▼ " .. aimbotBone
+    AimbotBoneDropdown.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
+    AimbotBoneDropdown.BackgroundTransparency = 0
+    AimbotBoneDropdown.TextColor3 = Color3.fromRGB(0, 200, 255)
+    AimbotBoneDropdown.Font = Enum.Font.SourceSans
+    AimbotBoneDropdown.TextSize = 16
+    AimbotBoneDropdown.BorderSizePixel = 0
+    AimbotBoneDropdown.Parent = tabContents["Aimbot"]
+
+    local boneDropdownOpen = false
+    local boneDropdownOptions = {"Head", "Body", "Feet"}
+    local boneDropdownFrame = Instance.new("Frame")
+    boneDropdownFrame.Size = UDim2.new(0, 280, 0, #boneDropdownOptions * 30)
+    boneDropdownFrame.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 480 or 400)
+    boneDropdownFrame.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+    boneDropdownFrame.BackgroundTransparency = 0
+    boneDropdownFrame.Visible = false
+    boneDropdownFrame.Parent = tabContents["Aimbot"]
+
+    for i, option in ipairs(boneDropdownOptions) do
+        local optionButton = Instance.new("TextButton")
+        optionButton.Size = UDim2.new(1, -10, 0, 30)
+        optionButton.Position = UDim2.new(0, 5, 0, (i - 1) * 30)
+        optionButton.Text = option
+        optionButton.BackgroundTransparency = 1
+        optionButton.TextColor3 = Color3.fromRGB(0, 200, 255)
+        optionButton.Font = Enum.Font.SourceSans
+        optionButton.TextSize = 16
+        optionButton.Parent = boneDropdownFrame
+
+        optionButton.MouseButton1Click:Connect(function()
+            aimbotBone = option
+            AimbotBoneLabel.Text = "Aim Bone: " .. aimbotBone
+            AimbotBoneDropdown.Text = "▼ " .. aimbotBone
+            settings.aimbotBone = aimbotBone
+            saveSettings()
+            boneDropdownFrame.Visible = false
+            boneDropdownOpen = false
+        end)
+    end
+
+    AimbotBoneDropdown.MouseButton1Click:Connect(function()
+        boneDropdownOpen = not boneDropdownOpen
+        boneDropdownFrame.Visible = boneDropdownOpen
+    end)
+
     -- Aimbot FOV Circle Drawing
     local fovCircle = Drawing.new("Circle")
     fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -420,7 +496,7 @@ local success, err = pcall(function()
     fovCircle.Filled = false
     fovCircle.Visible = aimbotFovEnabled
 
-    -- Aimbot Logic with Continuous Locking
+    -- Aimbot Logic with Bone Selection
     local function isPlayerInFov(player)
         if not aimbotFovEnabled then
             return true
@@ -463,6 +539,20 @@ local success, err = pcall(function()
         return nearestPlayer
     end
 
+    local function getAimPart(player)
+        if not player.Character then return nil end
+        if aimbotBone == "Head" then
+            return player.Character:FindFirstChild("Head")
+        elseif aimbotBone == "Body" then
+            return player.Character:FindFirstChild("UpperTorso") or player.Character:FindFirstChild("Torso") or player.Character:FindFirstChild("HumanoidRootPart")
+        elseif aimbotBone == "Feet" then
+            local leftFoot = player.Character:FindFirstChild("LeftFoot")
+            local rightFoot = player.Character:FindFirstChild("RightFoot")
+            return leftFoot or rightFoot or player.Character:FindFirstChild("HumanoidRootPart")
+        end
+        return player.Character:FindFirstChild("Head") -- Default fallback
+    end
+
     AimbotToggle.MouseButton1Click:Connect(function()
         aimbotEnabled = not aimbotEnabled
         AimbotToggle.Text = "☐ Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
@@ -499,6 +589,9 @@ local success, err = pcall(function()
         FovCircleToggle.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 290 or 210)
         FovCircleLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 330 or 250)
         FovCircleSlider.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 370 or 290)
+        AimbotBoneLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 410 or 330)
+        AimbotBoneDropdown.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 450 or 370)
+        boneDropdownFrame.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 480 or 400)
     end)
 
     FovCircleToggle.MouseButton1Click:Connect(function()
@@ -568,20 +661,23 @@ local success, err = pcall(function()
 
         fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
-        -- Continuous Aimbot Locking
+        -- Continuous Aimbot Locking with Bone Selection
         if aimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             targetPlayer = getNearestPlayer()
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid and (not deadCheck or humanoid.Health > 0) and isPlayerInFov(targetPlayer) then
-                    local targetPos = targetPlayer.Character.Head.Position
-                    if targetPos.Magnitude < 10000 then
-                        local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                        if aimbotSmoothnessEnabled then
-                            local alpha = math.clamp(1 - aimbotSmoothness, 0.01, 1) * RunService.RenderStepped:Wait() * 60
-                            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, alpha)
-                        else
-                            Camera.CFrame = targetCFrame
+            if targetPlayer and targetPlayer.Character then
+                local aimPart = getAimPart(targetPlayer)
+                if aimPart then
+                    local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid and (not deadCheck or humanoid.Health > 0) and isPlayerInFov(targetPlayer) then
+                        local targetPos = aimPart.Position
+                        if targetPos.Magnitude < 10000 then
+                            local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                            if aimbotSmoothnessEnabled then
+                                local alpha = math.clamp(1 - aimbotSmoothness, 0.01, 1) * RunService.RenderStepped:Wait() * 60
+                                Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, alpha)
+                            else
+                                Camera.CFrame = targetCFrame
+                            end
                         end
                     end
                 end
@@ -677,19 +773,12 @@ local success, err = pcall(function()
             local rootPart = character:WaitForChild("HumanoidRootPart")
             connection = RunService.RenderStepped:Connect(function()
                 if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                    local pos, vis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position)
-                    if vis then
+                    local headPos, headVis = Camera:WorldToViewportPoint((plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart).Position + Vector3.new(0, 1.5, 0))
+                    if headVis then
                         local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
                         local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
                         local BottomLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, -3, 0)).p)
                         local BottomRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, -3, 0)).p)
-                        local headPart = plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart
-                        local headPos, headVis
-                        if headPart then
-                            headPos, headVis = Camera:WorldToViewportPoint((headPart.CFrame * CFrame.new(0, 1.5, 0)).p)
-                        else
-                            headPos, headVis = Camera:WorldToViewportPoint(plr.Character.PrimaryPart.Position), true
-                        end
 
                         if espToggles.Box then
                             drawings.Box.PointA = Vector2.new(TopRight.X, TopRight.Y)
@@ -731,7 +820,7 @@ local success, err = pcall(function()
                                 local barWidth = 60
                                 local barHeight = 10
                                 local barX = headPos.X - (barWidth / 2)
-                                local barY = headPos.Y - 50
+                                local barY = headPos.Y - 50 -- Fixed position above head
 
                                 local healthText = math.floor(healthPercent * 100) .. "%"
                                 local textWidth = drawings.HealthText.TextBounds.X
@@ -1022,9 +1111,6 @@ local success, err = pcall(function()
     local infiniteJumpEnabled = settings.infiniteJumpEnabled
     local speedEnabled = settings.speedEnabled
     local speedMultiplier = settings.speedMultiplier
-    local tpAuraEnabled = settings.tpAuraEnabled
-    local tpAuraDistance = settings.tpAuraDistance
-    local tpAuraPosition = settings.tpAuraPosition
     local saveLastPositionEnabled = settings.saveLastPositionEnabled
     local lastPosition = nil
 
@@ -1130,104 +1216,9 @@ local success, err = pcall(function()
     SpeedKnob.BorderSizePixel = 0
     SpeedKnob.Parent = SpeedSlider
 
-    local TpAuraToggle = Instance.new("TextButton")
-    TpAuraToggle.Size = UDim2.new(0, 280, 0, 30)
-    TpAuraToggle.Position = UDim2.new(0, 10, 0, 330)
-    TpAuraToggle.Text = "☐ TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
-    TpAuraToggle.BackgroundTransparency = 1
-    TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-    TpAuraToggle.Font = Enum.Font.SourceSans
-    TpAuraToggle.TextSize = 16
-    TpAuraToggle.Parent = tabContents["Exploits"]
-
-    local TpAuraDistanceLabel = Instance.new("TextLabel")
-    TpAuraDistanceLabel.Size = UDim2.new(0, 280, 0, 30)
-    TpAuraDistanceLabel.Position = UDim2.new(0, 10, 0, 370)
-    TpAuraDistanceLabel.Text = "TP Distance: " .. tpAuraDistance .. " studs"
-    TpAuraDistanceLabel.BackgroundTransparency = 1
-    TpAuraDistanceLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
-    TpAuraDistanceLabel.Font = Enum.Font.SourceSans
-    TpAuraDistanceLabel.TextSize = 16
-    TpAuraDistanceLabel.Parent = tabContents["Exploits"]
-
-    local TpAuraDistanceSlider = Instance.new("TextButton")
-    TpAuraDistanceSlider.Size = UDim2.new(0, 280, 0, 10)
-    TpAuraDistanceSlider.Position = UDim2.new(0, 10, 0, 410)
-    TpAuraDistanceSlider.Text = ""
-    TpAuraDistanceSlider.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
-    TpAuraDistanceSlider.BackgroundTransparency = 0
-    TpAuraDistanceSlider.Parent = tabContents["Exploits"]
-
-    local TpAuraDistanceKnob = Instance.new("Frame")
-    TpAuraDistanceKnob.Size = UDim2.new(0, 20, 1, 0)
-    TpAuraDistanceKnob.Position = UDim2.new(tpAuraDistance / 5, 0, 0, 0)
-    TpAuraDistanceKnob.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-    TpAuraDistanceKnob.BackgroundTransparency = 0
-    TpAuraDistanceKnob.BorderSizePixel = 0
-    TpAuraDistanceKnob.Parent = TpAuraDistanceSlider
-
-    local TpAuraPositionLabel = Instance.new("TextLabel")
-    TpAuraPositionLabel.Size = UDim2.new(0, 280, 0, 30)
-    TpAuraPositionLabel.Position = UDim2.new(0, 10, 0, 430)
-    TpAuraPositionLabel.Text = "TP Position: " .. tpAuraPosition
-    TpAuraPositionLabel.BackgroundTransparency = 1
-    TpAuraPositionLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
-    TpAuraPositionLabel.Font = Enum.Font.SourceSans
-    TpAuraPositionLabel.TextSize = 16
-    TpAuraPositionLabel.Parent = tabContents["Exploits"]
-
-    local TpAuraPositionDropdown = Instance.new("TextButton")
-    TpAuraPositionDropdown.Size = UDim2.new(0, 280, 0, 30)
-    TpAuraPositionDropdown.Position = UDim2.new(0, 10, 0, 470)
-    TpAuraPositionDropdown.Text = "▼ " .. tpAuraPosition
-    TpAuraPositionDropdown.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
-    TpAuraPositionDropdown.BackgroundTransparency = 0
-    TpAuraPositionDropdown.TextColor3 = Color3.fromRGB(0, 200, 255)
-    TpAuraPositionDropdown.Font = Enum.Font.SourceSans
-    TpAuraPositionDropdown.TextSize = 16
-    TpAuraPositionDropdown.BorderSizePixel = 0
-    TpAuraPositionDropdown.Parent = tabContents["Exploits"]
-
-    local dropdownOpen = false
-    local dropdownOptions = {"Random", "Back", "Front", "Top", "Bottom"}
-    local dropdownFrame = Instance.new("Frame")
-    dropdownFrame.Size = UDim2.new(0, 280, 0, #dropdownOptions * 30)
-    dropdownFrame.Position = UDim2.new(0, 10, 0, 500)
-    dropdownFrame.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
-    dropdownFrame.BackgroundTransparency = 0
-    dropdownFrame.Visible = false
-    dropdownFrame.Parent = tabContents["Exploits"]
-
-    for i, option in ipairs(dropdownOptions) do
-        local optionButton = Instance.new("TextButton")
-        optionButton.Size = UDim2.new(1, -10, 0, 30)
-        optionButton.Position = UDim2.new(0, 5, 0, (i - 1) * 30)
-        optionButton.Text = option
-        optionButton.BackgroundTransparency = 1
-        optionButton.TextColor3 = Color3.fromRGB(0, 200, 255)
-        optionButton.Font = Enum.Font.SourceSans
-        optionButton.TextSize = 16
-        optionButton.Parent = dropdownFrame
-
-        optionButton.MouseButton1Click:Connect(function()
-            tpAuraPosition = option
-            TpAuraPositionLabel.Text = "TP Position: " .. tpAuraPosition
-            TpAuraPositionDropdown.Text = "▼ " .. tpAuraPosition
-            settings.tpAuraPosition = tpAuraPosition
-            saveSettings()
-            dropdownFrame.Visible = false
-            dropdownOpen = false
-        end)
-    end
-
-    TpAuraPositionDropdown.MouseButton1Click:Connect(function()
-        dropdownOpen = not dropdownOpen
-        dropdownFrame.Visible = dropdownOpen
-    end)
-
     local SaveLastPositionToggle = Instance.new("TextButton")
     SaveLastPositionToggle.Size = UDim2.new(0, 280, 0, 30)
-    SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 530 + (#dropdownOptions * 30)) -- Moved down
+    SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 330)
     SaveLastPositionToggle.Text = "☐ Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
     SaveLastPositionToggle.BackgroundTransparency = 1
     SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
@@ -1235,8 +1226,8 @@ local success, err = pcall(function()
     SaveLastPositionToggle.TextSize = 16
     SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
-    -- Fly Toggle Logic
-    local flyConnection
+    -- Fly Toggle Logic (Using Admin-Style Script)
+    local flying = false
     local function toggleFly()
         flyEnabled = not flyEnabled
         FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
@@ -1245,50 +1236,55 @@ local success, err = pcall(function()
         saveSettings()
 
         local character = getCharacter()
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            local rootPart = character.HumanoidRootPart
-            if flyEnabled then
-                local bodyVelocity = Instance.new("BodyVelocity")
-                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-                bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-                bodyVelocity.Parent = rootPart
+        local rootPart = character:WaitForChild("HumanoidRootPart")
+        local humanoid = character:WaitForChild("Humanoid")
+        if not LocalPlayer or not character or not rootPart or not humanoid then
+            warn("Error: Could not find LocalPlayer, character, root part, or humanoid!")
+            return
+        end
 
-                local bodyGyro = Instance.new("BodyGyro")
-                bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-                bodyGyro.P = 10000
-                bodyGyro.Parent = rootPart
-
-                flyConnection = RunService.RenderStepped:Connect(function()
-                    if flyEnabled and character and character:FindFirstChild("HumanoidRootPart") then
-                        local moveDirection = Vector3.new()
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - Camera.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Camera.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
-                        bodyVelocity.Velocity = moveDirection.Unit * flySpeed
-                        bodyGyro.CFrame = Camera.CFrame
+        if flyEnabled then
+            humanoid.PlatformStand = true
+            local bv = Instance.new("BodyVelocity")
+            bv.Velocity = Vector3.new(0, 0, 0)
+            bv.MaxForce = Vector3.new(10000, 10000, 10000)
+            bv.Parent = rootPart
+            
+            local bg = Instance.new("BodyGyro")
+            bg.MaxTorque = Vector3.new(10000, 10000, 10000)
+            bg.P = 5000
+            bg.D = 500
+            bg.CFrame = rootPart.CFrame
+            bg.Parent = rootPart
+            
+            spawn(function()
+                while flyEnabled and rootPart and humanoid do
+                    local cam = workspace.CurrentCamera
+                    local move = Vector3.new(0, 0, 0)
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -1) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, 1) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-1, 0, 0) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1, 0, 0) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -1, 0) end
+                    
+                    if move.Magnitude > 0 then
+                        move = move.Unit * flySpeed
+                        bv.Velocity = cam.CFrame:VectorToWorldSpace(move)
+                        bg.CFrame = cam.CFrame
                     else
-                        if flyConnection then
-                            flyConnection:Disconnect()
-                            flyConnection = nil
-                        end
-                        bodyVelocity:Destroy()
-                        bodyGyro:Destroy()
+                        bv.Velocity = Vector3.new(0, 0, 0)
                     end
-                end)
-            else
-                if flyConnection then
-                    flyConnection:Disconnect()
-                    flyConnection = nil
+                    wait()
                 end
-                for _, v in pairs(rootPart:GetChildren()) do
-                    if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then
-                        v:Destroy()
-                    end
-                end
-            end
+            end)
+            print("Admin Fly ON! Press E to toggle off.")
+        else
+            humanoid.PlatformStand = false
+            if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
+            if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            print("Admin Fly OFF!")
         end
     end
 
@@ -1317,13 +1313,6 @@ local success, err = pcall(function()
             FlySpeedKnob.Position = UDim2.new(flySpeedNewPos, 0, 0, 0)
             flySpeed = math.floor(10 + (flySpeedNewPos * 190))
             FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
-            if flyEnabled then
-                local character = getCharacter()
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                if rootPart and rootPart:FindFirstChild("BodyVelocity") then
-                    rootPart.BodyVelocity.Velocity = rootPart.BodyVelocity.Velocity.Unit * flySpeed
-                end
-            end
             settings.flySpeed = flySpeed
             saveSettings()
         end
@@ -1433,109 +1422,7 @@ local success, err = pcall(function()
                     humanoid.WalkSpeed = 16 * speedMultiplier
                 end
             end
-            settings.speedMultiplier = speed             saveSettings()
-        end
-    end)
-
-    -- TP Aura Toggle Logic (Fixed)
-    local tpConnection
-    local lastTeleport = 0
-    local teleportCooldown = 0.1 -- Prevent rapid teleport spam
-    local function toggleTpAura()
-        tpAuraEnabled = not tpAuraEnabled
-        TpAuraToggle.Text = "☐ TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
-        TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-        settings.tpAuraEnabled = tpAuraEnabled
-        saveSettings()
-
-        if tpAuraEnabled then
-            local character = getCharacter()
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local rootPart = character.HumanoidRootPart
-                tpConnection = RunService.Heartbeat:Connect(function()
-                    if not tpAuraEnabled or not character or not rootPart.Parent then
-                        if tpConnection then
-                            tpConnection:Disconnect()
-                            tpConnection = nil
-                        end
-                        return
-                    end
-
-                    local currentTime = tick()
-                    if currentTime - lastTeleport < teleportCooldown then
-                        return
-                    end
-
-                    for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
-                        if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                            local targetRoot = otherPlayer.Character.HumanoidRootPart
-                            local humanoid = otherPlayer.Character:FindFirstChildOfClass("Humanoid")
-                            if humanoid and humanoid.Health > 0 then
-                                local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                                if distance <= tpAuraDistance then
-                                    local targetPosition = targetRoot.Position
-                                    if tpAuraPosition == "Random" then
-                                        local offset = Vector3.new(
-                                            math.random(-tpAuraDistance, tpAuraDistance),
-                                            math.random(-tpAuraDistance, tpAuraDistance),
-                                            math.random(-tpAuraDistance, tpAuraDistance)
-                                        )
-                                        targetPosition = targetPosition + offset
-                                    elseif tpAuraPosition == "Back" then
-                                        targetPosition = targetPosition - (targetRoot.CFrame.LookVector * tpAuraDistance)
-                                    elseif tpAuraPosition == "Front" then
-                                        targetPosition = targetPosition + (targetRoot.CFrame.LookVector * tpAuraDistance)
-                                    elseif tpAuraPosition == "Top" then
-                                        targetPosition = targetPosition + Vector3.new(0, tpAuraDistance, 0)
-                                    elseif tpAuraPosition == "Bottom" then
-                                        targetPosition = targetPosition - Vector3.new(0, tpAuraDistance, 0)
-                                    end
-                                    rootPart.CFrame = CFrame.new(targetPosition)
-                                    lastTeleport = currentTime
-                                    print("Teleported to " .. otherPlayer.Name .. " at position: " .. tostring(targetPosition)) -- Debug print
-                                    break -- Teleport to one player per frame
-                                end
-                            end
-                        end
-                    end
-                end)
-            else
-                warn("No character or HumanoidRootPart found for TP Aura.")
-            end
-        else
-            if tpConnection then
-                tpConnection:Disconnect()
-                tpConnection = nil
-            end
-        end
-    end
-
-    TpAuraToggle.MouseButton1Click:Connect(toggleTpAura)
-
-    -- TP Aura Distance Slider Logic
-    local draggingTpAuraDistanceSlider = false
-    TpAuraDistanceSlider.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingTpAuraDistanceSlider = true
-        end
-    end)
-
-    TpAuraDistanceSlider.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingTpAuraDistanceSlider = false
-        end
-    end)
-
-    RunService.RenderStepped:Connect(function()
-        local mouseX = UserInputService:GetMouseLocation().X
-        if draggingTpAuraDistanceSlider then
-            local tpAuraDistanceSliderPos = TpAuraDistanceSlider.AbsolutePosition.X
-            local tpAuraDistanceSliderWidth = TpAuraDistanceSlider.AbsoluteSize.X
-            local tpAuraDistanceNewPos = math.clamp((mouseX - tpAuraDistanceSliderPos) / tpAuraDistanceSliderWidth, 0, 1)
-            TpAuraDistanceKnob.Position = UDim2.new(tpAuraDistanceNewPos, 0, 0, 0)
-            tpAuraDistance = math.floor(tpAuraDistanceNewPos * 5)
-            TpAuraDistanceLabel.Text = "TP Distance: " .. tpAuraDistance .. " studs"
-            settings.tpAuraDistance = tpAuraDistance
+            settings.speedMultiplier = speedMultiplier
             saveSettings()
         end
     end)
@@ -1560,7 +1447,7 @@ local success, err = pcall(function()
         end
     end)
 
-    -- Settings Tab Content with Separate Player List GUI
+    -- Settings Tab Content
     local playerListEnabled = settings.playerListEnabled
 
     local CategoryLabelSettings = Instance.new("TextLabel")
@@ -1703,8 +1590,8 @@ local success, err = pcall(function()
             layoutOrder = layoutOrder + 1
         end
 
-        PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, layoutOrder * 65) -- Adjust canvas size
-        print("Player list updated with " .. layoutOrder .. " players.") -- Debug print
+        PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, layoutOrder * 65)
+        print("Player list updated with " .. layoutOrder .. " players.")
     end
 
     PlayerListToggle.MouseButton1Click:Connect(function()
@@ -1735,7 +1622,7 @@ local success, err = pcall(function()
     currentTab = "Aimbot"
     local initialSlideIn = TweenService:Create(tabContents["Aimbot"], TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -150, 0, 130)})
     initialSlideIn:Play()
-    print("Initial tab set to Aimbot, GUI ready.") -- Debug print
+    print("Initial tab set to Aimbot, GUI ready.")
 end)
 
 if not success then
