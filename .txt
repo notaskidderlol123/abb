@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 local PlayersService = game:GetService("Players")
+local DataStoreService = game:GetService("DataStoreService")
 
 -- Safely get LocalPlayer with a wait loop
 local LocalPlayer
@@ -11,10 +12,60 @@ while not PlayersService.LocalPlayer do
 end
 LocalPlayer = PlayersService.LocalPlayer
 
+-- DataStore for saving settings
+local ConfigStore = DataStoreService:GetDataStore("NettlewareConfig")
+
 -- Function to get character safely
 local function getCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
+
+-- Default settings
+local settings = {
+    aimbotEnabled = false,
+    deadCheck = false,
+    teamCheck = false,
+    espToggles = {
+        Box = false,
+        Name = false,
+        Speed = false,
+        HealthBar = false,
+        Tracer = false,
+        Skeleton = false,
+        Box3D = false
+    },
+    flyEnabled = false,
+    flySpeed = 75,
+    noClipEnabled = false,
+    infiniteJumpEnabled = false,
+    speedEnabled = false,
+    speedMultiplier = 1,
+    tpAuraEnabled = false,
+    saveLastPositionEnabled = false,
+    playerListEnabled = false
+}
+
+-- Load settings from DataStore
+local function loadSettings()
+    local success, loadedSettings = pcall(function()
+        return ConfigStore:GetAsync("Player_" .. LocalPlayer.UserId)
+    end)
+    if success and loadedSettings then
+        for key, value in pairs(loadedSettings) do
+            settings[key] = value
+        end
+    end
+end
+
+-- Save settings to DataStore
+local function saveSettings()
+    pcall(function()
+        ConfigStore:SetAsync("Player_" .. LocalPlayer.UserId, settings)
+    end)
+end
+
+-- Load settings on join
+loadSettings()
 
 -- GUI Setup with Custom Design
 local ScreenGui = Instance.new("ScreenGui")
@@ -25,7 +76,7 @@ ScreenGui.IgnoreGuiInset = true
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 600, 0, 600)
-MainFrame.Position = UDim2.new(0.5, -300, 1, 0) -- Start off-screen
+MainFrame.Position = UDim2.new(0.5, -300, 0.5, -300) -- Start on-screen
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30) -- Dark base
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 0
@@ -73,7 +124,7 @@ TitleLabel.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
 TitleLabel.Parent = MainFrame
 
 -- Tab Buttons (Horizontal Layout under Title)
-local tabs = {"Aimbot", "Visuals", "Exploits"}
+local tabs = {"Aimbot", "Visuals", "Exploits", "Settings"}
 local currentTab = nil
 local tabContents = {}
 
@@ -132,9 +183,9 @@ for i, tabName in ipairs(tabs) do
 end
 
 -- Aimbot Tab Content
-local aimbotEnabled = false
-local deadCheck = false
-local teamCheck = false
+local aimbotEnabled = settings.aimbotEnabled
+local deadCheck = settings.deadCheck
+local teamCheck = settings.teamCheck
 local targetPlayer = nil
 
 local CategoryLabelAimbot = Instance.new("TextLabel")
@@ -208,18 +259,24 @@ AimbotToggle.MouseButton1Click:Connect(function()
     aimbotEnabled = not aimbotEnabled
     AimbotToggle.Text = "☐ Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+    settings.aimbotEnabled = aimbotEnabled
+    saveSettings()
 end)
 
 DeadCheckToggle.MouseButton1Click:Connect(function()
     deadCheck = not deadCheck
     DeadCheckToggle.Text = "☐ Dead Check: " .. (deadCheck and "ON" or "OFF")
     DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+    settings.deadCheck = deadCheck
+    saveSettings()
 end)
 
 TeamCheckToggle.MouseButton1Click:Connect(function()
     teamCheck = not teamCheck
     TeamCheckToggle.Text = "☐ Team Check: " .. (teamCheck and "ON" or "OFF")
     TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+    settings.teamCheck = teamCheck
+    saveSettings()
 end)
 
 UserInputService.InputBegan:Connect(function(input)
@@ -270,15 +327,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- Visuals Tab Content
-local espToggles = {
-    Box = false,
-    Name = false,
-    Speed = false,
-    HealthBar = false,
-    Tracer = false,
-    Skeleton = false,
-    Box3D = false
-}
+local espToggles = settings.espToggles
 local espPlayers = {}
 local lastPositions = {}
 
@@ -289,6 +338,7 @@ local function DrawESP(plr)
         Speed = Drawing.new("Text"),
         HealthText = Drawing.new("Text"),
         HealthBar = Drawing.new("Square"),
+        HealthBarOutline = Drawing.new("Square"),
         Tracer = Drawing.new("Line"),
         Skeleton = {},
         Box3D = {}
@@ -317,6 +367,12 @@ local function DrawESP(plr)
     drawings.HealthBar.Thickness = 0
     drawings.HealthBar.Size = Vector2.new(60, 10)
     drawings.HealthBar.Visible = false
+
+    drawings.HealthBarOutline.Thickness = 1
+    drawings.HealthBarOutline.Size = Vector2.new(60, 10)
+    drawings.HealthBarOutline.Color = Color3.fromRGB(0, 0, 0)
+    drawings.HealthBarOutline.Filled = false
+    drawings.HealthBarOutline.Visible = false
 
     drawings.Tracer.Color = Color3.fromRGB(0, 200, 255)
     drawings.Tracer.Thickness = 1
@@ -410,22 +466,27 @@ local function DrawESP(plr)
                             local barWidth = 60
                             local barHeight = 10
                             local barX = headPos.X - (barWidth / 2)
-                            local barY = headPos.Y + 20
+                            local barY = headPos.Y - 50 -- Fixed position above head
 
                             local healthText = math.floor(healthPercent * 100) .. "%"
                             local textWidth = drawings.HealthText.TextBounds.X
                             drawings.HealthText.Text = healthText
-                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y)
+                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y - 70)
                             drawings.HealthText.Visible = true
 
                             drawings.HealthBar.Position = Vector2.new(barX, barY)
                             drawings.HealthBar.Size = Vector2.new(barWidth * healthPercent, barHeight)
                             drawings.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0)
                             drawings.HealthBar.Visible = true
+
+                            drawings.HealthBarOutline.Position = Vector2.new(barX, barY)
+                            drawings.HealthBarOutline.Size = Vector2.new(barWidth, barHeight)
+                            drawings.HealthBarOutline.Visible = true
                         end
                     else
                         drawings.HealthText.Visible = false
                         drawings.HealthBar.Visible = false
+                        drawings.HealthBarOutline.Visible = false
                     end
 
                     if espToggles.Tracer then
@@ -598,22 +659,23 @@ for feature, enabled in pairs(espToggles) do
         espToggles[feature] = not espToggles[feature]
         Toggle.Text = "☐ " .. feature .. ": " .. (espToggles[feature] and "ON" or "OFF")
         Toggle.TextColor3 = espToggles[feature] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+        settings.espToggles[feature] = espToggles[feature]
+        saveSettings()
     end)
     yOffset = yOffset + 40
 end
 
 -- Exploits Tab Content
-local flyEnabled = false
-local flySpeed = 75
+local flyEnabled = settings.flyEnabled
+local flySpeed = settings.flySpeed
 local controlSpeed = 10000
-local noClipEnabled = false
-local infiniteJumpEnabled = false
-local speedEnabled = false
-local speedMultiplier = 1
-local tpAuraEnabled = false
-local saveLastPositionEnabled = false
+local noClipEnabled = settings.noClipEnabled
+local infiniteJumpEnabled = settings.infiniteJumpEnabled
+local speedEnabled = settings.speedEnabled
+local speedMultiplier = settings.speedMultiplier
+local tpAuraEnabled = settings.tpAuraEnabled
+local saveLastPositionEnabled = settings.saveLastPositionEnabled
 local lastPosition = nil
-local playerListEnabled = false
 
 local CategoryLabelExploits = Instance.new("TextLabel")
 CategoryLabelExploits.Size = UDim2.new(0, 280, 0, 30)
@@ -737,15 +799,28 @@ SaveLastPositionToggle.Font = Enum.Font.SourceSans
 SaveLastPositionToggle.TextSize = 16
 SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
+-- Settings Tab Content
+local playerListEnabled = settings.playerListEnabled
+
+local CategoryLabelSettings = Instance.new("TextLabel")
+CategoryLabelSettings.Size = UDim2.new(0, 280, 0, 30)
+CategoryLabelSettings.Position = UDim2.new(0, 10, 0, 10)
+CategoryLabelSettings.Text = "— Settings —"
+CategoryLabelSettings.TextColor3 = Color3.fromRGB(0, 200, 255)
+CategoryLabelSettings.BackgroundTransparency = 1
+CategoryLabelSettings.Font = Enum.Font.SourceSansBold
+CategoryLabelSettings.TextSize = 18
+CategoryLabelSettings.Parent = tabContents["Settings"]
+
 local PlayerListToggle = Instance.new("TextButton")
 PlayerListToggle.Size = UDim2.new(0, 280, 0, 30)
-PlayerListToggle.Position = UDim2.new(0, 10, 0, 410)
+PlayerListToggle.Position = UDim2.new(0, 10, 0, 50)
 PlayerListToggle.Text = "☐ Player List: " .. (playerListEnabled and "ON" or "OFF")
 PlayerListToggle.BackgroundTransparency = 1
 PlayerListToggle.TextColor3 = playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
 PlayerListToggle.Font = Enum.Font.SourceSans
 PlayerListToggle.TextSize = 16
-PlayerListToggle.Parent = tabContents["Exploits"]
+PlayerListToggle.Parent = tabContents["Settings"]
 
 -- Player List GUI
 local PlayerListFrame = Instance.new("Frame")
@@ -842,6 +917,8 @@ PlayerListToggle.MouseButton1Click:Connect(function()
     if playerListEnabled then
         updatePlayerList()
     end
+    settings.playerListEnabled = playerListEnabled
+    saveSettings()
 end)
 
 PlayersService.PlayerAdded:Connect(function(player)
@@ -908,6 +985,8 @@ RunService.RenderStepped:Connect(function()
         FlySpeedKnob.Position = UDim2.new(flyNewPos, 0, 0, 0)
         flySpeed = math.floor(10 + (flyNewPos * 190))
         FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
+        settings.flySpeed = flySpeed
+        saveSettings()
     end
 
     if draggingSpeedSlider then
@@ -917,6 +996,8 @@ RunService.RenderStepped:Connect(function()
         SpeedKnob.Position = UDim2.new(speedNewPos, 0, 0, 0)
         speedMultiplier = math.floor(1 + (speedNewPos * 9))
         SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
+        settings.speedMultiplier = speedMultiplier
+        saveSettings()
     end
 end)
 
@@ -924,6 +1005,8 @@ function toggleFly()
     flyEnabled = not flyEnabled
     FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
     FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+    settings.flyEnabled = flyEnabled
+    saveSettings()
     
     local character = getCharacter()
     local rootPart = character:WaitForChild("HumanoidRootPart")
@@ -1009,6 +1092,8 @@ function toggleNoClip()
     noClipEnabled = not noClipEnabled
     NoClipToggle.Text = "☐ NoClip: " .. (noClipEnabled and "ON" or "OFF")
     NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+    settings.noClipEnabled = noClipEnabled
+    saveSettings()
     
     spawn(function()
         while noClipEnabled do
@@ -1043,12 +1128,16 @@ InfiniteJumpToggle.MouseButton1Click:Connect(function()
     infiniteJumpEnabled = not infiniteJumpEnabled
     InfiniteJumpToggle.Text = "☐ Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+    settings.infiniteJumpEnabled = infiniteJumpEnabled
+    saveSettings()
 end)
 
 function toggleSpeed()
     speedEnabled = not speedEnabled
     SpeedToggle.Text = "☐ Speed: " .. (speedEnabled and "ON" or "OFF")
     SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+    settings.speedEnabled = speedEnabled
+    saveSettings()
     
     local character = getCharacter()
     local humanoid = character:WaitForChild("Humanoid")
@@ -1075,6 +1164,8 @@ function toggleTpAura()
     tpAuraEnabled = not tpAuraEnabled
     TpAuraToggle.Text = "☐ TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
     TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+    settings.tpAuraEnabled = tpAuraEnabled
+    saveSettings()
     
     if tpAuraEnabled then
         spawn(function()
@@ -1128,6 +1219,8 @@ SaveLastPositionToggle.MouseButton1Click:Connect(function()
     saveLastPositionEnabled = not saveLastPositionEnabled
     SaveLastPositionToggle.Text = "☐ Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
     SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+    settings.saveLastPositionEnabled = saveLastPositionEnabled
+    saveSettings()
     
     if saveLastPositionEnabled then
         local character = getCharacter()
@@ -1196,13 +1289,23 @@ end)
 -- GUI Toggle with Q Key and Animation
 MainFrame.Visible = true
 local guiOpen = true
-local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out)
+local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
 local function toggleGui()
     guiOpen = not guiOpen
-    local targetPos = guiOpen and UDim2.new(0.5, -300, 0.5, -300) or UDim2.new(0.5, -300, 1, 0)
-    local tween = TweenService:Create(MainFrame, tweenInfo, {Position = targetPos})
-    tween:Play()
+    if guiOpen then
+        MainFrame.Position = UDim2.new(0.5, -300, 1, 0) -- Start off-screen
+        MainFrame.BackgroundTransparency = 1
+        MainFrame.Visible = true
+        local slideIn = TweenService:Create(MainFrame, tweenInfo, {Position = UDim2.new(0.5, -300, 0.5, -300), BackgroundTransparency = 0})
+        slideIn:Play()
+    else
+        local slideOut = TweenService:Create(MainFrame, tweenInfo, {Position = UDim2.new(0.5, -300, 1, 0), BackgroundTransparency = 1})
+        slideOut:Play()
+        slideOut.Completed:Connect(function()
+            MainFrame.Visible = false
+        end)
+    end
 end
 
 UserInputService.InputBegan:Connect(function(input)
@@ -1210,10 +1313,6 @@ UserInputService.InputBegan:Connect(function(input)
         toggleGui()
     end
 end)
-
--- Initial animation on injection
-local openTween = TweenService:Create(MainFrame, tweenInfo, {Position = UDim2.new(0.5, -300, 0.5, -300)})
-openTween:Play()
 
 -- Set initial tab
 if tabContents["Aimbot"] then
@@ -1243,5 +1342,47 @@ ScreenGui.Destroying:Connect(function()
     end
     RunService:UnbindFromRenderStep("AimbotSnap")
 end)
+
+-- Apply saved settings on join
+if aimbotEnabled then
+    AimbotToggle:Fire()
+end
+if deadCheck then
+    DeadCheckToggle:Fire()
+end
+if teamCheck then
+    TeamCheckToggle:Fire()
+end
+for feature, enabled in pairs(espToggles) do
+    if enabled then
+        for _, child in pairs(tabContents["Visuals"]:GetChildren()) do
+            if child:IsA("TextButton") and child.Text:find(feature) then
+                child:Fire()
+                break
+            end
+        end
+    end
+end
+if flyEnabled then
+    toggleFly()
+end
+if noClipEnabled then
+    toggleNoClip()
+end
+if infiniteJumpEnabled then
+    InfiniteJumpToggle:Fire()
+end
+if speedEnabled then
+    toggleSpeed()
+end
+if tpAuraEnabled then
+    toggleTpAura()
+end
+if saveLastPositionEnabled then
+    SaveLastPositionToggle:Fire()
+end
+if playerListEnabled then
+    PlayerListToggle:Fire()
+end
 
 print("Nettleware Alpha Loaded Successfully!")
