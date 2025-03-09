@@ -55,9 +55,10 @@ spawn(function()
         for i = 1, 0.7, -0.01 do
             CircuitBackground.ImageTransparency = i
             wait(0.01)
-        )        end
+        end -- <- Fixed the misplaced parenthesis
     end
 end)
+
 
 -- Title with Logo Inspiration
 local TitleLabel = Instance.new("TextLabel")
