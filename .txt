@@ -22,10 +22,9 @@ local success, err = pcall(function()
         unbindAll = false
     }
 
-    -- Load settings (placeholder - implement file I/O if needed)
+    -- Placeholder for saveSettings (implement file I/O if needed)
     local function saveSettings()
-        -- Implement save logic (e.g., to a file)
-        print("Settings saved: " .. table.concat({flyEnabled, flySpeed, noClipEnabled, infiniteJumpEnabled, speedEnabled, speedMultiplier, saveLastPositionEnabled}, ", "))
+        print("Settings saved: " .. table.concat({settings.flyEnabled, settings.flySpeed, settings.noClipEnabled, settings.infiniteJumpEnabled, settings.speedEnabled, settings.speedMultiplier, settings.saveLastPositionEnabled}, ", "))
     end
 
     local function getCharacter()
@@ -34,7 +33,7 @@ local success, err = pcall(function()
 
     local lastPosition = nil
     local bindingFeature = nil
-    local controlSpeed = 10000 -- From your fly script
+    local controlSpeed = 10000 -- For fly logic
 
     -- GUI Setup
     local NettlewareGui = Instance.new("ScreenGui")
@@ -1513,8 +1512,6 @@ local success, err = pcall(function()
 
         local function Update()
             local connection
-            local character = getCharacter()
-            local rootPart = character:WaitForChild("HumanoidRootPart")
             connection = RunService.RenderStepped:Connect(function()
                 if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
                     local head = plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart
@@ -1859,7 +1856,7 @@ local success, err = pcall(function()
                     AimbotToggle.Text = "☐ Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
                     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
                 elseif feature == "Smoothness" then
-                                        smoothAiming = not smoothAiming
+                    smoothAiming = not smoothAiming
                     SmoothnessToggle.Text = "☐ Smoothness: " .. (smoothAiming and "ON" or "OFF")
                     SmoothnessToggle.TextColor3 = smoothAiming and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
                 elseif feature == "FovCircle" then
