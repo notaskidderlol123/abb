@@ -1,4 +1,4 @@
-print("Nettleware script starting...")
+print("Nettleware Alpha script starting...")
 
 local success, err = pcall(function()
     -- Core Services
@@ -305,11 +305,12 @@ local success, err = pcall(function()
                 newContent.Visible = true
                 local slideIn = TweenService:Create(newContent, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -150, 0, 130)})
                 slideIn:Play()
+                print("Switched to " .. tabName .. " tab.")
             end
         end)
     end
 
-    -- Aimbot Tab Content
+    -- Aimbot Tab Content (Fixed Positioning)
     local aimbotEnabled = settings.aimbotEnabled
     local deadCheck = settings.deadCheck
     local teamCheck = settings.teamCheck
@@ -320,29 +321,33 @@ local success, err = pcall(function()
     local aimbotBone = settings.aimbotBone
     local targetPlayer = nil
 
-    local CategoryLabelAimbot = Instance.new("TextLabel")
-    CategoryLabelAimbot.Size = UDim2.new(0, 280, 0, 30)
-    CategoryLabelAimbot.Position = UDim2.new(0, 10, 0, 10)
-    CategoryLabelAimbot.Text = "— Aimbot —"
-    CategoryLabelAimbot.TextColor3 = Color3.fromRGB(0, 200, 255)
-    CategoryLabelAimbot.BackgroundTransparency = 1
-    CategoryLabelAimbot.Font = Enum.Font.SourceSansBold
-    CategoryLabelAimbot.TextSize = 18
-    CategoryLabelAimbot.Parent = tabContents["Aimbot"]
+    local baseY = 10
+    local categoryLabelAimbot = Instance.new("TextLabel")
+    categoryLabelAimbot.Size = UDim2.new(0, 280, 0, 30)
+    categoryLabelAimbot.Position = UDim2.new(0, 10, 0, baseY)
+    categoryLabelAimbot.Text = "— Aimbot —"
+    categoryLabelAimbot.TextColor3 = Color3.fromRGB(0, 200, 255)
+    categoryLabelAimbot.BackgroundTransparency = 1
+    categoryLabelAimbot.Font = Enum.Font.SourceSansBold
+    categoryLabelAimbot.TextSize = 18
+    categoryLabelAimbot.Parent = tabContents["Aimbot"]
+    print("Aimbot category label created at Y: " .. baseY)
 
+    local yOffset = baseY + 40
     local AimbotToggle = Instance.new("TextButton")
     AimbotToggle.Size = UDim2.new(0, 240, 0, 30)
-    AimbotToggle.Position = UDim2.new(0, 10, 0, 50)
+    AimbotToggle.Position = UDim2.new(0, 10, 0, yOffset)
     AimbotToggle.Text = "☐ Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
     AimbotToggle.BackgroundTransparency = 1
     AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     AimbotToggle.Font = Enum.Font.SourceSans
     AimbotToggle.TextSize = 16
     AimbotToggle.Parent = tabContents["Aimbot"]
+    print("Aimbot toggle created at Y: " .. yOffset)
 
     local AimbotBindSquare = Instance.new("TextButton")
     AimbotBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    AimbotBindSquare.Position = UDim2.new(0, 260, 0, 50)
+    AimbotBindSquare.Position = UDim2.new(0, 260, 0, yOffset)
     AimbotBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     AimbotBindSquare.Text = settings.keyBinds.Aimbot and settings.keyBinds.Aimbot.Name or "Bind"
     AimbotBindSquare.BackgroundTransparency = 0
@@ -351,19 +356,21 @@ local success, err = pcall(function()
     AimbotBindSquare.TextSize = 12
     AimbotBindSquare.Parent = tabContents["Aimbot"]
 
+    yOffset = yOffset + 40
     local DeadCheckToggle = Instance.new("TextButton")
     DeadCheckToggle.Size = UDim2.new(0, 240, 0, 30)
-    DeadCheckToggle.Position = UDim2.new(0, 10, 0, 90)
+    DeadCheckToggle.Position = UDim2.new(0, 10, 0, yOffset)
     DeadCheckToggle.Text = "☐ Dead Check: " .. (deadCheck and "ON" or "OFF")
     DeadCheckToggle.BackgroundTransparency = 1
     DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     DeadCheckToggle.Font = Enum.Font.SourceSans
     DeadCheckToggle.TextSize = 16
     DeadCheckToggle.Parent = tabContents["Aimbot"]
+    print("DeadCheck toggle created at Y: " .. yOffset)
 
     local DeadCheckBindSquare = Instance.new("TextButton")
     DeadCheckBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    DeadCheckBindSquare.Position = UDim2.new(0, 260, 0, 90)
+    DeadCheckBindSquare.Position = UDim2.new(0, 260, 0, yOffset)
     DeadCheckBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     DeadCheckBindSquare.Text = settings.keyBinds.DeadCheck and settings.keyBinds.DeadCheck.Name or "Bind"
     DeadCheckBindSquare.BackgroundTransparency = 0
@@ -372,19 +379,21 @@ local success, err = pcall(function()
     DeadCheckBindSquare.TextSize = 12
     DeadCheckBindSquare.Parent = tabContents["Aimbot"]
 
+    yOffset = yOffset + 40
     local TeamCheckToggle = Instance.new("TextButton")
     TeamCheckToggle.Size = UDim2.new(0, 240, 0, 30)
-    TeamCheckToggle.Position = UDim2.new(0, 10, 0, 130)
+    TeamCheckToggle.Position = UDim2.new(0, 10, 0, yOffset)
     TeamCheckToggle.Text = "☐ Team Check: " .. (teamCheck and "ON" or "OFF")
     TeamCheckToggle.BackgroundTransparency = 1
     TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     TeamCheckToggle.Font = Enum.Font.SourceSans
     TeamCheckToggle.TextSize = 16
     TeamCheckToggle.Parent = tabContents["Aimbot"]
+    print("TeamCheck toggle created at Y: " .. yOffset)
 
     local TeamCheckBindSquare = Instance.new("TextButton")
     TeamCheckBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    TeamCheckBindSquare.Position = UDim2.new(0, 260, 0, 130)
+    TeamCheckBindSquare.Position = UDim2.new(0, 260, 0, yOffset)
     TeamCheckBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     TeamCheckBindSquare.Text = settings.keyBinds.TeamCheck and settings.keyBinds.TeamCheck.Name or "Bind"
     TeamCheckBindSquare.BackgroundTransparency = 0
@@ -393,19 +402,21 @@ local success, err = pcall(function()
     TeamCheckBindSquare.TextSize = 12
     TeamCheckBindSquare.Parent = tabContents["Aimbot"]
 
+    yOffset = yOffset + 40
     local SmoothnessToggle = Instance.new("TextButton")
     SmoothnessToggle.Size = UDim2.new(0, 240, 0, 30)
-    SmoothnessToggle.Position = UDim2.new(0, 10, 0, 170)
+    SmoothnessToggle.Position = UDim2.new(0, 10, 0, yOffset)
     SmoothnessToggle.Text = "☐ Smoothness: " .. (aimbotSmoothnessEnabled and "ON" or "OFF")
     SmoothnessToggle.BackgroundTransparency = 1
     SmoothnessToggle.TextColor3 = aimbotSmoothnessEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     SmoothnessToggle.Font = Enum.Font.SourceSans
     SmoothnessToggle.TextSize = 16
     SmoothnessToggle.Parent = tabContents["Aimbot"]
+    print("Smoothness toggle created at Y: " .. yOffset)
 
     local SmoothnessBindSquare = Instance.new("TextButton")
     SmoothnessBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    SmoothnessBindSquare.Position = UDim2.new(0, 260, 0, 170)
+    SmoothnessBindSquare.Position = UDim2.new(0, 260, 0, yOffset)
     SmoothnessBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     SmoothnessBindSquare.Text = settings.keyBinds.Smoothness and settings.keyBinds.Smoothness.Name or "Bind"
     SmoothnessBindSquare.BackgroundTransparency = 0
@@ -414,9 +425,10 @@ local success, err = pcall(function()
     SmoothnessBindSquare.TextSize = 12
     SmoothnessBindSquare.Parent = tabContents["Aimbot"]
 
+    yOffset = yOffset + 40
     local SmoothnessLabel = Instance.new("TextLabel")
     SmoothnessLabel.Size = UDim2.new(0, 280, 0, 30)
-    SmoothnessLabel.Position = UDim2.new(0, 10, 0, 210)
+    SmoothnessLabel.Position = UDim2.new(0, 10, 0, yOffset)
     SmoothnessLabel.Text = "Smoothness: " .. aimbotSmoothness
     SmoothnessLabel.BackgroundTransparency = 1
     SmoothnessLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
@@ -424,15 +436,18 @@ local success, err = pcall(function()
     SmoothnessLabel.TextSize = 16
     SmoothnessLabel.Visible = aimbotSmoothnessEnabled
     SmoothnessLabel.Parent = tabContents["Aimbot"]
+    print("Smoothness label created at Y: " .. yOffset)
 
+    yOffset = yOffset + 40
     local SmoothnessSlider = Instance.new("TextButton")
     SmoothnessSlider.Size = UDim2.new(0, 280, 0, 10)
-    SmoothnessSlider.Position = UDim2.new(0, 10, 0, 250)
+    SmoothnessSlider.Position = UDim2.new(0, 10, 0, yOffset)
     SmoothnessSlider.Text = ""
     SmoothnessSlider.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
     SmoothnessSlider.BackgroundTransparency = 0
     SmoothnessSlider.Visible = aimbotSmoothnessEnabled
     SmoothnessSlider.Parent = tabContents["Aimbot"]
+    print("Smoothness slider created at Y: " .. yOffset)
 
     local SmoothnessKnob = Instance.new("Frame")
     SmoothnessKnob.Size = UDim2.new(0, 20, 1, 0)
@@ -442,19 +457,21 @@ local success, err = pcall(function()
     SmoothnessKnob.BorderSizePixel = 0
     SmoothnessKnob.Parent = SmoothnessSlider
 
+    yOffset = yOffset + 40
     local FovCircleToggle = Instance.new("TextButton")
     FovCircleToggle.Size = UDim2.new(0, 240, 0, 30)
-    FovCircleToggle.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 290 or 210)
+    FovCircleToggle.Position = UDim2.new(0, 10, 0, yOffset)
     FovCircleToggle.Text = "☐ FOV Circle: " .. (aimbotFovEnabled and "ON" or "OFF")
     FovCircleToggle.BackgroundTransparency = 1
     FovCircleToggle.TextColor3 = aimbotFovEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     FovCircleToggle.Font = Enum.Font.SourceSans
     FovCircleToggle.TextSize = 16
     FovCircleToggle.Parent = tabContents["Aimbot"]
+    print("FovCircle toggle created at Y: " .. yOffset)
 
     local FovCircleBindSquare = Instance.new("TextButton")
     FovCircleBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    FovCircleBindSquare.Position = UDim2.new(0, 260, 0, aimbotSmoothnessEnabled and 290 or 210)
+    FovCircleBindSquare.Position = UDim2.new(0, 260, 0, yOffset)
     FovCircleBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     FovCircleBindSquare.Text = settings.keyBinds.FovCircle and settings.keyBinds.FovCircle.Name or "Bind"
     FovCircleBindSquare.BackgroundTransparency = 0
@@ -463,9 +480,10 @@ local success, err = pcall(function()
     FovCircleBindSquare.TextSize = 12
     FovCircleBindSquare.Parent = tabContents["Aimbot"]
 
+    yOffset = yOffset + 40
     local FovCircleLabel = Instance.new("TextLabel")
     FovCircleLabel.Size = UDim2.new(0, 280, 0, 30)
-    FovCircleLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 330 or 250)
+    FovCircleLabel.Position = UDim2.new(0, 10, 0, yOffset)
     FovCircleLabel.Text = "FOV Size: " .. aimbotFovSize
     FovCircleLabel.BackgroundTransparency = 1
     FovCircleLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
@@ -473,15 +491,18 @@ local success, err = pcall(function()
     FovCircleLabel.TextSize = 16
     FovCircleLabel.Visible = aimbotFovEnabled
     FovCircleLabel.Parent = tabContents["Aimbot"]
+    print("FovCircle label created at Y: " .. yOffset)
 
+    yOffset = yOffset + 40
     local FovCircleSlider = Instance.new("TextButton")
     FovCircleSlider.Size = UDim2.new(0, 280, 0, 10)
-    FovCircleSlider.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 370 or 290)
+    FovCircleSlider.Position = UDim2.new(0, 10, 0, yOffset)
     FovCircleSlider.Text = ""
     FovCircleSlider.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
     FovCircleSlider.BackgroundTransparency = 0
     FovCircleSlider.Visible = aimbotFovEnabled
     FovCircleSlider.Parent = tabContents["Aimbot"]
+    print("FovCircle slider created at Y: " .. yOffset)
 
     local FovCircleKnob = Instance.new("Frame")
     FovCircleKnob.Size = UDim2.new(0, 20, 1, 0)
@@ -491,20 +512,22 @@ local success, err = pcall(function()
     FovCircleKnob.BorderSizePixel = 0
     FovCircleKnob.Parent = FovCircleSlider
 
-    -- Aimbot Bone Dropdown (Moved Higher)
+    yOffset = yOffset + 40
     local AimbotBoneLabel = Instance.new("TextLabel")
     AimbotBoneLabel.Size = UDim2.new(0, 280, 0, 30)
-    AimbotBoneLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 130 or 90) -- Moved up
+    AimbotBoneLabel.Position = UDim2.new(0, 10, 0, yOffset)
     AimbotBoneLabel.Text = "Aim Bone: " .. aimbotBone
     AimbotBoneLabel.BackgroundTransparency = 1
     AimbotBoneLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
     AimbotBoneLabel.Font = Enum.Font.SourceSans
     AimbotBoneLabel.TextSize = 16
     AimbotBoneLabel.Parent = tabContents["Aimbot"]
+    print("AimbotBone label created at Y: " .. yOffset)
 
+    yOffset = yOffset + 40
     local AimbotBoneDropdown = Instance.new("TextButton")
     AimbotBoneDropdown.Size = UDim2.new(0, 280, 0, 30)
-    AimbotBoneDropdown.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 170 or 130) -- Moved up
+    AimbotBoneDropdown.Position = UDim2.new(0, 10, 0, yOffset)
     AimbotBoneDropdown.Text = "▼ " .. aimbotBone
     AimbotBoneDropdown.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
     AimbotBoneDropdown.BackgroundTransparency = 0
@@ -513,16 +536,18 @@ local success, err = pcall(function()
     AimbotBoneDropdown.TextSize = 16
     AimbotBoneDropdown.BorderSizePixel = 0
     AimbotBoneDropdown.Parent = tabContents["Aimbot"]
+    print("AimbotBone dropdown created at Y: " .. yOffset)
 
     local boneDropdownOpen = false
     local boneDropdownOptions = {"Head", "Body", "Feet"}
     local boneDropdownFrame = Instance.new("Frame")
     boneDropdownFrame.Size = UDim2.new(0, 280, 0, #boneDropdownOptions * 30)
-    boneDropdownFrame.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 200 or 160) -- Moved up
+    boneDropdownFrame.Position = UDim2.new(0, 10, 0, yOffset + 30)
     boneDropdownFrame.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
     boneDropdownFrame.BackgroundTransparency = 0
     boneDropdownFrame.Visible = false
     boneDropdownFrame.Parent = tabContents["Aimbot"]
+    print("Bone dropdown frame created at Y: " .. (yOffset + 30))
 
     for i, option in ipairs(boneDropdownOptions) do
         local optionButton = Instance.new("TextButton")
@@ -649,14 +674,6 @@ local success, err = pcall(function()
         SmoothnessSlider.Visible = aimbotSmoothnessEnabled
         settings.aimbotSmoothnessEnabled = aimbotSmoothnessEnabled
         saveSettings()
-
-        FovCircleToggle.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 290 or 210)
-        FovCircleBindSquare.Position = UDim2.new(0, 260, 0, aimbotSmoothnessEnabled and 290 or 210)
-        FovCircleLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 330 or 250)
-        FovCircleSlider.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 370 or 290)
-        AimbotBoneLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 130 or 90)
-        AimbotBoneDropdown.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 170 or 130)
-        boneDropdownFrame.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 200 or 160)
     end)
 
     FovCircleToggle.MouseButton1Click:Connect(function()
@@ -726,7 +743,6 @@ local success, err = pcall(function()
 
         fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
-        -- Continuous Aimbot Locking with Bone Selection
         if aimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             targetPlayer = getNearestPlayer()
             if targetPlayer and targetPlayer.Character then
@@ -768,12 +784,6 @@ local success, err = pcall(function()
                 elseif bindingFeature == TeamCheckBindSquare then feature = "TeamCheck"
                 elseif bindingFeature == SmoothnessBindSquare then feature = "Smoothness"
                 elseif bindingFeature == FovCircleBindSquare then feature = "FovCircle"
-                elseif bindingFeature == FlyBindSquare then feature = "Fly"
-                elseif bindingFeature == NoClipBindSquare then feature = "NoClip"
-                elseif bindingFeature == InfiniteJumpBindSquare then feature = "InfiniteJump"
-                elseif bindingFeature == SpeedBindSquare then feature = "Speed"
-                elseif bindingFeature == SaveLastPositionBindSquare then feature = "SaveLastPosition"
-                elseif bindingFeature == PlayerListBindSquare then feature = "PlayerList"
                 end
                 if feature then
                     settings.keyBinds[feature] = key
@@ -808,13 +818,6 @@ local success, err = pcall(function()
                         SmoothnessLabel.Visible = aimbotSmoothnessEnabled
                         SmoothnessSlider.Visible = aimbotSmoothnessEnabled
                         settings.aimbotSmoothnessEnabled = aimbotSmoothnessEnabled
-                        FovCircleToggle.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 290 or 210)
-                        FovCircleBindSquare.Position = UDim2.new(0, 260, 0, aimbotSmoothnessEnabled and 290 or 210)
-                        FovCircleLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 330 or 250)
-                        FovCircleSlider.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 370 or 290)
-                        AimbotBoneLabel.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 130 or 90)
-                        AimbotBoneDropdown.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 170 or 130)
-                        boneDropdownFrame.Position = UDim2.new(0, 10, 0, aimbotSmoothnessEnabled and 200 or 160)
                     elseif feature == "FovCircle" then
                         aimbotFovEnabled = not aimbotFovEnabled
                         FovCircleToggle.Text = "☐ FOV Circle: " .. (aimbotFovEnabled and "ON" or "OFF")
@@ -823,47 +826,6 @@ local success, err = pcall(function()
                         FovCircleSlider.Visible = aimbotFovEnabled
                         fovCircle.Visible = aimbotFovEnabled
                         settings.aimbotFovEnabled = aimbotFovEnabled
-                    elseif feature == "Fly" then
-                        toggleFly()
-                    elseif feature == "NoClip" then
-                        toggleNoClip()
-                    elseif feature == "InfiniteJump" then
-                        toggleInfiniteJump()
-                    elseif feature == "Speed" then
-                        toggleSpeed()
-                    elseif feature == "SaveLastPosition" then
-                        saveLastPositionEnabled = not saveLastPositionEnabled
-                        SaveLastPositionToggle.Text = "☐ Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
-                        SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        settings.saveLastPositionEnabled = saveLastPositionEnabled
-                        if saveLastPositionEnabled then
-                            local character = getCharacter()
-                            if character and character:FindFirstChild("HumanoidRootPart") then
-                                local rootPart = character.HumanoidRootPart
-                                lastPosition = rootPart.CFrame
-                                print("Last position saved: " .. tostring(lastPosition))
-                            else
-                                warn("No character or HumanoidRootPart found to save position.")
-                            end
-                        end
-                        saveSettings()
-                    elseif feature == "PlayerList" then
-                        playerListEnabled = not playerListEnabled
-                        PlayerListToggle.Text = "☐ Player List: " .. (playerListEnabled and "ON" or "OFF")
-                        PlayerListToggle.TextColor3 = playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        PlayerListFrame.Visible = playerListEnabled
-                        settings.playerListEnabled = playerListEnabled
-                        saveSettings()
-                        if playerListEnabled then
-                            local slideIn = TweenService:Create(PlayerListFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, -210, 0, 10)})
-                            slideIn:Play()
-                            updatePlayerList()
-                        else
-                            local slideOut = TweenService:Create(PlayerListFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 0, 0, 10)})
-                            slideOut:Play()
-                            wait(0.3)
-                            PlayerListFrame.Visible = false
-                        end
                     end
                     saveSettings()
                 end
@@ -876,12 +838,6 @@ local success, err = pcall(function()
     TeamCheckBindSquare.MouseButton1Click:Connect(function() startBinding(TeamCheckBindSquare) end)
     SmoothnessBindSquare.MouseButton1Click:Connect(function() startBinding(SmoothnessBindSquare) end)
     FovCircleBindSquare.MouseButton1Click:Connect(function() startBinding(FovCircleBindSquare) end)
-    FlyBindSquare.MouseButton1Click:Connect(function() startBinding(FlyBindSquare) end)
-    NoClipBindSquare.MouseButton1Click:Connect(function() startBinding(NoClipBindSquare) end)
-    InfiniteJumpBindSquare.MouseButton1Click:Connect(function() startBinding(InfiniteJumpBindSquare) end)
-    SpeedBindSquare.MouseButton1Click:Connect(function() startBinding(SpeedBindSquare) end)
-    SaveLastPositionBindSquare.MouseButton1Click:Connect(function() startBinding(SaveLastPositionBindSquare) end)
-    PlayerListBindSquare.MouseButton1Click:Connect(function() startBinding(PlayerListBindSquare) end)
 
     -- Visuals Tab Content
     local espToggles = settings.espToggles
@@ -924,11 +880,11 @@ local success, err = pcall(function()
         drawings.HealthText.Visible = false
 
         drawings.HealthBar.Thickness = 0
-        drawings.HealthBar.Size = Vector2.new(60, 10) -- Initial size, will be scaled
+        drawings.HealthBar.Size = Vector2.new(60, 10)
         drawings.HealthBar.Visible = false
 
         drawings.HealthBarOutline.Thickness = 1
-        drawings.HealthBarOutline.Size = Vector2.new(60, 10) -- Initial size, will be scaled
+        drawings.HealthBarOutline.Size = Vector2.new(60, 10)
         drawings.HealthBarOutline.Color = Color3.fromRGB(0, 0, 0)
         drawings.HealthBarOutline.Filled = false
         drawings.HealthBarOutline.Visible = false
@@ -972,7 +928,7 @@ local success, err = pcall(function()
             connection = RunService.RenderStepped:Connect(function()
                 if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
                     local head = plr.Character:FindFirstChild("Head") or plr.Character.PrimaryPart
-                    local headPos, headVis = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0)) -- 2.5 studs above head
+                    local headPos, headVis = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0))
                     if headVis then
                         local TopLeft = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(-2, 3, 0)).p)
                         local TopRight = Camera:WorldToViewportPoint((plr.Character.PrimaryPart.CFrame * CFrame.new(2, 3, 0)).p)
@@ -1017,16 +973,15 @@ local success, err = pcall(function()
                             if humanoid then
                                 local healthPercent = humanoid.Health / humanoid.MaxHealth
                                 local distance = (Camera.CFrame.Position - head.Position).Magnitude
-                                local baseWidth = 60 -- Base width at close range (e.g., 10 studs)
-                                local scaleFactor = math.clamp(10 / distance, 0.1, 1) -- Scales down with distance
+                                local baseWidth = 60
+                                local scaleFactor = math.clamp(10 / distance, 0.1, 1)
                                 local barWidth = baseWidth * scaleFactor
                                 local barHeight = 10 * scaleFactor
                                 local barX = headPos.X - (barWidth / 2)
                                 local barY = headPos.Y
 
-                                local healthText = math.floor(healthPercent * 100) .. "%"
+                                drawings.HealthText.Text = math.floor(healthPercent * 100) .. "%"
                                 local textWidth = drawings.HealthText.TextBounds.X
-                                drawings.HealthText.Text = healthText
                                 drawings.HealthText.Position = Vector2.new(barX + (barWidth / 2) - (textWidth / 2), barY - 20 * scaleFactor)
                                 drawings.HealthText.Visible = true
 
@@ -1124,16 +1079,10 @@ local success, err = pcall(function()
                             end
                         end
                     else
-                        for key, drawing in pairs(drawings) do
+                        for _, drawing in pairs(drawings) do
                             if type(drawing) == "table" then
                                 for _, line in pairs(drawing) do
-                                    if type(line) == "table" then
-                                        for _, subLine in pairs(line) do
-                                            subLine.Visible = false
-                                        end
-                                    else
-                                        line.Visible = false
-                                    end
+                                    line.Visible = false
                                 end
                             else
                                 drawing.Visible = false
@@ -1141,16 +1090,10 @@ local success, err = pcall(function()
                         end
                     end
                 else
-                    for key, drawing in pairs(drawings) do
+                    for _, drawing in pairs(drawings) do
                         if type(drawing) == "table" then
                             for _, line in pairs(drawing) do
-                                if type(line) == "table" then
-                                    for _, subLine in pairs(line) do
-                                        subLine.Visible = false
-                                    end
-                                else
-                                    line.Visible = false
-                                end
+                                line.Visible = false
                             end
                         else
                             drawing.Visible = false
@@ -1189,20 +1132,22 @@ local success, err = pcall(function()
         end
     end)
 
-    local CategoryLabelVisuals = Instance.new("TextLabel")
-    CategoryLabelVisuals.Size = UDim2.new(0, 280, 0, 30)
-    CategoryLabelVisuals.Position = UDim2.new(0, 10, 0, 10)
-    CategoryLabelVisuals.Text = "— Visuals —"
-    CategoryLabelVisuals.TextColor3 = Color3.fromRGB(0, 200, 255)
-    CategoryLabelVisuals.BackgroundTransparency = 1
-    CategoryLabelVisuals.Font = Enum.Font.SourceSansBold
-    CategoryLabelVisuals.TextSize = 18
-    CategoryLabelVisuals.Parent = tabContents["Visuals"]
+    local baseYVisuals = 10
+    local categoryLabelVisuals = Instance.new("TextLabel")
+    categoryLabelVisuals.Size = UDim2.new(0, 280, 0, 30)
+    categoryLabelVisuals.Position = UDim2.new(0, 10, 0, baseYVisuals)
+    categoryLabelVisuals.Text = "— Visuals —"
+    categoryLabelVisuals.TextColor3 = Color3.fromRGB(0, 200, 255)
+    categoryLabelVisuals.BackgroundTransparency = 1
+    categoryLabelVisuals.Font = Enum.Font.SourceSansBold
+    categoryLabelVisuals.TextSize = 18
+    categoryLabelVisuals.Parent = tabContents["Visuals"]
+    print("Visuals category label created at Y: " .. baseYVisuals)
 
-    local yOffsetVisuals = 50
+    local yOffsetVisuals = baseYVisuals + 40
     for feature, enabled in pairs(espToggles) do
         local Toggle = Instance.new("TextButton")
-        Toggle.Size = UDim2.new(0, 280, 0, 30)
+        Toggle.Size = UDim2.new(0, 240, 0, 30)
         Toggle.Position = UDim2.new(0, 10, 0, yOffsetVisuals)
         Toggle.Text = "☐ " .. feature .. ": " .. (enabled and "ON" or "OFF")
         Toggle.BackgroundTransparency = 1
@@ -1210,6 +1155,7 @@ local success, err = pcall(function()
         Toggle.Font = Enum.Font.SourceSans
         Toggle.TextSize = 16
         Toggle.Parent = tabContents["Visuals"]
+        print(feature .. " toggle created at Y: " .. yOffsetVisuals)
 
         Toggle.MouseButton1Click:Connect(function()
             espToggles[feature] = not espToggles[feature]
@@ -1221,8 +1167,9 @@ local success, err = pcall(function()
         yOffsetVisuals = yOffsetVisuals + 40
     end
 
+    yOffsetVisuals = yOffsetVisuals + 10
     local FovChangerToggle = Instance.new("TextButton")
-    FovChangerToggle.Size = UDim2.new(0, 280, 0, 30)
+    FovChangerToggle.Size = UDim2.new(0, 240, 0, 30)
     FovChangerToggle.Position = UDim2.new(0, 10, 0, yOffsetVisuals)
     FovChangerToggle.Text = "☐ FOV Changer: " .. (fovChangerEnabled and "ON" or "OFF")
     FovChangerToggle.BackgroundTransparency = 1
@@ -1230,10 +1177,12 @@ local success, err = pcall(function()
     FovChangerToggle.Font = Enum.Font.SourceSans
     FovChangerToggle.TextSize = 16
     FovChangerToggle.Parent = tabContents["Visuals"]
+    print("FovChanger toggle created at Y: " .. yOffsetVisuals)
 
+    yOffsetVisuals = yOffsetVisuals + 40
     local FovChangerLabel = Instance.new("TextLabel")
     FovChangerLabel.Size = UDim2.new(0, 280, 0, 30)
-    FovChangerLabel.Position = UDim2.new(0, 10, 0, yOffsetVisuals + 40)
+    FovChangerLabel.Position = UDim2.new(0, 10, 0, yOffsetVisuals)
     FovChangerLabel.Text = "FOV: " .. fovChangerValue
     FovChangerLabel.BackgroundTransparency = 1
     FovChangerLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
@@ -1241,15 +1190,18 @@ local success, err = pcall(function()
     FovChangerLabel.TextSize = 16
     FovChangerLabel.Visible = fovChangerEnabled
     FovChangerLabel.Parent = tabContents["Visuals"]
+    print("FovChanger label created at Y: " .. yOffsetVisuals)
 
+    yOffsetVisuals = yOffsetVisuals + 40
     local FovChangerSlider = Instance.new("TextButton")
     FovChangerSlider.Size = UDim2.new(0, 280, 0, 10)
-    FovChangerSlider.Position = UDim2.new(0, 10, 0, yOffsetVisuals + 80)
+    FovChangerSlider.Position = UDim2.new(0, 10, 0, yOffsetVisuals)
     FovChangerSlider.Text = ""
     FovChangerSlider.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
     FovChangerSlider.BackgroundTransparency = 0
     FovChangerSlider.Visible = fovChangerEnabled
     FovChangerSlider.Parent = tabContents["Visuals"]
+    print("FovChanger slider created at Y: " .. yOffsetVisuals)
 
     local FovChangerKnob = Instance.new("Frame")
     FovChangerKnob.Size = UDim2.new(0, 20, 1, 0)
@@ -1316,29 +1268,33 @@ local success, err = pcall(function()
     local saveLastPositionEnabled = settings.saveLastPositionEnabled
     local lastPosition = nil
 
-    local CategoryLabelExploits = Instance.new("TextLabel")
-    CategoryLabelExploits.Size = UDim2.new(0, 280, 0, 30)
-    CategoryLabelExploits.Position = UDim2.new(0, 10, 0, 10)
-    CategoryLabelExploits.Text = "— Exploits —"
-    CategoryLabelExploits.TextColor3 = Color3.fromRGB(0, 200, 255)
-    CategoryLabelExploits.BackgroundTransparency = 1
-    CategoryLabelExploits.Font = Enum.Font.SourceSansBold
-    CategoryLabelExploits.TextSize = 18
-    CategoryLabelExploits.Parent = tabContents["Exploits"]
+    local baseYExploits = 10
+    local categoryLabelExploits = Instance.new("TextLabel")
+    categoryLabelExploits.Size = UDim2.new(0, 280, 0, 30)
+    categoryLabelExploits.Position = UDim2.new(0, 10, 0, baseYExploits)
+    categoryLabelExploits.Text = "— Exploits —"
+    categoryLabelExploits.TextColor3 = Color3.fromRGB(0, 200, 255)
+    categoryLabelExploits.BackgroundTransparency = 1
+    categoryLabelExploits.Font = Enum.Font.SourceSansBold
+    categoryLabelExploits.TextSize = 18
+    categoryLabelExploits.Parent = tabContents["Exploits"]
+    print("Exploits category label created at Y: " .. baseYExploits)
 
+    local yOffsetExploits = baseYExploits + 40
     local FlyToggle = Instance.new("TextButton")
     FlyToggle.Size = UDim2.new(0, 240, 0, 30)
-    FlyToggle.Position = UDim2.new(0, 10, 0, 50)
+    FlyToggle.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
     FlyToggle.BackgroundTransparency = 1
     FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     FlyToggle.Font = Enum.Font.SourceSans
     FlyToggle.TextSize = 16
     FlyToggle.Parent = tabContents["Exploits"]
+    print("Fly toggle created at Y: " .. yOffsetExploits)
 
     local FlyBindSquare = Instance.new("TextButton")
     FlyBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    FlyBindSquare.Position = UDim2.new(0, 260, 0, 50)
+    FlyBindSquare.Position = UDim2.new(0, 260, 0, yOffsetExploits)
     FlyBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     FlyBindSquare.Text = settings.keyBinds.Fly and settings.keyBinds.Fly.Name or "Bind"
     FlyBindSquare.BackgroundTransparency = 0
@@ -1347,23 +1303,27 @@ local success, err = pcall(function()
     FlyBindSquare.TextSize = 12
     FlyBindSquare.Parent = tabContents["Exploits"]
 
+    yOffsetExploits = yOffsetExploits + 40
     local FlySpeedLabel = Instance.new("TextLabel")
     FlySpeedLabel.Size = UDim2.new(0, 280, 0, 30)
-    FlySpeedLabel.Position = UDim2.new(0, 10, 0, 90)
+    FlySpeedLabel.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     FlySpeedLabel.Text = "Fly Speed: " .. flySpeed
     FlySpeedLabel.BackgroundTransparency = 1
     FlySpeedLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
     FlySpeedLabel.Font = Enum.Font.SourceSans
     FlySpeedLabel.TextSize = 16
     FlySpeedLabel.Parent = tabContents["Exploits"]
+    print("FlySpeed label created at Y: " .. yOffsetExploits)
 
+    yOffsetExploits = yOffsetExploits + 40
     local FlySpeedSlider = Instance.new("TextButton")
     FlySpeedSlider.Size = UDim2.new(0, 280, 0, 10)
-    FlySpeedSlider.Position = UDim2.new(0, 10, 0, 130)
+    FlySpeedSlider.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     FlySpeedSlider.Text = ""
     FlySpeedSlider.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
-        FlySpeedSlider.BackgroundTransparency = 0
+    FlySpeedSlider.BackgroundTransparency = 0
     FlySpeedSlider.Parent = tabContents["Exploits"]
+    print("FlySpeed slider created at Y: " .. yOffsetExploits)
 
     local FlySpeedKnob = Instance.new("Frame")
     FlySpeedKnob.Size = UDim2.new(0, 20, 1, 0)
@@ -1373,19 +1333,21 @@ local success, err = pcall(function()
     FlySpeedKnob.BorderSizePixel = 0
     FlySpeedKnob.Parent = FlySpeedSlider
 
+    yOffsetExploits = yOffsetExploits + 40
     local NoClipToggle = Instance.new("TextButton")
     NoClipToggle.Size = UDim2.new(0, 240, 0, 30)
-    NoClipToggle.Position = UDim2.new(0, 10, 0, 150)
+    NoClipToggle.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     NoClipToggle.Text = "☐ NoClip: " .. (noClipEnabled and "ON" or "OFF")
     NoClipToggle.BackgroundTransparency = 1
     NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     NoClipToggle.Font = Enum.Font.SourceSans
     NoClipToggle.TextSize = 16
     NoClipToggle.Parent = tabContents["Exploits"]
+    print("NoClip toggle created at Y: " .. yOffsetExploits)
 
     local NoClipBindSquare = Instance.new("TextButton")
     NoClipBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    NoClipBindSquare.Position = UDim2.new(0, 260, 0, 150)
+    NoClipBindSquare.Position = UDim2.new(0, 260, 0, yOffsetExploits)
     NoClipBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     NoClipBindSquare.Text = settings.keyBinds.NoClip and settings.keyBinds.NoClip.Name or "Bind"
     NoClipBindSquare.BackgroundTransparency = 0
@@ -1394,19 +1356,21 @@ local success, err = pcall(function()
     NoClipBindSquare.TextSize = 12
     NoClipBindSquare.Parent = tabContents["Exploits"]
 
+    yOffsetExploits = yOffsetExploits + 40
     local InfiniteJumpToggle = Instance.new("TextButton")
     InfiniteJumpToggle.Size = UDim2.new(0, 240, 0, 30)
-    InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 190)
+    InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     InfiniteJumpToggle.Text = "☐ Infinite Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
     InfiniteJumpToggle.BackgroundTransparency = 1
     InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     InfiniteJumpToggle.Font = Enum.Font.SourceSans
     InfiniteJumpToggle.TextSize = 16
     InfiniteJumpToggle.Parent = tabContents["Exploits"]
+    print("InfiniteJump toggle created at Y: " .. yOffsetExploits)
 
     local InfiniteJumpBindSquare = Instance.new("TextButton")
     InfiniteJumpBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    InfiniteJumpBindSquare.Position = UDim2.new(0, 260, 0, 190)
+        InfiniteJumpBindSquare.Position = UDim2.new(0, 260, 0, yOffsetExploits)
     InfiniteJumpBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     InfiniteJumpBindSquare.Text = settings.keyBinds.InfiniteJump and settings.keyBinds.InfiniteJump.Name or "Bind"
     InfiniteJumpBindSquare.BackgroundTransparency = 0
@@ -1415,19 +1379,21 @@ local success, err = pcall(function()
     InfiniteJumpBindSquare.TextSize = 12
     InfiniteJumpBindSquare.Parent = tabContents["Exploits"]
 
+    yOffsetExploits = yOffsetExploits + 40
     local SpeedToggle = Instance.new("TextButton")
     SpeedToggle.Size = UDim2.new(0, 240, 0, 30)
-    SpeedToggle.Position = UDim2.new(0, 10, 0, 230)
+    SpeedToggle.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     SpeedToggle.Text = "☐ Speed: " .. (speedEnabled and "ON" or "OFF")
     SpeedToggle.BackgroundTransparency = 1
     SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     SpeedToggle.Font = Enum.Font.SourceSans
     SpeedToggle.TextSize = 16
     SpeedToggle.Parent = tabContents["Exploits"]
+    print("Speed toggle created at Y: " .. yOffsetExploits)
 
     local SpeedBindSquare = Instance.new("TextButton")
     SpeedBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    SpeedBindSquare.Position = UDim2.new(0, 260, 0, 230)
+    SpeedBindSquare.Position = UDim2.new(0, 260, 0, yOffsetExploits)
     SpeedBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     SpeedBindSquare.Text = settings.keyBinds.Speed and settings.keyBinds.Speed.Name or "Bind"
     SpeedBindSquare.BackgroundTransparency = 0
@@ -1436,23 +1402,27 @@ local success, err = pcall(function()
     SpeedBindSquare.TextSize = 12
     SpeedBindSquare.Parent = tabContents["Exploits"]
 
+    yOffsetExploits = yOffsetExploits + 40
     local SpeedLabel = Instance.new("TextLabel")
     SpeedLabel.Size = UDim2.new(0, 280, 0, 30)
-    SpeedLabel.Position = UDim2.new(0, 10, 0, 270)
+    SpeedLabel.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     SpeedLabel.Text = "Speed Multiplier: " .. speedMultiplier
     SpeedLabel.BackgroundTransparency = 1
     SpeedLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
     SpeedLabel.Font = Enum.Font.SourceSans
     SpeedLabel.TextSize = 16
     SpeedLabel.Parent = tabContents["Exploits"]
+    print("Speed label created at Y: " .. yOffsetExploits)
 
+    yOffsetExploits = yOffsetExploits + 40
     local SpeedSlider = Instance.new("TextButton")
     SpeedSlider.Size = UDim2.new(0, 280, 0, 10)
-    SpeedSlider.Position = UDim2.new(0, 10, 0, 310)
+    SpeedSlider.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     SpeedSlider.Text = ""
     SpeedSlider.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
     SpeedSlider.BackgroundTransparency = 0
     SpeedSlider.Parent = tabContents["Exploits"]
+    print("Speed slider created at Y: " .. yOffsetExploits)
 
     local SpeedKnob = Instance.new("Frame")
     SpeedKnob.Size = UDim2.new(0, 20, 1, 0)
@@ -1462,19 +1432,21 @@ local success, err = pcall(function()
     SpeedKnob.BorderSizePixel = 0
     SpeedKnob.Parent = SpeedSlider
 
+    yOffsetExploits = yOffsetExploits + 40
     local SaveLastPositionToggle = Instance.new("TextButton")
     SaveLastPositionToggle.Size = UDim2.new(0, 240, 0, 30)
-    SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 340)
+    SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     SaveLastPositionToggle.Text = "☐ Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
     SaveLastPositionToggle.BackgroundTransparency = 1
     SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     SaveLastPositionToggle.Font = Enum.Font.SourceSans
     SaveLastPositionToggle.TextSize = 16
     SaveLastPositionToggle.Parent = tabContents["Exploits"]
+    print("SaveLastPosition toggle created at Y: " .. yOffsetExploits)
 
     local SaveLastPositionBindSquare = Instance.new("TextButton")
     SaveLastPositionBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    SaveLastPositionBindSquare.Position = UDim2.new(0, 260, 0, 340)
+    SaveLastPositionBindSquare.Position = UDim2.new(0, 260, 0, yOffsetExploits)
     SaveLastPositionBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     SaveLastPositionBindSquare.Text = settings.keyBinds.SaveLastPosition and settings.keyBinds.SaveLastPosition.Name or "Bind"
     SaveLastPositionBindSquare.BackgroundTransparency = 0
@@ -1483,9 +1455,10 @@ local success, err = pcall(function()
     SaveLastPositionBindSquare.TextSize = 12
     SaveLastPositionBindSquare.Parent = tabContents["Exploits"]
 
+    yOffsetExploits = yOffsetExploits + 40
     local TeleportToLastPositionButton = Instance.new("TextButton")
     TeleportToLastPositionButton.Size = UDim2.new(0, 280, 0, 30)
-    TeleportToLastPositionButton.Position = UDim2.new(0, 10, 0, 380)
+    TeleportToLastPositionButton.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     TeleportToLastPositionButton.Text = "Teleport to Last Position"
     TeleportToLastPositionButton.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
     TeleportToLastPositionButton.BackgroundTransparency = 0
@@ -1493,6 +1466,7 @@ local success, err = pcall(function()
     TeleportToLastPositionButton.Font = Enum.Font.SourceSans
     TeleportToLastPositionButton.TextSize = 16
     TeleportToLastPositionButton.Parent = tabContents["Exploits"]
+    print("TeleportToLastPosition button created at Y: " .. yOffsetExploits)
 
     local draggingFlySpeedSlider = false
     local draggingSpeedSlider = false
@@ -1727,29 +1701,33 @@ local success, err = pcall(function()
     -- Settings Tab Content
     local playerListEnabled = settings.playerListEnabled
 
+    local baseYSettings = 10
     local CategoryLabelSettings = Instance.new("TextLabel")
     CategoryLabelSettings.Size = UDim2.new(0, 280, 0, 30)
-    CategoryLabelSettings.Position = UDim2.new(0, 10, 0, 10)
+    CategoryLabelSettings.Position = UDim2.new(0, 10, 0, baseYSettings)
     CategoryLabelSettings.Text = "— Settings —"
     CategoryLabelSettings.TextColor3 = Color3.fromRGB(0, 200, 255)
     CategoryLabelSettings.BackgroundTransparency = 1
     CategoryLabelSettings.Font = Enum.Font.SourceSansBold
     CategoryLabelSettings.TextSize = 18
     CategoryLabelSettings.Parent = tabContents["Settings"]
+    print("Settings category label created at Y: " .. baseYSettings)
 
+    local yOffsetSettings = baseYSettings + 40
     local PlayerListToggle = Instance.new("TextButton")
     PlayerListToggle.Size = UDim2.new(0, 240, 0, 30)
-    PlayerListToggle.Position = UDim2.new(0, 10, 0, 50)
+    PlayerListToggle.Position = UDim2.new(0, 10, 0, yOffsetSettings)
     PlayerListToggle.Text = "☐ Player List: " .. (playerListEnabled and "ON" or "OFF")
     PlayerListToggle.BackgroundTransparency = 1
     PlayerListToggle.TextColor3 = playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     PlayerListToggle.Font = Enum.Font.SourceSans
     PlayerListToggle.TextSize = 16
     PlayerListToggle.Parent = tabContents["Settings"]
+    print("PlayerList toggle created at Y: " .. yOffsetSettings)
 
     local PlayerListBindSquare = Instance.new("TextButton")
     PlayerListBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    PlayerListBindSquare.Position = UDim2.new(0, 260, 0, 50)
+    PlayerListBindSquare.Position = UDim2.new(0, 260, 0, yOffsetSettings)
     PlayerListBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     PlayerListBindSquare.Text = settings.keyBinds.PlayerList and settings.keyBinds.PlayerList.Name or "Bind"
     PlayerListBindSquare.BackgroundTransparency = 0
@@ -1899,6 +1877,90 @@ local success, err = pcall(function()
     updatePlayerList()
     PlayersService.PlayerAdded:Connect(updatePlayerList)
     PlayersService.PlayerRemoving:Connect(updatePlayerList)
+
+    -- Key Binding Logic for Exploits and Settings
+    local function startBinding(bindSquare)
+        bindingFeature = bindSquare
+        bindSquare.Text = "Press Key"
+        bindSquare.TextColor3 = Color3.fromRGB(255, 255, 0)
+    end
+
+    FlyBindSquare.MouseButton1Click:Connect(function() startBinding(FlyBindSquare) end)
+    NoClipBindSquare.MouseButton1Click:Connect(function() startBinding(NoClipBindSquare) end)
+    InfiniteJumpBindSquare.MouseButton1Click:Connect(function() startBinding(InfiniteJumpBindSquare) end)
+    SpeedBindSquare.MouseButton1Click:Connect(function() startBinding(SpeedBindSquare) end)
+    SaveLastPositionBindSquare.MouseButton1Click:Connect(function() startBinding(SaveLastPositionBindSquare) end)
+    PlayerListBindSquare.MouseButton1Click:Connect(function() startBinding(PlayerListBindSquare) end)
+
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if bindingFeature and not gameProcessed then
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                local key = input.KeyCode
+                local feature = nil
+                if bindingFeature == FlyBindSquare then feature = "Fly"
+                elseif bindingFeature == NoClipBindSquare then feature = "NoClip"
+                elseif bindingFeature == InfiniteJumpBindSquare then feature = "InfiniteJump"
+                elseif bindingFeature == SpeedBindSquare then feature = "Speed"
+                elseif bindingFeature == SaveLastPositionBindSquare then feature = "SaveLastPosition"
+                elseif bindingFeature == PlayerListBindSquare then feature = "PlayerList"
+                end
+                if feature then
+                    settings.keyBinds[feature] = key
+                    bindingFeature.Text = key.Name
+                    bindingFeature.TextColor3 = Color3.fromRGB(0, 200, 255)
+                    saveSettings()
+                end
+                bindingFeature = nil
+            end
+        elseif not gameProcessed then
+            for feature, key in pairs(settings.keyBinds) do
+                if key and input.KeyCode == key then
+                    if feature == "Fly" then
+                        toggleFly()
+                    elseif feature == "NoClip" then
+                        toggleNoClip()
+                    elseif feature == "InfiniteJump" then
+                        toggleInfiniteJump()
+                    elseif feature == "Speed" then
+                        toggleSpeed()
+                    elseif feature == "SaveLastPosition" then
+                        saveLastPositionEnabled = not saveLastPositionEnabled
+                        SaveLastPositionToggle.Text = "☐ Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
+                        SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                        settings.saveLastPositionEnabled = saveLastPositionEnabled
+                        if saveLastPositionEnabled then
+                            local character = getCharacter()
+                            if character and character:FindFirstChild("HumanoidRootPart") then
+                                local rootPart = character.HumanoidRootPart
+                                lastPosition = rootPart.CFrame
+                                print("Last position saved: " .. tostring(lastPosition))
+                            else
+                                warn("No character or HumanoidRootPart found to save position.")
+                            end
+                        end
+                        saveSettings()
+                    elseif feature == "PlayerList" then
+                        playerListEnabled = not playerListEnabled
+                        PlayerListToggle.Text = "☐ Player List: " .. (playerListEnabled and "ON" or "OFF")
+                        PlayerListToggle.TextColor3 = playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                        PlayerListFrame.Visible = playerListEnabled
+                        settings.playerListEnabled = playerListEnabled
+                        saveSettings()
+                        if playerListEnabled then
+                            local slideIn = TweenService:Create(PlayerListFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, -210, 0, 10)})
+                            slideIn:Play()
+                            updatePlayerList()
+                        else
+                            local slideOut = TweenService:Create(PlayerListFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 0, 0, 10)})
+                            slideOut:Play()
+                            wait(0.3)
+                            PlayerListFrame.Visible = false
+                        end
+                    end
+                end
+            end
+        end
+    end)
 
     -- Initial tab activation
     tabContents["Aimbot"].Visible = true
