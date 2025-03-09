@@ -35,6 +35,8 @@ local settings = {
     speedEnabled = false,
     speedMultiplier = 1,
     tpAuraEnabled = false,
+    tpAuraDistance = 5, -- Default teleport distance (0 to 5 studs)
+    tpAuraPosition = "Random", -- Default teleport position
     saveLastPositionEnabled = false,
     playerListEnabled = false
 }
@@ -86,7 +88,7 @@ MainFrame.Parent = ScreenGui
 local CircuitBackground = Instance.new("ImageLabel")
 CircuitBackground.Size = UDim2.new(1, 0, 1, 0)
 CircuitBackground.BackgroundTransparency = 1
-CircuitBackground.Image = "rbxassetid://10758317539" -- Circuit pattern asset (replace with a suitable ID if needed)
+CircuitBackground.Image = "rbxassetid://10758317539" -- Circuit pattern asset
 CircuitBackground.ImageColor3 = Color3.fromRGB(0, 100, 255) -- Neon blue
 CircuitBackground.ImageTransparency = 0.7
 CircuitBackground.Parent = MainFrame
@@ -139,7 +141,7 @@ for i, tabName in ipairs(tabs) do
 
     local TabButton = Instance.new("TextButton")
     TabButton.Size = UDim2.new(0, tabWidth, 0, 40)
-    TabButton.Position = UDim2.new(0, xPos, 0, 80) -- Position below title
+    TabButton.Position = UDim2.new(0, xPos, 0, 80)
     TabButton.Text = tabName
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButton.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
@@ -152,7 +154,7 @@ for i, tabName in ipairs(tabs) do
 
     local Content = Instance.new("ScrollingFrame")
     Content.Size = UDim2.new(0, 300, 0, 400)
-    Content.Position = UDim2.new(0.5, -150, 0, 130) -- Adjusted to appear below tabs
+    Content.Position = UDim2.new(0.5, -150, 0, 130)
     Content.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
     Content.BackgroundTransparency = 0
     Content.BorderSizePixel = 0
@@ -296,6 +298,9 @@ UserInputService.InputBegan:Connect(function(input)
                         targetPlayer = nil
                         RunService:UnbindFromRenderStep("AimbotSnap")
                     end
+                else
+                    targetPlayer = nil
+                    RunService:UnbindFromRenderStep("AimbotSnap")
                 end
             end)
         end
@@ -320,9 +325,35 @@ LocalPlayer.CharacterAdded:Connect(function(char)
                     if targetPos.Magnitude < 10000 then
                         Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
                     end
+                else
+                    targetPlayer = nil
+                    RunService:UnbindFromRenderStep("AimbotSnap")
                 end
+            else
+                targetPlayer = nil
+                RunService:UnbindFromRenderStep("AimbotSnap")
             end
         end)
+    end
+    -- Reapply fly state on character respawn
+    if settings.flyEnabled then
+        wait(0.1)
+        toggleFly()
+    end
+    if settings.noClipEnabled then
+        wait(0.1)
+        toggleNoClip()
+        toggleNoClip()
+    end
+    if settings.speedEnabled then
+        wait(0.1)
+        toggleSpeed()
+        toggleSpeed()
+    end
+    if settings.tpAuraEnabled then
+        wait(0.1)
+        toggleTpAura()
+        toggleTpAura()
     end
 end)
 
@@ -466,7 +497,7 @@ local function DrawESP(plr)
                             local barWidth = 60
                             local barHeight = 10
                             local barX = headPos.X - (barWidth / 2)
-                            local barY = headPos.Y - 50 -- Fixed position above head
+                            local barY = headPos.Y - 50
 
                             local healthText = math.floor(healthPercent * 100) .. "%"
                             local textWidth = drawings.HealthText.TextBounds.X
@@ -674,6 +705,8 @@ local infiniteJumpEnabled = settings.infiniteJumpEnabled
 local speedEnabled = settings.speedEnabled
 local speedMultiplier = settings.speedMultiplier
 local tpAuraEnabled = settings.tpAuraEnabled
+local tpAuraDistance = settings.tpAuraDistance or 5
+local tpAuraPosition = settings.tpAuraPosition or "Random"
 local saveLastPositionEnabled = settings.saveLastPositionEnabled
 local lastPosition = nil
 
@@ -789,9 +822,94 @@ TpAuraToggle.Font = Enum.Font.SourceSans
 TpAuraToggle.TextSize = 16
 TpAuraToggle.Parent = tabContents["Exploits"]
 
+local TpAuraDistanceLabel = Instance.new("TextLabel")
+TpAuraDistanceLabel.Size = UDim2.new(0, 280, 0, 30)
+TpAuraDistanceLabel.Position = UDim2.new(0, 10, 0, 370)
+TpAuraDistanceLabel.Text = "TP Distance: " .. tpAuraDistance .. " studs"
+TpAuraDistanceLabel.BackgroundTransparency = 1
+TpAuraDistanceLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
+TpAuraDistanceLabel.Font = Enum.Font.SourceSans
+TpAuraDistanceLabel.TextSize = 16
+TpAuraDistanceLabel.Parent = tabContents["Exploits"]
+
+local TpAuraDistanceSlider = Instance.new("TextButton")
+TpAuraDistanceSlider.Size = UDim2.new(0, 280, 0, 10)
+TpAuraDistanceSlider.Position = UDim2.new(0, 10, 0, 410)
+TpAuraDistanceSlider.Text = ""
+TpAuraDistanceSlider.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
+TpAuraDistanceSlider.BackgroundTransparency = 0
+TpAuraDistanceSlider.Parent = tabContents["Exploits"]
+
+local TpAuraDistanceKnob = Instance.new("Frame")
+TpAuraDistanceKnob.Size = UDim2.new(0, 20, 1, 0)
+TpAuraDistanceKnob.Position = UDim2.new(tpAuraDistance / 5, 0, 0, 0)
+TpAuraDistanceKnob.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+TpAuraDistanceKnob.BackgroundTransparency = 0
+TpAuraDistanceKnob.BorderSizePixel = 0
+TpAuraDistanceKnob.Parent = TpAuraDistanceSlider
+
+local TpAuraPositionLabel = Instance.new("TextLabel")
+TpAuraPositionLabel.Size = UDim2.new(0, 280, 0, 30)
+TpAuraPositionLabel.Position = UDim2.new(0, 10, 0, 430)
+TpAuraPositionLabel.Text = "TP Position: " .. tpAuraPosition
+TpAuraPositionLabel.BackgroundTransparency = 1
+TpAuraPositionLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
+TpAuraPositionLabel.Font = Enum.Font.SourceSans
+TpAuraPositionLabel.TextSize = 16
+TpAuraPositionLabel.Parent = tabContents["Exploits"]
+
+local TpAuraPositionDropdown = Instance.new("TextButton")
+TpAuraPositionDropdown.Size = UDim2.new(0, 280, 0, 30)
+TpAuraPositionDropdown.Position = UDim2.new(0, 10, 0, 470)
+TpAuraPositionDropdown.Text = "▼ " .. tpAuraPosition
+TpAuraPositionDropdown.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
+TpAuraPositionDropdown.BackgroundTransparency = 0
+TpAuraPositionDropdown.TextColor3 = Color3.fromRGB(0, 200, 255)
+TpAuraPositionDropdown.Font = Enum.Font.SourceSans
+TpAuraPositionDropdown.TextSize = 16
+TpAuraPositionDropdown.BorderSizePixel = 0
+TpAuraPositionDropdown.Parent = tabContents["Exploits"]
+
+local dropdownOpen = false
+local dropdownOptions = {"Random", "Back", "Front", "Top", "Bottom"}
+local dropdownFrame = Instance.new("Frame")
+dropdownFrame.Size = UDim2.new(0, 280, 0, #dropdownOptions * 30)
+dropdownFrame.Position = UDim2.new(0, 10, 0, 500)
+dropdownFrame.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+dropdownFrame.BackgroundTransparency = 0
+dropdownFrame.Visible = false
+dropdownFrame.Parent = tabContents["Exploits"]
+
+for i, option in ipairs(dropdownOptions) do
+    local optionButton = Instance.new("TextButton")
+    optionButton.Size = UDim2.new(1, -10, 0, 30)
+    optionButton.Position = UDim2.new(0, 5, 0, (i - 1) * 30)
+    optionButton.Text = option
+    optionButton.BackgroundTransparency = 1
+    optionButton.TextColor3 = Color3.fromRGB(0, 200, 255)
+    optionButton.Font = Enum.Font.SourceSans
+    optionButton.TextSize = 16
+    optionButton.Parent = dropdownFrame
+
+    optionButton.MouseButton1Click:Connect(function()
+        tpAuraPosition = option
+        TpAuraPositionLabel.Text = "TP Position: " .. tpAuraPosition
+        TpAuraPositionDropdown.Text = "▼ " .. tpAuraPosition
+        settings.tpAuraPosition = tpAuraPosition
+        saveSettings()
+        dropdownFrame.Visible = false
+        dropdownOpen = false
+    end)
+end
+
+TpAuraPositionDropdown.MouseButton1Click:Connect(function()
+    dropdownOpen = not dropdownOpen
+    dropdownFrame.Visible = dropdownOpen
+end)
+
 local SaveLastPositionToggle = Instance.new("TextButton")
 SaveLastPositionToggle.Size = UDim2.new(0, 280, 0, 30)
-SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 370)
+SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 510 + (#dropdownOptions * 30))
 SaveLastPositionToggle.Text = "☐ Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
 SaveLastPositionToggle.BackgroundTransparency = 1
 SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
@@ -950,6 +1068,7 @@ end)
 -- Exploits Logic
 local draggingFlySlider = false
 local draggingSpeedSlider = false
+local draggingTpAuraDistanceSlider = false
 
 FlySpeedSlider.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -975,6 +1094,18 @@ SpeedSlider.InputEnded:Connect(function(input)
     end
 end)
 
+TpAuraDistanceSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingTpAuraDistanceSlider = true
+    end
+end)
+
+TpAuraDistanceSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingTpAuraDistanceSlider = false
+    end
+end)
+
 RunService.RenderStepped:Connect(function()
     local mouseX = UserInputService:GetMouseLocation().X
 
@@ -997,6 +1128,17 @@ RunService.RenderStepped:Connect(function()
         speedMultiplier = math.floor(1 + (speedNewPos * 9))
         SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
         settings.speedMultiplier = speedMultiplier
+        saveSettings()
+    end
+
+    if draggingTpAuraDistanceSlider then
+        local tpAuraSliderPos = TpAuraDistanceSlider.AbsolutePosition.X
+        local tpAuraSliderWidth = TpAuraDistanceSlider.AbsoluteSize.X
+        local tpAuraNewPos = math.clamp((mouseX - tpAuraSliderPos) / tpAuraSliderWidth, 0, 1)
+        TpAuraDistanceKnob.Position = UDim2.new(tpAuraNewPos, 0, 0, 0)
+        tpAuraDistance = math.floor(tpAuraNewPos * 5)
+        TpAuraDistanceLabel.Text = "TP Distance: " .. tpAuraDistance .. " studs"
+        settings.tpAuraDistance = tpAuraDistance
         saveSettings()
     end
 end)
@@ -1080,14 +1222,6 @@ end
 
 FlyToggle.MouseButton1Click:Connect(toggleFly)
 
-LocalPlayer.CharacterAdded:Connect(function(char)
-    if flyEnabled then
-        wait(0.1)
-        toggleFly()
-        toggleFly()
-    end
-end)
-
 function toggleNoClip()
     noClipEnabled = not noClipEnabled
     NoClipToggle.Text = "☐ NoClip: " .. (noClipEnabled and "ON" or "OFF")
@@ -1143,7 +1277,7 @@ function toggleSpeed()
     local humanoid = character:WaitForChild("Humanoid")
     
     if speedEnabled then
-        humanoid.WalkSpeed = 16 * speedMultiplier -- Default walkspeed is 16
+        humanoid.WalkSpeed = 16 * speedMultiplier
         spawn(function()
             while speedEnabled do
                 wait()
@@ -1151,7 +1285,7 @@ function toggleSpeed()
                     humanoid.WalkSpeed = 16 * speedMultiplier
                 end
             end
-            humanoid.WalkSpeed = 16 -- Reset to default when disabled
+            humanoid.WalkSpeed = 16
         end)
     else
         humanoid.WalkSpeed = 16
@@ -1176,9 +1310,32 @@ function toggleTpAura()
                 if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     local targetRoot = closestPlayer.Character.HumanoidRootPart
                     local success = false
-                    for i = 1, 8 do
-                        local angle = i * 45
-                        local newPos = targetRoot.Position + Vector3.new(math.cos(math.rad(angle)) * 3, 0, math.sin(math.rad(angle)) * 3)
+                    local angles = {0, 45, 90, 135, 180, 225, 270, 315}
+                    if tpAuraPosition == "Back" then
+                        angles = {180}
+                    elseif tpAuraPosition == "Front" then
+                        angles = {0}
+                    elseif tpAuraPosition == "Top" then
+                        angles = {}
+                        for i = 1, 8 do
+                            angles[i] = (i - 1) * 45
+                        end
+                    elseif tpAuraPosition == "Bottom" then
+                        angles = {}
+                        for i = 1, 8 do
+                            angles[i] = (i - 1) * 45 + 180
+                        end
+                    end
+
+                    for _, angle in ipairs(angles) do
+                        local newPos
+                        if tpAuraPosition == "Top" then
+                            newPos = targetRoot.Position + Vector3.new(0, tpAuraDistance, 0)
+                        elseif tpAuraPosition == "Bottom" then
+                            newPos = targetRoot.Position + Vector3.new(0, -tpAuraDistance, 0)
+                        else
+                            newPos = targetRoot.Position + Vector3.new(math.cos(math.rad(angle)) * tpAuraDistance, 0, math.sin(math.rad(angle)) * tpAuraDistance)
+                        end
                         local ray = Ray.new(rootPart.Position, (newPos - rootPart.Position).Unit * 100)
                         local raycastResult = workspace:Raycast(ray.Origin, ray.Direction)
                         if not raycastResult then
@@ -1232,24 +1389,6 @@ SaveLastPositionToggle.MouseButton1Click:Connect(function()
     end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function(char)
-    if noClipEnabled then
-        wait(0.1)
-        toggleNoClip()
-        toggleNoClip()
-    end
-    if speedEnabled then
-        wait(0.1)
-        toggleSpeed()
-        toggleSpeed()
-    end
-    if tpAuraEnabled then
-        wait(0.1)
-        toggleTpAura()
-        toggleTpAura()
-    end
-end)
-
 -- Dragging Functionality
 local dragging = false
 local dragInput, dragStart, startPos
@@ -1259,8 +1398,7 @@ MainFrame.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos = MainFrame.Position
-        -- Bring the frame to the front when dragged
-        MainFrame.Parent = ScreenGui -- Re-parenting ensures it stays on top
+        MainFrame.Parent = ScreenGui
     end
 end)
 
@@ -1296,7 +1434,7 @@ local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection
 local function toggleGui()
     guiOpen = not guiOpen
     if guiOpen then
-        MainFrame.Position = UDim2.new(0.5, -300, 1, 0) -- Start off-screen
+        MainFrame.Position = UDim2.new(0.5, -300, 1, 0)
         MainFrame.BackgroundTransparency = 1
         MainFrame.Visible = true
         local slideIn = TweenService:Create(MainFrame, tweenInfo, {Position = UDim2.new(0.5, -300, 0.5, -300), BackgroundTransparency = 0})
