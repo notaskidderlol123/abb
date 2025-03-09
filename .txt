@@ -3,7 +3,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 local PlayersService = game:GetService("Players")
-local DataStoreService = game:GetService("DataStoreService")
 
 -- Safely get LocalPlayer with a wait loop
 local LocalPlayer
@@ -12,13 +11,8 @@ while not PlayersService.LocalPlayer do
 end
 LocalPlayer = PlayersService.LocalPlayer
 
--- DataStore for saving settings
-local ConfigStore = DataStoreService:GetDataStore("NettlewareConfig")
-
--- Function to get character safely
-local function getCharacter()
-    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-end
+-- File-based config (assuming executor supports writefile/readfile)
+local configFile = "NettlewareConfig.json"
 
 -- Default settings
 local settings = {
@@ -45,27 +39,33 @@ local settings = {
     playerListEnabled = false
 }
 
--- Load settings from DataStore
+-- Load settings from file
 local function loadSettings()
-    local success, loadedSettings = pcall(function()
-        return ConfigStore:GetAsync("Player_" .. LocalPlayer.UserId)
-    end)
-    if success and loadedSettings then
-        for key, value in pairs(loadedSettings) do
-            settings[key] = value
+    if pcall(function() return readfile(configFile) end) then
+        local success, data = pcall(function() return game:GetService("HttpService"):JSONDecode(readfile(configFile)) end)
+        if success and data then
+            for key, value in pairs(data) do
+                settings[key] = value
+            end
         end
     end
 end
 
--- Save settings to DataStore
+-- Save settings to file
 local function saveSettings()
-    pcall(function()
-        ConfigStore:SetAsync("Player_" .. LocalPlayer.UserId, settings)
-    end)
+    local success, encoded = pcall(function() return game:GetService("HttpService"):JSONEncode(settings) end)
+    if success then
+        pcall(function() writefile(configFile, encoded) end)
+    end
 end
 
 -- Load settings on join
 loadSettings()
+
+-- Function to get character safely
+local function getCharacter()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
 
 -- GUI Setup with Custom Design
 local ScreenGui = Instance.new("ScreenGui")
@@ -471,7 +471,7 @@ local function DrawESP(plr)
                             local healthText = math.floor(healthPercent * 100) .. "%"
                             local textWidth = drawings.HealthText.TextBounds.X
                             drawings.HealthText.Text = healthText
-                            drawings.HealthText.Position = Vector2.new(headPos.X - (textWidth / 2), headPos.Y - 70)
+                            drawings.HealthText.Position = Vector2.new(barX + (barWidth / 2) - (textWidth / 2), barY - 20)
                             drawings.HealthText.Visible = true
 
                             drawings.HealthBar.Position = Vector2.new(barX, barY)
