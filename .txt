@@ -24,7 +24,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 600, 0, 600) -- Larger for radial design
+MainFrame.Size = UDim2.new(0, 600, 0, 600)
 MainFrame.Position = UDim2.new(0.5, -300, 1, 0) -- Start off-screen
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30) -- Dark base
 MainFrame.BackgroundTransparency = 0
@@ -72,32 +72,23 @@ TitleLabel.TextStrokeTransparency = 0
 TitleLabel.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
 TitleLabel.Parent = MainFrame
 
--- Central Hub
-local Hub = Instance.new("Frame")
-Hub.Size = UDim2.new(0, 100, 0, 100)
-Hub.Position = UDim2.new(0.5, -50, 0.5, -50)
-Hub.BackgroundColor3 = Color3.fromRGB(0, 50, 100)
-Hub.BorderSizePixel = 0
-Hub.Parent = MainFrame
-local HubGlow = Instance.new("UIGradient")
-HubGlow.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 100, 255))}
-HubGlow.Parent = Hub
-
--- Tab Buttons (Radial Layout)
+-- Tab Buttons (Horizontal Layout under Title)
 local tabs = {"Aimbot", "Visuals", "Exploits"}
 local currentTab = nil
 local tabContents = {}
-local tabAngles = {0, 120, 240} -- Degrees for radial placement
+
+-- Spacing for tabs
+local tabWidth = 100
+local tabSpacing = 20
+local totalTabsWidth = (#tabs * tabWidth) + ((#tabs - 1) * tabSpacing)
+local startX = (600 - totalTabsWidth) / 2 -- Center the tabs
 
 for i, tabName in ipairs(tabs) do
-    local angleRad = math.rad(tabAngles[i])
-    local radius = 150
-    local x = 300 + math.cos(angleRad) * radius
-    local y = 300 + math.sin(angleRad) * radius
+    local xPos = startX + ((i - 1) * (tabWidth + tabSpacing))
 
     local TabButton = Instance.new("TextButton")
-    TabButton.Size = UDim2.new(0, 100, 0, 40)
-    TabButton.Position = UDim2.new(0, x - 50, 0, y - 20)
+    TabButton.Size = UDim2.new(0, tabWidth, 0, 40)
+    TabButton.Position = UDim2.new(0, xPos, 0, 80) -- Position below title
     TabButton.Text = tabName
     TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButton.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
@@ -110,7 +101,7 @@ for i, tabName in ipairs(tabs) do
 
     local Content = Instance.new("ScrollingFrame")
     Content.Size = UDim2.new(0, 300, 0, 400)
-    Content.Position = UDim2.new(0.5, -150, 0.5, -200)
+    Content.Position = UDim2.new(0.5, -150, 0, 130) -- Adjusted to appear below tabs
     Content.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
     Content.BackgroundTransparency = 0
     Content.BorderSizePixel = 0
@@ -134,7 +125,7 @@ for i, tabName in ipairs(tabs) do
             local newContent = tabContents[tabName]
             newContent.Position = UDim2.new(0.5, -150, 1, 0)
             newContent.Visible = true
-            local slideIn = TweenService:Create(newContent, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -150, 0.5, -200)})
+            local slideIn = TweenService:Create(newContent, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -150, 0, 130)})
             slideIn:Play()
         end
     end)
@@ -1223,6 +1214,14 @@ end)
 -- Initial animation on injection
 local openTween = TweenService:Create(MainFrame, tweenInfo, {Position = UDim2.new(0.5, -300, 0.5, -300)})
 openTween:Play()
+
+-- Set initial tab
+if tabContents["Aimbot"] then
+    currentTab = "Aimbot"
+    tabContents["Aimbot"].Visible = true
+    local slideIn = TweenService:Create(tabContents["Aimbot"], TweenInfo.new(0.3), {Position = UDim2.new(0.5, -150, 0, 130)})
+    slideIn:Play()
+end
 
 -- Cleanup on script end
 ScreenGui.Destroying:Connect(function()
