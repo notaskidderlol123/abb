@@ -1259,6 +1259,8 @@ MainFrame.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos = MainFrame.Position
+        -- Bring the frame to the front when dragged
+        MainFrame.Parent = ScreenGui -- Re-parenting ensures it stays on top
     end
 end)
 
