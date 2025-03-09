@@ -1,4 +1,9 @@
-local function initializeScript()
+-- Debug flag to confirm script execution
+print("Nettleware script starting...")
+
+-- Ensure the script runs in a safe environment
+local success, err = pcall(function()
+    -- Core Services
     local UserInputService = game:GetService("UserInputService")
     local RunService = game:GetService("RunService")
     local TweenService = game:GetService("TweenService")
@@ -49,28 +54,67 @@ local function initializeScript()
         playerListEnabled = false
     }
 
+    -- Fallback for JSON encoding/decoding if HttpService is unavailable
+    local function simpleEncode(tbl)
+        local str = "{"
+        for k, v in pairs(tbl) do
+            if type(v) == "table" then
+                str = str .. k .. "=" .. simpleEncode(v) .. ","
+            else
+                str = str .. k .. "=" .. tostring(v) .. ","
+            end
+        end
+        return str .. "}"
+    end
+
+    local function simpleDecode(str)
+        return settings -- Fallback to default settings if decoding fails
+    end
+
+    -- Check if HttpService is available
+    local useHttpService = pcall(function() return HttpService:JSONEncode({}) end)
+
     -- Load settings from file with error handling
     local function loadSettings()
-        if pcall(function() return readfile(configFile) end) then
-            local success, data = pcall(function() return HttpService:JSONDecode(readfile(configFile)) end)
+        if not pcall(function() return readfile(configFile) end) then
+            print("No config file found, using default settings.")
+            return
+        end
+        local fileContent = readfile(configFile)
+        if useHttpService then
+            local success, data = pcall(function() return HttpService:JSONDecode(fileContent) end)
             if success and data then
                 for key, value in pairs(data) do
                     settings[key] = value
                 end
+                print("Settings loaded successfully via HttpService.")
+            else
+                warn("Failed to decode JSON: " .. tostring(data))
             end
+        else
+            settings = simpleDecode(fileContent)
+            print("Settings loaded using fallback method (HttpService unavailable).")
         end
     end
 
     -- Save settings to file with error handling
     local function saveSettings()
-        local success, encoded = pcall(function() return HttpService:JSONEncode(settings) end)
-        if success then
-            local writeSuccess = pcall(function() writefile(configFile, encoded) end)
-            if not writeSuccess then
-                warn("Failed to write to " .. configFile .. ". Check permissions or executor compatibility.")
+        local encoded
+        if useHttpService then
+            local success, result = pcall(function() return HttpService:JSONEncode(settings) end)
+            if not success then
+                warn("Failed to encode settings to JSON: " .. tostring(result))
+                return
             end
+            encoded = result
         else
-            warn("Failed to encode settings to JSON.")
+            encoded = simpleEncode(settings)
+        end
+        local writeSuccess = pcall(function() writefile(configFile, encoded) end)
+        if not writeSuccess then
+            warn("Failed to write to " .. configFile .. ". Check permissions or executor compatibility.")
+        else
+            print("Settings saved successfully.")
         end
     end
 
@@ -592,27 +636,6 @@ local function initializeScript()
                     RunService:UnbindFromRenderStep("AimbotSnap")
                 end
             end)
-        end
-        if settings.flyEnabled then
-            wait(0.1)
-            if not flyEnabled then
-                toggleFly()
-            end
-        end
-        if settings.noClipEnabled then
-            wait(0.1)
-            toggleNoClip()
-            toggleNoClip()
-        end
-        if settings.speedEnabled then
-            wait(0.1)
-            toggleSpeed()
-            toggleSpeed()
-        end
-        if settings.tpAuraEnabled then
-            wait(0.1)
-            toggleTpAura()
-            toggleTpAura()
         end
     end)
 
@@ -1265,7 +1288,7 @@ local function initializeScript()
     SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
     -- Fly Toggle Logic
-    function toggleFly()
+    local function toggleFly()
         flyEnabled = not flyEnabled
         FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
         FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
@@ -1352,7 +1375,7 @@ local function initializeScript()
     end)
 
     -- NoClip Toggle Logic
-    function toggleNoClip()
+    local function toggleNoClip()
         noClipEnabled = not noClipEnabled
         NoClipToggle.Text = "☐ NoClip: " .. (noClipEnabled and "ON" or "OFF")
         NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
@@ -1384,7 +1407,7 @@ local function initializeScript()
     NoClipToggle.MouseButton1Click:Connect(toggleNoClip)
 
     -- Infinite Jump Toggle Logic
-    function toggleInfiniteJump()
+    local function toggleInfiniteJump()
         infiniteJumpEnabled = not infiniteJumpEnabled
         InfiniteJumpToggle.Text = "☐ Inf Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
         InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
@@ -1405,7 +1428,7 @@ local function initializeScript()
     end)
 
     -- Speed Toggle Logic
-    function toggleSpeed()
+    local function toggleSpeed()
         speedEnabled = not speedEnabled
         SpeedToggle.Text = "☐ Speed: " .. (speedEnabled and "ON" or "OFF")
         SpeedToggle.TextColor3 = speedEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
@@ -1439,10 +1462,10 @@ local function initializeScript()
         local mouseX = UserInputService:GetMouseLocation().X
         if draggingSpeedSlider then
             local speedSliderPos = SpeedSlider.AbsolutePosition.X
-            local speedSliderWidth = SpeedSlider.AbsoluteSize.X
+            local speedSliderWidth =             SpeedSlider.AbsoluteSize.X
             local speedNewPos = math.clamp((mouseX - speedSliderPos) / speedSliderWidth, 0, 1)
             SpeedKnob.Position = UDim2.new(speedNewPos, 0, 0, 0)
-            speedMultiplier = math.round(1 + (speedNewPos * 9), 1)
+            speedMultiplier = math.floor(1 + (speedNewPos * 9))
             SpeedLabel.Text = "Speed: " .. speedMultiplier .. "x"
             if speedEnabled then
                 local character = getCharacter()
@@ -1456,8 +1479,9 @@ local function initializeScript()
         end
     end)
 
-        -- TP Aura Toggle Logic (continued)
-    function toggleTpAura()
+    -- TP Aura Toggle Logic
+    local tpConnection
+    local function toggleTpAura()
         tpAuraEnabled = not tpAuraEnabled
         TpAuraToggle.Text = "☐ TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
         TpAuraToggle.TextColor3 = tpAuraEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
@@ -1466,9 +1490,16 @@ local function initializeScript()
 
         if tpAuraEnabled then
             local character = getCharacter()
-            local rootPart = character:WaitForChild("HumanoidRootPart")
-            local tpConnection = RunService.RenderStepped:Connect(function()
-                if tpAuraEnabled and character and rootPart then
+            if character then
+                local rootPart = character:WaitForChild("HumanoidRootPart")
+                tpConnection = RunService.RenderStepped:Connect(function()
+                    if not tpAuraEnabled or not character or not rootPart.Parent then
+                        if tpConnection then
+                            tpConnection:Disconnect()
+                        end
+                        return
+                    end
+
                     for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
                         if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
                             local targetRoot = otherPlayer.Character.HumanoidRootPart
@@ -1495,15 +1526,12 @@ local function initializeScript()
                             end
                         end
                     end
-                else
-                    if tpConnection then
-                        tpConnection:Disconnect()
-                    end
-                end
-            end)
+                end)
+            end
         else
             if tpConnection then
                 tpConnection:Disconnect()
+                tpConnection = nil
             end
         end
     end
@@ -1548,8 +1576,10 @@ local function initializeScript()
 
         if saveLastPositionEnabled then
             local character = getCharacter()
-            local rootPart = character:WaitForChild("HumanoidRootPart")
-            lastPosition = rootPart.CFrame
+            if character then
+                local rootPart = character:WaitForChild("HumanoidRootPart")
+                lastPosition = rootPart.CFrame
+            end
         end
     end)
 
@@ -1600,13 +1630,17 @@ local function initializeScript()
     end)
 
     local function updatePlayerList()
-        PlayerListFrame:ClearAllChildren()
+        for _, child in pairs(PlayerListFrame:GetChildren()) do
+            if child:IsA("TextLabel") then
+                child:Destroy()
+            end
+        end
         for _, player in pairs(PlayersService:GetPlayers()) do
             local playerLabel = Instance.new("TextLabel")
             playerLabel.Size = UDim2.new(1, -10, 0, 20)
             playerLabel.BackgroundTransparency = 1
             playerLabel.Text = player.Name .. (player == LocalPlayer and " (You)" or "")
-            playerLabel.TextColor3 = player.TeamColor.Color or Color3.fromRGB(0, 200, 255)
+            playerLabel.TextColor3 = player.TeamColor and player.TeamColor.Color or Color3.fromRGB(0, 200, 255)
             playerLabel.Font = Enum.Font.SourceSans
             playerLabel.TextSize = 14
             playerLabel.Parent = PlayerListFrame
@@ -1620,7 +1654,10 @@ local function initializeScript()
     -- Initial tab activation
     tabContents["Aimbot"].Visible = true
     currentTab = "Aimbot"
-end
+end)
 
--- Call the function to initialize the script
-initializeScript()
+if not success then
+    warn("Script execution failed: " .. err)
+else
+    print("Nettleware script loaded successfully!")
+end
