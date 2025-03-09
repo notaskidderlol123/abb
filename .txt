@@ -47,7 +47,6 @@ local success, err = pcall(function()
         playerListEnabled = false
     }
 
-    -- Fallback for JSON encoding/decoding if HttpService is unavailable
     local function simpleEncode(tbl)
         local str = "{"
         for k, v in pairs(tbl) do
@@ -61,7 +60,7 @@ local success, err = pcall(function()
     end
 
     local function simpleDecode(str)
-        return settings -- Fallback to default settings if decoding fails
+        return settings
     end
 
     local useHttpService = pcall(function() return HttpService:JSONEncode({}) end)
@@ -114,13 +113,12 @@ local success, err = pcall(function()
         return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     end
 
-    -- GUI Setup
+    -- Main GUI Setup
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "NettlewareGUI"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.IgnoreGuiInset = true
 
-    -- Fallback to PlayerGui if CoreGui fails
     local successCoreGui, errCoreGui = pcall(function()
         ScreenGui.Parent = game:GetService("CoreGui")
     end)
@@ -134,7 +132,7 @@ local success, err = pcall(function()
     MainFrame.Size = UDim2.new(0, 600, 0, 600)
     MainFrame.Position = UDim2.new(0.5, -300, 0.5, -300)
     MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
-    MainFrame.BackgroundTransparency = 0
+    MainFrame.BackgroundTransparency = 1 -- Start invisible for fade animation
     MainFrame.BorderSizePixel = 0
     MainFrame.Parent = ScreenGui
     print("MainFrame created and parented to ScreenGui.")
@@ -151,7 +149,6 @@ local success, err = pcall(function()
             dragging = true
             dragStart = input.Position
             startPos = MainFrame.Position
-
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -172,12 +169,19 @@ local success, err = pcall(function()
         end
     end)
 
-    -- Bind GUI to 'Q'
+    -- GUI Toggle with Fade Animation
     local guiVisible = true
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if not gameProcessed and input.KeyCode == Enum.KeyCode.Q then
             guiVisible = not guiVisible
-            MainFrame.Visible = guiVisible
+            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad)
+            if guiVisible then
+                local tween = TweenService:Create(MainFrame, tweenInfo, {BackgroundTransparency = 0})
+                tween:Play()
+            else
+                local tween = TweenService:Create(MainFrame, tweenInfo, {BackgroundTransparency = 1})
+                tween:Play()
+            end
             print("GUI visibility toggled to: " .. tostring(guiVisible))
         end
     end)
@@ -266,7 +270,7 @@ local success, err = pcall(function()
                 currentTab = tabName
                 for name, content in pairs(tabContents) do
                     if content.Visible then
-                        local slideOut = TweenService:Create(content, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -150, 1, 0)})
+                        local slideOut = TweenService:Create(content, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -150, 1, 0)})
                         slideOut:Play()
                         wait(0.3)
                         content.Visible = false
@@ -275,7 +279,7 @@ local success, err = pcall(function()
                 local newContent = tabContents[tabName]
                 newContent.Position = UDim2.new(0.5, -150, 1, 0)
                 newContent.Visible = true
-                local slideIn = TweenService:Create(newContent, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -150, 0, 130)})
+                local slideIn = TweenService:Create(newContent, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -150, 0, 130)})
                 slideIn:Play()
             end
         end)
@@ -416,7 +420,7 @@ local success, err = pcall(function()
     fovCircle.Filled = false
     fovCircle.Visible = aimbotFovEnabled
 
-    -- Aimbot Logic
+    -- Aimbot Logic with Continuous Locking
     local function isPlayerInFov(player)
         if not aimbotFovEnabled then
             return true
@@ -563,77 +567,25 @@ local success, err = pcall(function()
         end
 
         fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    end)
 
-    UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        -- Continuous Aimbot Locking
+        if aimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             targetPlayer = getNearestPlayer()
-            
-            if aimbotEnabled and targetPlayer then
-                local lastCFrame = Camera.CFrame
-                RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function(deltaTime)
-                    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                        local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-                        if humanoid and (not deadCheck or humanoid.Health > 0) and isPlayerInFov(targetPlayer) then
-                            local targetPos = targetPlayer.Character.Head.Position
-                            if targetPos.Magnitude < 10000 then
-                                local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                                if aimbotSmoothnessEnabled then
-                                    local alpha = math.clamp(1 - aimbotSmoothness, 0.01, 1) * deltaTime * 60
-                                    Camera.CFrame = lastCFrame:Lerp(targetCFrame, alpha)
-                                else
-                                    Camera.CFrame = targetCFrame
-                                end
-                                lastCFrame = Camera.CFrame
-                            end
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid and (not deadCheck or humanoid.Health > 0) and isPlayerInFov(targetPlayer) then
+                    local targetPos = targetPlayer.Character.Head.Position
+                    if targetPos.Magnitude < 10000 then
+                        local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                        if aimbotSmoothnessEnabled then
+                            local alpha = math.clamp(1 - aimbotSmoothness, 0.01, 1) * RunService.RenderStepped:Wait() * 60
+                            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, alpha)
                         else
-                            targetPlayer = nil
-                            RunService:UnbindFromRenderStep("AimbotSnap")
+                            Camera.CFrame = targetCFrame
                         end
-                    else
-                        targetPlayer = nil
-                        RunService:UnbindFromRenderStep("AimbotSnap")
                     end
-                end)
-            end
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton2 then
-            RunService:UnbindFromRenderStep("AimbotSnap")
-            targetPlayer = nil
-        end
-    end)
-
-    LocalPlayer.CharacterAdded:Connect(function(char)
-        if aimbotEnabled and targetPlayer then
-            local rootPart = char:WaitForChild("HumanoidRootPart")
-            local lastCFrame = Camera.CFrame
-            RunService:BindToRenderStep("AimbotSnap", Enum.RenderPriority.Camera.Value + 1, function(deltaTime)
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-                    local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-                    if humanoid and (not deadCheck or humanoid.Health > 0) and isPlayerInFov(targetPlayer) then
-                        local targetPos = targetPlayer.Character.Head.Position
-                        if targetPos.Magnitude < 10000 then
-                            local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-                            if aimbotSmoothnessEnabled then
-                                local alpha = math.clamp(1 - aimbotSmoothness, 0.01, 1) * deltaTime * 60
-                                Camera.CFrame = lastCFrame:Lerp(targetCFrame, alpha)
-                            else
-                                Camera.CFrame = targetCFrame
-                            end
-                            lastCFrame = Camera.CFrame
-                        end
-                    else
-                        targetPlayer = nil
-                        RunService:UnbindFromRenderStep("AimbotSnap")
-                    end
-                else
-                    targetPlayer = nil
-                    RunService:UnbindFromRenderStep("AimbotSnap")
                 end
-            end)
+            end
         end
     end)
 
@@ -1265,20 +1217,17 @@ local success, err = pcall(function()
             saveSettings()
             dropdownFrame.Visible = false
             dropdownOpen = false
-            SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 510)
         end)
     end
 
     TpAuraPositionDropdown.MouseButton1Click:Connect(function()
         dropdownOpen = not dropdownOpen
         dropdownFrame.Visible = dropdownOpen
-        SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, dropdownOpen and 510 + (#dropdownOptions * 30) or 510)
-        TpToLastPositionButton.Position = UDim2.new(0, 10, 0, dropdownOpen and 550 + (#dropdownOptions * 30) or 550)
     end)
 
     local SaveLastPositionToggle = Instance.new("TextButton")
     SaveLastPositionToggle.Size = UDim2.new(0, 280, 0, 30)
-    SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 510)
+    SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, 530 + (#dropdownOptions * 30)) -- Moved down
     SaveLastPositionToggle.Text = "☐ Save Pos: " .. (saveLastPositionEnabled and "ON" or "OFF")
     SaveLastPositionToggle.BackgroundTransparency = 1
     SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
@@ -1286,19 +1235,8 @@ local success, err = pcall(function()
     SaveLastPositionToggle.TextSize = 16
     SaveLastPositionToggle.Parent = tabContents["Exploits"]
 
-    local TpToLastPositionButton = Instance.new("TextButton")
-    TpToLastPositionButton.Size = UDim2.new(0, 280, 0, 30)
-    TpToLastPositionButton.Position = UDim2.new(0, 10, 0, 550)
-    TpToLastPositionButton.Text = "Teleport to Last Pos"
-    TpToLastPositionButton.BackgroundColor3 = Color3.fromRGB(0, 70, 140)
-    TpToLastPositionButton.BackgroundTransparency = 0
-    TpToLastPositionButton.TextColor3 = Color3.fromRGB(0, 200, 255)
-    TpToLastPositionButton.Font = Enum.Font.SourceSans
-    TpToLastPositionButton.TextSize = 16
-    TpToLastPositionButton.BorderSizePixel = 0
-    TpToLastPositionButton.Parent = tabContents["Exploits"]
-
     -- Fly Toggle Logic
+    local flyConnection
     local function toggleFly()
         flyEnabled = not flyEnabled
         FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
@@ -1320,8 +1258,8 @@ local success, err = pcall(function()
                 bodyGyro.P = 10000
                 bodyGyro.Parent = rootPart
 
-                RunService:BindToRenderStep("FlyControl", Enum.RenderPriority.Last.Value, function()
-                    if flyEnabled then
+                flyConnection = RunService.RenderStepped:Connect(function()
+                    if flyEnabled and character and character:FindFirstChild("HumanoidRootPart") then
                         local moveDirection = Vector3.new()
                         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
@@ -1332,18 +1270,24 @@ local success, err = pcall(function()
                         bodyVelocity.Velocity = moveDirection.Unit * flySpeed
                         bodyGyro.CFrame = Camera.CFrame
                     else
+                        if flyConnection then
+                            flyConnection:Disconnect()
+                            flyConnection = nil
+                        end
                         bodyVelocity:Destroy()
                         bodyGyro:Destroy()
-                        RunService:UnbindFromRenderStep("FlyControl")
                     end
                 end)
             else
+                if flyConnection then
+                    flyConnection:Disconnect()
+                    flyConnection = nil
+                end
                 for _, v in pairs(rootPart:GetChildren()) do
                     if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then
                         v:Destroy()
                     end
                 end
-                RunService:UnbindFromRenderStep("FlyControl")
             end
         end
     end
@@ -1432,7 +1376,7 @@ local success, err = pcall(function()
         if infiniteJumpEnabled then
             local character = getCharacter()
             local humanoid = character:FindFirstChildOfClass("Humanoid")
-                       if humanoid then
+            if humanoid then
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end
@@ -1489,13 +1433,14 @@ local success, err = pcall(function()
                     humanoid.WalkSpeed = 16 * speedMultiplier
                 end
             end
-            settings.speedMultiplier = speedMultiplier
-            saveSettings()
+            settings.speedMultiplier = speed             saveSettings()
         end
     end)
 
-    -- TP Aura Toggle Logic
+    -- TP Aura Toggle Logic (Fixed)
     local tpConnection
+    local lastTeleport = 0
+    local teleportCooldown = 0.1 -- Prevent rapid teleport spam
     local function toggleTpAura()
         tpAuraEnabled = not tpAuraEnabled
         TpAuraToggle.Text = "☐ TP Aura: " .. (tpAuraEnabled and "ON" or "OFF")
@@ -1505,43 +1450,57 @@ local success, err = pcall(function()
 
         if tpAuraEnabled then
             local character = getCharacter()
-            if character then
-                local rootPart = character:WaitForChild("HumanoidRootPart")
-                tpConnection = RunService.RenderStepped:Connect(function()
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local rootPart = character.HumanoidRootPart
+                tpConnection = RunService.Heartbeat:Connect(function()
                     if not tpAuraEnabled or not character or not rootPart.Parent then
                         if tpConnection then
                             tpConnection:Disconnect()
+                            tpConnection = nil
                         end
+                        return
+                    end
+
+                    local currentTime = tick()
+                    if currentTime - lastTeleport < teleportCooldown then
                         return
                     end
 
                     for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
                         if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
                             local targetRoot = otherPlayer.Character.HumanoidRootPart
-                            local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                            if distance <= tpAuraDistance then
-                                local targetPosition = targetRoot.Position
-                                if tpAuraPosition == "Random" then
-                                    local offset = Vector3.new(
-                                        math.random(-tpAuraDistance, tpAuraDistance),
-                                        math.random(-tpAuraDistance, tpAuraDistance),
-                                        math.random(-tpAuraDistance, tpAuraDistance)
-                                    )
-                                    targetPosition = targetPosition + offset
-                                elseif tpAuraPosition == "Back" then
-                                    targetPosition = targetPosition - (targetRoot.CFrame.LookVector * tpAuraDistance)
-                                elseif tpAuraPosition == "Front" then
-                                    targetPosition = targetPosition + (targetRoot.CFrame.LookVector * tpAuraDistance)
-                                elseif tpAuraPosition == "Top" then
-                                    targetPosition = targetPosition + Vector3.new(0, tpAuraDistance, 0)
-                                elseif tpAuraPosition == "Bottom" then
-                                    targetPosition = targetPosition - Vector3.new(0, tpAuraDistance, 0)
+                            local humanoid = otherPlayer.Character:FindFirstChildOfClass("Humanoid")
+                            if humanoid and humanoid.Health > 0 then
+                                local distance = (rootPart.Position - targetRoot.Position).Magnitude
+                                if distance <= tpAuraDistance then
+                                    local targetPosition = targetRoot.Position
+                                    if tpAuraPosition == "Random" then
+                                        local offset = Vector3.new(
+                                            math.random(-tpAuraDistance, tpAuraDistance),
+                                            math.random(-tpAuraDistance, tpAuraDistance),
+                                            math.random(-tpAuraDistance, tpAuraDistance)
+                                        )
+                                        targetPosition = targetPosition + offset
+                                    elseif tpAuraPosition == "Back" then
+                                        targetPosition = targetPosition - (targetRoot.CFrame.LookVector * tpAuraDistance)
+                                    elseif tpAuraPosition == "Front" then
+                                        targetPosition = targetPosition + (targetRoot.CFrame.LookVector * tpAuraDistance)
+                                    elseif tpAuraPosition == "Top" then
+                                        targetPosition = targetPosition + Vector3.new(0, tpAuraDistance, 0)
+                                    elseif tpAuraPosition == "Bottom" then
+                                        targetPosition = targetPosition - Vector3.new(0, tpAuraDistance, 0)
+                                    end
+                                    rootPart.CFrame = CFrame.new(targetPosition)
+                                    lastTeleport = currentTime
+                                    print("Teleported to " .. otherPlayer.Name .. " at position: " .. tostring(targetPosition)) -- Debug print
+                                    break -- Teleport to one player per frame
                                 end
-                                rootPart.CFrame = CFrame.new(targetPosition)
                             end
                         end
                     end
                 end)
+            else
+                warn("No character or HumanoidRootPart found for TP Aura.")
             end
         else
             if tpConnection then
@@ -1591,31 +1550,17 @@ local success, err = pcall(function()
 
         if saveLastPositionEnabled then
             local character = getCharacter()
-            if character then
-                local rootPart = character:WaitForChild("HumanoidRootPart")
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local rootPart = character.HumanoidRootPart
                 lastPosition = rootPart.CFrame
-                print("Last position saved: ", lastPosition) -- Debug print
-            end
-        end
-    end)
-
-    -- Teleport to Last Position Logic
-    TpToLastPositionButton.MouseButton1Click:Connect(function()
-        if lastPosition and saveLastPositionEnabled then
-            local character = getCharacter()
-            if character then
-                local rootPart = character:WaitForChild("HumanoidRootPart")
-                rootPart.CFrame = lastPosition
-                print("Teleported to last position: ", lastPosition) -- Debug print
+                print("Last position saved: " .. tostring(lastPosition)) -- Debug print
             else
-                warn("No character found to teleport.")
+                warn("No character or HumanoidRootPart found to save position.")
             end
-        else
-            warn("No last position saved or Save Last Position is disabled.")
         end
     end)
 
-    -- Settings Tab Content
+    -- Settings Tab Content with Separate Player List GUI
     local playerListEnabled = settings.playerListEnabled
 
     local CategoryLabelSettings = Instance.new("TextLabel")
@@ -1638,19 +1583,129 @@ local success, err = pcall(function()
     PlayerListToggle.TextSize = 16
     PlayerListToggle.Parent = tabContents["Settings"]
 
+    -- Separate Player List GUI (Top-Right)
+    local PlayerListGui = Instance.new("ScreenGui")
+    PlayerListGui.Name = "PlayerListGui"
+    PlayerListGui.ResetOnSpawn = false
+    PlayerListGui.IgnoreGuiInset = true
+    local successPlayerListGui, errPlayerListGui = pcall(function()
+        PlayerListGui.Parent = game:GetService("CoreGui")
+    end)
+    if not successPlayerListGui then
+        warn("Failed to parent PlayerListGui to CoreGui: " .. tostring(errPlayerListGui))
+        PlayerListGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+        print("Falling back to PlayerGui for PlayerListGui parenting.")
+    end
+
     local PlayerListFrame = Instance.new("ScrollingFrame")
-    PlayerListFrame.Size = UDim2.new(0, 260, 0, 300)
-    PlayerListFrame.Position = UDim2.new(0, 20, 0, 90)
+    PlayerListFrame.Size = UDim2.new(0, 200, 0, 300)
+    PlayerListFrame.Position = UDim2.new(1, -210, 0, 10) -- Top-right corner
     PlayerListFrame.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
     PlayerListFrame.BackgroundTransparency = 0
     PlayerListFrame.BorderSizePixel = 0
     PlayerListFrame.Visible = playerListEnabled
     PlayerListFrame.ScrollBarThickness = 5
-    PlayerListFrame.Parent = tabContents["Settings"]
+    PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    PlayerListFrame.Parent = PlayerListGui
 
     local PlayerListLayout = Instance.new("UIListLayout")
     PlayerListLayout.Padding = UDim.new(0, 5)
     PlayerListLayout.Parent = PlayerListFrame
+    PlayerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    local function updatePlayerList()
+        for _, child in pairs(PlayerListFrame:GetChildren()) do
+            if child:IsA("Frame") then
+                child:Destroy()
+            end
+        end
+
+        local layoutOrder = 0
+        for _, player in pairs(PlayersService:GetPlayers()) do
+            local playerFrame = Instance.new("Frame")
+            playerFrame.Size = UDim2.new(1, -10, 0, 60)
+            playerFrame.BackgroundTransparency = 1
+            playerFrame.LayoutOrder = layoutOrder
+            playerFrame.Parent = PlayerListFrame
+
+            -- Player Icon
+            local playerIcon = Instance.new("ImageLabel")
+            playerIcon.Size = UDim2.new(0, 50, 0, 50)
+            playerIcon.Position = UDim2.new(0, 5, 0, 5)
+            playerIcon.BackgroundTransparency = 1
+            playerIcon.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+            playerIcon.Parent = playerFrame
+
+            -- Player Name
+            local playerLabel = Instance.new("TextLabel")
+            playerLabel.Size = UDim2.new(0, 130, 0, 20)
+            playerLabel.Position = UDim2.new(0, 60, 0, 5)
+            playerLabel.BackgroundTransparency = 1
+            playerLabel.Text = player.Name .. (player == LocalPlayer and " (You)" or "")
+            playerLabel.TextColor3 = player.TeamColor and player.TeamColor.Color or Color3.fromRGB(0, 200, 255)
+            playerLabel.Font = Enum.Font.SourceSans
+            playerLabel.TextSize = 14
+            playerLabel.TextXAlignment = Enum.TextXAlignment.Left
+            playerLabel.Parent = playerFrame
+
+            -- Health Bar
+            local healthBarFrame = Instance.new("Frame")
+            healthBarFrame.Size = UDim2.new(0, 130, 0, 10)
+            healthBarFrame.Position = UDim2.new(0, 60, 0, 30)
+            healthBarFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            healthBarFrame.Parent = playerFrame
+
+            local healthBar = Instance.new("Frame")
+            healthBar.Size = UDim2.new(0, 0, 1, 0)
+            healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+            healthBar.BorderSizePixel = 0
+            healthBar.Parent = healthBarFrame
+
+            -- Health Label
+            local healthLabel = Instance.new("TextLabel")
+            healthLabel.Size = UDim2.new(0, 130, 0, 20)
+            healthLabel.Position = UDim2.new(0, 60, 0, 40)
+            healthLabel.BackgroundTransparency = 1
+            healthLabel.Text = "Health: N/A"
+            healthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            healthLabel.Font = Enum.Font.SourceSans
+            healthLabel.TextSize = 12
+            healthLabel.TextXAlignment = Enum.TextXAlignment.Left
+            healthLabel.Parent = playerFrame
+
+            -- Update Health
+            local function updateHealth()
+                if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+                    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                    local healthPercent = humanoid.Health / humanoid.MaxHealth
+                    healthBar.Size = UDim2.new(healthPercent, 0, 1, 0)
+                    healthBar.BackgroundColor3 = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0)
+                    healthLabel.Text = "Health: " .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
+                else
+                    healthBar.Size = UDim2.new(0, 0, 1, 0)
+                    healthLabel.Text = "Health: N/A"
+                end
+            end
+
+            updateHealth()
+            if player.Character then
+                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:GetPropertyChangedSignal("Health"):Connect(updateHealth)
+                end
+            end
+            player.CharacterAdded:Connect(function(char)
+                local humanoid = char:WaitForChild("Humanoid")
+                humanoid:GetPropertyChangedSignal("Health"):Connect(updateHealth)
+                updateHealth()
+            end)
+
+            layoutOrder = layoutOrder + 1
+        end
+
+        PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, layoutOrder * 65) -- Adjust canvas size
+        print("Player list updated with " .. layoutOrder .. " players.") -- Debug print
+    end
 
     PlayerListToggle.MouseButton1Click:Connect(function()
         playerListEnabled = not playerListEnabled
@@ -1659,26 +1714,17 @@ local success, err = pcall(function()
         PlayerListFrame.Visible = playerListEnabled
         settings.playerListEnabled = playerListEnabled
         saveSettings()
+        if playerListEnabled then
+            local slideIn = TweenService:Create(PlayerListFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, -210, 0, 10)})
+            slideIn:Play()
+            updatePlayerList()
+        else
+            local slideOut = TweenService:Create(PlayerListFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 0, 0, 10)})
+            slideOut:Play()
+            wait(0.3)
+            PlayerListFrame.Visible = false
+        end
     end)
-
-    local function updatePlayerList()
-        for _, child in pairs(PlayerListFrame:GetChildren()) do
-            if child:IsA("TextLabel") then
-                child:Destroy()
-            end
-        end
-        for _, player in pairs(PlayersService:GetPlayers()) do
-            local playerLabel = Instance.new("TextLabel")
-            playerLabel.Size = UDim2.new(1, -10, 0, 20)
-            playerLabel.BackgroundTransparency = 1
-            playerLabel.Text = player.Name .. (player == LocalPlayer and " (You)" or "")
-            playerLabel.TextColor3 = player.TeamColor and player.TeamColor.Color or Color3.fromRGB(0, 200, 255)
-            playerLabel.Font = Enum.Font.SourceSans
-            playerLabel.TextSize = 14
-            playerLabel.Parent = PlayerListFrame
-        end
-        print("Player list updated with " .. #PlayersService:GetPlayers() .. " players.") -- Debug print
-    end
 
     updatePlayerList()
     PlayersService.PlayerAdded:Connect(updatePlayerList)
@@ -1687,6 +1733,8 @@ local success, err = pcall(function()
     -- Initial tab activation
     tabContents["Aimbot"].Visible = true
     currentTab = "Aimbot"
+    local initialSlideIn = TweenService:Create(tabContents["Aimbot"], TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -150, 0, 130)})
+    initialSlideIn:Play()
     print("Initial tab set to Aimbot, GUI ready.") -- Debug print
 end)
 
