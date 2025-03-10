@@ -355,16 +355,6 @@ local success, err = pcall(function()
     AimbotBindSquare.TextSize = 12
     AimbotBindSquare.Parent = tabContents["Aimbot"]
 
-    local AimbotUnbindToggle = Instance.new("TextButton")
-    AimbotUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    AimbotUnbindToggle.Position = UDim2.new(0, 300, 0, yOffset)
-    AimbotUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.Aimbot == nil and "ON" or "OFF")
-    AimbotUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    AimbotUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    AimbotUnbindToggle.Font = Enum.Font.SourceSans
-    AimbotUnbindToggle.TextSize = 12
-    AimbotUnbindToggle.Parent = tabContents["Aimbot"]
-
     yOffset = yOffset + 40
     local DeadCheckToggle = Instance.new("TextButton")
     DeadCheckToggle.Size = UDim2.new(0, 240, 0, 30)
@@ -387,16 +377,6 @@ local success, err = pcall(function()
     DeadCheckBindSquare.Font = Enum.Font.SourceSans
     DeadCheckBindSquare.TextSize = 12
     DeadCheckBindSquare.Parent = tabContents["Aimbot"]
-
-    local DeadCheckUnbindToggle = Instance.new("TextButton")
-    DeadCheckUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    DeadCheckUnbindToggle.Position = UDim2.new(0, 300, 0, yOffset)
-    DeadCheckUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.DeadCheck == nil and "ON" or "OFF")
-    DeadCheckUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    DeadCheckUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    DeadCheckUnbindToggle.Font = Enum.Font.SourceSans
-    DeadCheckUnbindToggle.TextSize = 12
-    DeadCheckUnbindToggle.Parent = tabContents["Aimbot"]
 
     yOffset = yOffset + 40
     local TeamCheckToggle = Instance.new("TextButton")
@@ -421,16 +401,6 @@ local success, err = pcall(function()
     TeamCheckBindSquare.TextSize = 12
     TeamCheckBindSquare.Parent = tabContents["Aimbot"]
 
-    local TeamCheckUnbindToggle = Instance.new("TextButton")
-    TeamCheckUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    TeamCheckUnbindToggle.Position = UDim2.new(0, 300, 0, yOffset)
-    TeamCheckUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.TeamCheck == nil and "ON" or "OFF")
-    TeamCheckUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    TeamCheckUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    TeamCheckUnbindToggle.Font = Enum.Font.SourceSans
-    TeamCheckUnbindToggle.TextSize = 12
-    TeamCheckUnbindToggle.Parent = tabContents["Aimbot"]
-
     yOffset = yOffset + 40
     local SmoothnessToggle = Instance.new("TextButton")
     SmoothnessToggle.Size = UDim2.new(0, 240, 0, 30)
@@ -453,16 +423,6 @@ local success, err = pcall(function()
     SmoothnessBindSquare.Font = Enum.Font.SourceSans
     SmoothnessBindSquare.TextSize = 12
     SmoothnessBindSquare.Parent = tabContents["Aimbot"]
-
-    local SmoothnessUnbindToggle = Instance.new("TextButton")
-    SmoothnessUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    SmoothnessUnbindToggle.Position = UDim2.new(0, 300, 0, yOffset)
-    SmoothnessUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.Smoothness == nil and "ON" or "OFF")
-    SmoothnessUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    SmoothnessUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    SmoothnessUnbindToggle.Font = Enum.Font.SourceSans
-    SmoothnessUnbindToggle.TextSize = 12
-    SmoothnessUnbindToggle.Parent = tabContents["Aimbot"]
 
     yOffset = yOffset + 40
     local SmoothnessLabel = Instance.new("TextLabel")
@@ -516,16 +476,6 @@ local success, err = pcall(function()
     FovCircleBindSquare.Font = Enum.Font.SourceSans
     FovCircleBindSquare.TextSize = 12
     FovCircleBindSquare.Parent = tabContents["Aimbot"]
-
-    local FovCircleUnbindToggle = Instance.new("TextButton")
-    FovCircleUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    FovCircleUnbindToggle.Position = UDim2.new(0, 300, 0, yOffset)
-    FovCircleUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.FovCircle == nil and "ON" or "OFF")
-    FovCircleUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    FovCircleUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    FovCircleUnbindToggle.Font = Enum.Font.SourceSans
-    FovCircleUnbindToggle.TextSize = 12
-    FovCircleUnbindToggle.Parent = tabContents["Aimbot"]
 
     yOffset = yOffset + 40
     local FovCircleLabel = Instance.new("TextLabel")
@@ -794,7 +744,7 @@ local success, err = pcall(function()
                         if targetPos.Magnitude < 10000 then
                             local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
                             if aimbotSmoothnessEnabled then
-                                local alpha = aimbotSmoothness * 0.1 -- Smoother movement
+                                local alpha = aimbotSmoothness * 0.1
                                 Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, alpha)
                             else
                                 Camera.CFrame = targetCFrame
@@ -815,74 +765,10 @@ local success, err = pcall(function()
     end
 
     AimbotBindSquare.MouseButton1Click:Connect(function() startBinding(AimbotBindSquare) end)
-    AimbotUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.Aimbot == nil
-        if not isUnbound then
-            settings.keyBinds.Aimbot = nil
-            AimbotBindSquare.Text = "Bind"
-            AimbotBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            AimbotUnbindToggle.Text = "Unbind: ON"
-        else
-            AimbotUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
-
     DeadCheckBindSquare.MouseButton1Click:Connect(function() startBinding(DeadCheckBindSquare) end)
-    DeadCheckUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.DeadCheck == nil
-        if not isUnbound then
-            settings.keyBinds.DeadCheck = nil
-            DeadCheckBindSquare.Text = "Bind"
-            DeadCheckBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            DeadCheckUnbindToggle.Text = "Unbind: ON"
-        else
-            DeadCheckUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
-
     TeamCheckBindSquare.MouseButton1Click:Connect(function() startBinding(TeamCheckBindSquare) end)
-    TeamCheckUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.TeamCheck == nil
-        if not isUnbound then
-            settings.keyBinds.TeamCheck = nil
-            TeamCheckBindSquare.Text = "Bind"
-            TeamCheckBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            TeamCheckUnbindToggle.Text = "Unbind: ON"
-        else
-            TeamCheckUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
-
     SmoothnessBindSquare.MouseButton1Click:Connect(function() startBinding(SmoothnessBindSquare) end)
-    SmoothnessUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.Smoothness == nil
-        if not isUnbound then
-            settings.keyBinds.Smoothness = nil
-            SmoothnessBindSquare.Text = "Bind"
-            SmoothnessBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            SmoothnessUnbindToggle.Text = "Unbind: ON"
-        else
-            SmoothnessUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
-
     FovCircleBindSquare.MouseButton1Click:Connect(function() startBinding(FovCircleBindSquare) end)
-    FovCircleUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.FovCircle == nil
-        if not isUnbound then
-            settings.keyBinds.FovCircle = nil
-            FovCircleBindSquare.Text = "Bind"
-            FovCircleBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            FovCircleUnbindToggle.Text = "Unbind: ON"
-        else
-            FovCircleUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
 
     -- Visuals Tab Content
     local espToggles = settings.espToggles
@@ -935,6 +821,7 @@ local success, err = pcall(function()
 
         drawings.Tracer.Color = Color3.fromRGB(0, 200, 255)
         drawings.Tracer.Thickness = 1
+        drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) -- Center screen
         drawings.Tracer.Visible = false
 
         local bones = {
@@ -1050,7 +937,6 @@ local success, err = pcall(function()
                         end
 
                         if espToggles.Tracer then
-                            drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) -- Center screen
                             drawings.Tracer.To = Vector2.new(headPos.X, headPos.Y)
                             drawings.Tracer.Visible = true
                         else
@@ -1277,16 +1163,6 @@ local success, err = pcall(function()
     FlyBindSquare.TextSize = 12
     FlyBindSquare.Parent = tabContents["Exploits"]
 
-    local FlyUnbindToggle = Instance.new("TextButton")
-    FlyUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    FlyUnbindToggle.Position = UDim2.new(0, 300, 0, yOffsetExploits)
-    FlyUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.Fly == nil and "ON" or "OFF")
-    FlyUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    FlyUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    FlyUnbindToggle.Font = Enum.Font.SourceSans
-    FlyUnbindToggle.TextSize = 12
-    FlyUnbindToggle.Parent = tabContents["Exploits"]
-
     yOffsetExploits = yOffsetExploits + 40
     local FlySpeedLabel = Instance.new("TextLabel")
     FlySpeedLabel.Size = UDim2.new(0, 280, 0, 30)
@@ -1340,16 +1216,6 @@ local success, err = pcall(function()
     NoClipBindSquare.TextSize = 12
     NoClipBindSquare.Parent = tabContents["Exploits"]
 
-    local NoClipUnbindToggle = Instance.new("TextButton")
-    NoClipUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    NoClipUnbindToggle.Position = UDim2.new(0, 300, 0, yOffsetExploits)
-    NoClipUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.NoClip == nil and "ON" or "OFF")
-    NoClipUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    NoClipUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    NoClipUnbindToggle.Font = Enum.Font.SourceSans
-    NoClipUnbindToggle.TextSize = 12
-    NoClipUnbindToggle.Parent = tabContents["Exploits"]
-
     yOffsetExploits = yOffsetExploits + 40
     local InfiniteJumpToggle = Instance.new("TextButton")
     InfiniteJumpToggle.Size = UDim2.new(0, 240, 0, 30)
@@ -1373,16 +1239,6 @@ local success, err = pcall(function()
     InfiniteJumpBindSquare.TextSize = 12
     InfiniteJumpBindSquare.Parent = tabContents["Exploits"]
 
-    local InfiniteJumpUnbindToggle = Instance.new("TextButton")
-    InfiniteJumpUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    InfiniteJumpUnbindToggle.Position = UDim2.new(0, 300, 0, yOffsetExploits)
-    InfiniteJumpUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.InfiniteJump == nil and "ON" 
-        InfiniteJumpUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    InfiniteJumpUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    InfiniteJumpUnbindToggle.Font = Enum.Font.SourceSans
-    InfiniteJumpUnbindToggle.TextSize = 12
-    InfiniteJumpUnbindToggle.Parent = tabContents["Exploits"]
-
     yOffsetExploits = yOffsetExploits + 40
     local SaveLastPositionToggle = Instance.new("TextButton")
     SaveLastPositionToggle.Size = UDim2.new(0, 240, 0, 30)
@@ -1405,16 +1261,6 @@ local success, err = pcall(function()
     SaveLastPositionBindSquare.Font = Enum.Font.SourceSans
     SaveLastPositionBindSquare.TextSize = 12
     SaveLastPositionBindSquare.Parent = tabContents["Exploits"]
-
-    local SaveLastPositionUnbindToggle = Instance.new("TextButton")
-    SaveLastPositionUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    SaveLastPositionUnbindToggle.Position = UDim2.new(0, 300, 0, yOffsetExploits)
-    SaveLastPositionUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.SaveLastPosition == nil and "ON" or "OFF")
-    SaveLastPositionUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    SaveLastPositionUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    SaveLastPositionUnbindToggle.Font = Enum.Font.SourceSans
-    SaveLastPositionUnbindToggle.TextSize = 12
-    SaveLastPositionUnbindToggle.Parent = tabContents["Exploits"]
 
     -- Fly Implementation
     local flyConnection = nil
@@ -1549,14 +1395,14 @@ local success, err = pcall(function()
     FlyToggle.MouseButton1Click:Connect(function()
         flyEnabled = not flyEnabled
         FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
-        FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
         settings.flyEnabled = flyEnabled
         if flyEnabled then
             startFlying()
         else
             stopFlying()
             if saveLastPositionEnabled then
-                savePosition() -- Save position when Fly turns OFF
+                savePosition()
             end
         end
         saveSettings()
@@ -1599,67 +1445,16 @@ local success, err = pcall(function()
         SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
         settings.saveLastPositionEnabled = saveLastPositionEnabled
         if not saveLastPositionEnabled then
-            loadPosition() -- Teleport back when toggled OFF
+            loadPosition()
         end
         saveSettings()
     end)
 
     -- Exploit Keybinds
     FlyBindSquare.MouseButton1Click:Connect(function() startBinding(FlyBindSquare) end)
-    FlyUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.Fly == nil
-        if not isUnbound then
-            settings.keyBinds.Fly = nil
-            FlyBindSquare.Text = "Bind"
-            FlyBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            FlyUnbindToggle.Text = "Unbind: ON"
-        else
-            FlyUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
-
     NoClipBindSquare.MouseButton1Click:Connect(function() startBinding(NoClipBindSquare) end)
-    NoClipUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.NoClip == nil
-        if not isUnbound then
-            settings.keyBinds.NoClip = nil
-            NoClipBindSquare.Text = "Bind"
-            NoClipBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            NoClipUnbindToggle.Text = "Unbind: ON"
-        else
-            NoClipUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
-
     InfiniteJumpBindSquare.MouseButton1Click:Connect(function() startBinding(InfiniteJumpBindSquare) end)
-    InfiniteJumpUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.InfiniteJump == nil
-        if not isUnbound then
-            settings.keyBinds.InfiniteJump = nil
-            InfiniteJumpBindSquare.Text = "Bind"
-            InfiniteJumpBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            InfiniteJumpUnbindToggle.Text = "Unbind: ON"
-        else
-            InfiniteJumpUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
-
     SaveLastPositionBindSquare.MouseButton1Click:Connect(function() startBinding(SaveLastPositionBindSquare) end)
-    SaveLastPositionUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.SaveLastPosition == nil
-        if not isUnbound then
-            settings.keyBinds.SaveLastPosition = nil
-            SaveLastPositionBindSquare.Text = "Bind"
-            SaveLastPositionBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            SaveLastPositionUnbindToggle.Text = "Unbind: ON"
-        else
-            SaveLastPositionUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
 
     -- Unified Keybind Input Handling
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -1675,7 +1470,6 @@ local success, err = pcall(function()
                 elseif bindingFeature == NoClipBindSquare then featureName = "NoClip"
                 elseif bindingFeature == InfiniteJumpBindSquare then featureName = "InfiniteJump"
                 elseif bindingFeature == SaveLastPositionBindSquare then featureName = "SaveLastPosition"
-                elseif bindingFeature == PlayerListBindSquare then featureName = "PlayerList"
                 end
                 if featureName then
                     settings.keyBinds[featureName] = input.KeyCode
@@ -1737,12 +1531,6 @@ local success, err = pcall(function()
                             SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
                             settings.saveLastPositionEnabled = saveLastPositionEnabled
                             if not saveLastPositionEnabled then loadPosition() end
-                        elseif feature == "PlayerList" then
-                            playerListEnabled = not playerListEnabled
-                            PlayerListToggle.Text = "☐ Player List: " .. (playerListEnabled and "ON" or "OFF")
-                            PlayerListToggle.TextColor3 = playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                            PlayerListFrame.Visible = playerListEnabled
-                            settings.playerListEnabled = playerListEnabled
                         end
                         saveSettings()
                     end
@@ -1806,16 +1594,6 @@ local success, err = pcall(function()
     PlayerListBindSquare.TextSize = 12
     PlayerListBindSquare.Parent = tabContents["Settings"]
 
-    local PlayerListUnbindToggle = Instance.new("TextButton")
-    PlayerListUnbindToggle.Size = UDim2.new(0, 50, 0, 30)
-    PlayerListUnbindToggle.Position = UDim2.new(0, 300, 0, yOffsetSettings)
-    PlayerListUnbindToggle.Text = "Unbind: " .. (settings.keyBinds.PlayerList == nil and "ON" or "OFF")
-    PlayerListUnbindToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    PlayerListUnbindToggle.TextColor3 = Color3.fromRGB(255, 0, 0)
-    PlayerListUnbindToggle.Font = Enum.Font.SourceSans
-    PlayerListUnbindToggle.TextSize = 12
-    PlayerListUnbindToggle.Parent = tabContents["Settings"]
-
     yOffsetSettings = yOffsetSettings + 40
     local GuiBindLabel = Instance.new("TextLabel")
     GuiBindLabel.Size = UDim2.new(0, 280, 0, 30)
@@ -1854,7 +1632,7 @@ local success, err = pcall(function()
     UnbindAllButton.Parent = tabContents["Settings"]
     print("UnbindAll button created at Y: " .. yOffsetSettings)
 
-    -- Enhanced Player List GUI with Photos and Health
+    -- Player List GUI
     local PlayerListFrame = Instance.new("Frame")
     PlayerListFrame.Size = UDim2.new(0, 250, 0, 350)
     PlayerListFrame.Position = UDim2.new(1, -260, 0.5, -175)
@@ -1982,18 +1760,6 @@ local success, err = pcall(function()
     end)
 
     PlayerListBindSquare.MouseButton1Click:Connect(function() startBinding(PlayerListBindSquare) end)
-    PlayerListUnbindToggle.MouseButton1Click:Connect(function()
-        local isUnbound = settings.keyBinds.PlayerList == nil
-        if not isUnbound then
-            settings.keyBinds.PlayerList = nil
-            PlayerListBindSquare.Text = "Bind"
-            PlayerListBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-            PlayerListUnbindToggle.Text = "Unbind: ON"
-        else
-            PlayerListUnbindToggle.Text = "Unbind: OFF"
-        end
-        saveSettings()
-    end)
 
     local changingGuiBind = false
     GuiBindButton.MouseButton1Click:Connect(function()
@@ -2027,16 +1793,6 @@ local success, err = pcall(function()
         InfiniteJumpBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
         SaveLastPositionBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
         PlayerListBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-        AimbotUnbindToggle.Text = "Unbind: ON"
-        DeadCheckUnbindToggle.Text = "Unbind: ON"
-        TeamCheckUnbindToggle.Text = "Unbind: ON"
-        SmoothnessUnbindToggle.Text = "Unbind: ON"
-        FovCircleUnbindToggle.Text = "Unbind: ON"
-        FlyUnbindToggle.Text = "Unbind: ON"
-        NoClipUnbindToggle.Text = "Unbind: ON"
-        InfiniteJumpUnbindToggle.Text = "Unbind: ON"
-        SaveLastPositionUnbindToggle.Text = "Unbind: ON"
-        PlayerListUnbindToggle.Text = "Unbind: ON"
         settings.unbindAll = unbindAll
         saveSettings()
     end)
@@ -2054,7 +1810,7 @@ local success, err = pcall(function()
 
     -- Character Reset Handling
     LocalPlayer.CharacterAdded:Connect(function(character)
-        wait(1) -- Wait for character to fully load
+        wait(1)
         if flyEnabled then
             stopFlying()
             startFlying()
