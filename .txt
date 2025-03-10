@@ -26,7 +26,7 @@ local success, err = pcall(function()
         aimbotFovSize = 100,
         aimbotBone = "Head",
         espToggles = {
-            Box2D = false, -- Renamed from Box to 2D Box
+            Box2D = false,
             Name = false,
             Speed = false,
             HealthBar = false,
@@ -189,7 +189,7 @@ local success, err = pcall(function()
         end
     end)
 
-    -- Background with Circuit Pattern
+    -- Animated Neon Background
     local CircuitBackground = Instance.new("ImageLabel")
     CircuitBackground.Size = UDim2.new(1, 0, 1, 0)
     CircuitBackground.BackgroundTransparency = 1
@@ -198,20 +198,22 @@ local success, err = pcall(function()
     CircuitBackground.ImageTransparency = 0.7
     CircuitBackground.Parent = MainFrame
 
-    -- Pulsing Neon Effect
-    local NeonPulse = Instance.new("UIStroke")
-    NeonPulse.Thickness = 2
-    NeonPulse.Color = Color3.fromRGB(0, 200, 255)
-    NeonPulse.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    NeonPulse.Parent = MainFrame
+    local NeonStroke = Instance.new("UIStroke")
+    NeonStroke.Thickness = 2
+    NeonStroke.Color = Color3.fromRGB(0, 200, 255)
+    NeonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    NeonStroke.Parent = MainFrame
+
     spawn(function()
         while true do
             for i = 0.7, 1, 0.01 do
                 CircuitBackground.ImageTransparency = i
+                NeonStroke.Color = Color3.fromHSV((tick() % 5) / 5, 1, 1)
                 wait(0.01)
             end
             for i = 1, 0.7, -0.01 do
                 CircuitBackground.ImageTransparency = i
+                NeonStroke.Color = Color3.fromHSV((tick() % 5) / 5, 1, 1)
                 wait(0.01)
             end
         end
@@ -592,417 +594,8 @@ local success, err = pcall(function()
     local boneDropdownOpen = false
     local boneDropdownOptions = {"Head", "UpperTorso", "LowerTorso"}
     local boneDropdownFrame = Instance.new("Frame")
-    boneDropdownFrame.Size = UDim2.new(0, 280, 0, #boneDropdownOptions * 30)
-    boneDropdownFrame.Position = UDim2.new(0, 10, 0, yOffset + 30)
-    boneDropdownFrame.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
-    boneDropdownFrame.BackgroundTransparency = 0
-    boneDropdownFrame.Visible = false
-    boneDropdownFrame.Parent = tabContents["Aimbot"]
-    print("Bone dropdown frame created at Y: " .. (yOffset + 30))
-
-    for i, option in ipairs(boneDropdownOptions) do
-        local optionButton = Instance.new("TextButton")
-        optionButton.Size = UDim2.new(1, -10, 0, 30)
-        optionButton.Position = UDim2.new(0, 5, 0, (i - 1) * 30)
-        optionButton.Text = option
-        optionButton.BackgroundTransparency = 1
-        optionButton.TextColor3 = Color3.fromRGB(0, 200, 255)
-        optionButton.Font = Enum.Font.SourceSans
-        optionButton.TextSize = 16
-        optionButton.Parent = boneDropdownFrame
-
-        optionButton.MouseButton1Click:Connect(function()
-            aimbotBone = option
-            AimbotBoneLabel.Text = "Aim Bone: " .. aimbotBone
-            AimbotBoneDropdown.Text = "▼ " .. aimbotBone
-            settings.aimbotBone = aimbotBone
-            saveSettings()
-            boneDropdownFrame.Visible = false
-            boneDropdownOpen = false
-        end)
-    end
-
-    AimbotBoneDropdown.MouseButton1Click:Connect(function()
-        boneDropdownOpen = not boneDropdownOpen
-        boneDropdownFrame.Visible = boneDropdownOpen
-    end)
-
-    -- Aimbot FOV Circle Drawing
-    local fovCircle = Drawing.new("Circle")
-    fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    fovCircle.Radius = aimbotFovSize
-    fovCircle.Color = Color3.fromRGB(255, 0, 0)
-    fovCircle.Thickness = 2
-    fovCircle.Filled = false
-    fovCircle.Visible = aimbotFovEnabled
-
-    -- Aimbot Logic (Updated with Provided Script)
-    local function isPlayerInFov(player)
-        if not aimbotFovEnabled then
-            return true
-        end
-        if not player.Character or not player.Character:FindFirstChild(aimbotBone) then
-            return false
-        end
-        local bonePos = player.Character[aimbotBone].Position
-        local screenPos, onScreen = Camera:WorldToViewportPoint(bonePos)
-        if not onScreen then
-            return false
-        end
-        local distanceFromCenter = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-        return distanceFromCenter <= aimbotFovSize
-    end
-
-    local function getNearestPlayer()
-        local nearestDistance = math.huge
-        local nearestPlayer = nil
-        local character = getCharacter()
-        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-        local localTeam = LocalPlayer.Team
-        if not rootPart then return nil end
-
-        for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
-            if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local humanoid = otherPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    local isDead = deadCheck and humanoid.Health <= 0
-                    local isSameTeam = teamCheck and localTeam and otherPlayer.Team and (otherPlayer.Team == localTeam)
-                    if not isDead and not isSameTeam and isPlayerInFov(otherPlayer) then
-                        local distance = (rootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
-                        if distance < nearestDistance then
-                            nearestDistance = distance
-                            nearestPlayer = otherPlayer
-                        end
-                    end
-                end
-            end
-        end
-        return nearestPlayer
-    end
-
-    AimbotToggle.MouseButton1Click:Connect(function()
-        aimbotEnabled = not aimbotEnabled
-        AimbotToggle.Text = "☐ Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
-        AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-        settings.aimbotEnabled = aimbotEnabled
-        saveSettings()
-    end)
-
-    DeadCheckToggle.MouseButton1Click:Connect(function()
-        deadCheck = not deadCheck
-        DeadCheckToggle.Text = "☐ Dead Check: " .. (deadCheck and "ON" or "OFF")
-        DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-        settings.deadCheck = deadCheck
-        saveSettings()
-    end)
-
-    TeamCheckToggle.MouseButton1Click:Connect(function()
-        teamCheck = not teamCheck
-        TeamCheckToggle.Text = "☐ Team Check: " .. (teamCheck and "ON" or "OFF")
-        TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-        settings.teamCheck = teamCheck
-        saveSettings()
-    end)
-
-    SmoothnessToggle.MouseButton1Click:Connect(function()
-        aimbotSmoothnessEnabled = not aimbotSmoothnessEnabled
-        SmoothnessToggle.Text = "☐ Smoothness: " .. (aimbotSmoothnessEnabled and "ON" or "OFF")
-        SmoothnessToggle.TextColor3 = aimbotSmoothnessEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-        settings.aimbotSmoothnessEnabled = aimbotSmoothnessEnabled
-        saveSettings()
-    end)
-
-    FovCircleToggle.MouseButton1Click:Connect(function()
-        aimbotFovEnabled = not aimbotFovEnabled
-        FovCircleToggle.Text = "☐ FOV Circle: " .. (aimbotFovEnabled and "ON" or "OFF")
-        FovCircleToggle.TextColor3 = aimbotFovEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-        fovCircle.Visible = aimbotFovEnabled
-        settings.aimbotFovEnabled = aimbotFovEnabled
-        saveSettings()
-    end)
-
-    local draggingSmoothnessSlider = false
-    local draggingFovCircleSlider = false
-
-    SmoothnessSlider.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingSmoothnessSlider = true
-        end
-    end)
-
-    SmoothnessSlider.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingSmoothnessSlider = false
-        end
-    end)
-
-    FovCircleSlider.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingFovCircleSlider = true
-        end
-    end)
-
-    FovCircleSlider.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingFovCircleSlider = false
-        end
-    end)
-
-    -- Aimbot Logic Integration
-    RunService.RenderStepped:Connect(function()
-        local mouseX = UserInputService:GetMouseLocation().X
-
-        if draggingSmoothnessSlider then
-            local smoothnessSliderPos = SmoothnessSlider.AbsolutePosition.X
-            local smoothnessSliderWidth = SmoothnessSlider.AbsoluteSize.X
-            local smoothnessNewPos = math.clamp((mouseX - smoothnessSliderPos) / smoothnessSliderWidth, 0, 1)
-            SmoothnessKnob.Position = UDim2.new(smoothnessNewPos, 0, 0, 0)
-            aimbotSmoothness = tonumber(string.format("%.2f", 0.1 + (smoothnessNewPos * 0.9)))
-            SmoothnessLabel.Text = "Smoothness: " .. aimbotSmoothness
-            settings.aimbotSmoothness = aimbotSmoothness
-            saveSettings()
-        end
-
-        if draggingFovCircleSlider then
-            local fovCircleSliderPos = FovCircleSlider.AbsolutePosition.X
-            local fovCircleSliderWidth = FovCircleSlider.AbsoluteSize.X
-            local fovCircleNewPos = math.clamp((mouseX - fovCircleSliderPos) / fovCircleSliderWidth, 0, 1)
-            FovCircleKnob.Position = UDim2.new(fovCircleNewPos, 0, 0, 0)
-            aimbotFovSize = math.floor(1 + (fovCircleNewPos * 639))
-            FovCircleLabel.Text = "FOV Size: " .. aimbotFovSize
-            fovCircle.Radius = aimbotFovSize
-            settings.aimbotFovSize = aimbotFovSize
-            saveSettings()
-        end
-
-        fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    end)
-
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton2 and aimbotEnabled then
-            targetPlayer = getNearestPlayer()
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild(aimbotBone) then
-                local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid and (not deadCheck or humanoid.Health > 0) and isPlayerInFov(targetPlayer) then
-                    RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
-                        if aimbotSmoothnessEnabled then
-                            local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character[aimbotBone].Position)
-                            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, aimbotSmoothness * 0.1)
-                        else
-                            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character[aimbotBone].Position)
-                        end
-                    end)
-                end
-            end
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton2 then
-            RunService:UnbindFromRenderStep("LockOnPlayer")
-            targetPlayer = nil
-        end
-    end)
-
-    -- Key Binding Logic
-    local bindingFeature = nil
-    local function startBinding(bindSquare)
-        bindingFeature = bindSquare
-        bindSquare.Text = "Press Key"
-        bindSquare.TextColor3 = Color3.fromRGB(255, 255, 0)
-    end
-
-    AimbotBindSquare.MouseButton1Click:Connect(function() startBinding(AimbotBindSquare) end)
-    DeadCheckBindSquare.MouseButton1Click:Connect(function() startBinding(DeadCheckBindSquare) end)
-    TeamCheckBindSquare.MouseButton1Click:Connect(function() startBinding(TeamCheckBindSquare) end)
-    SmoothnessBindSquare.MouseButton1Click:Connect(function() startBinding(SmoothnessBindSquare) end)
-    FovCircleBindSquare.MouseButton1Click:Connect(function() startBinding(FovCircleBindSquare) end)
-
-    AimbotUnbindSquare.MouseButton1Click:Connect(function()
-        settings.keyBinds.Aimbot = nil
-        AimbotBindSquare.Text = "Bind"
-        AimbotBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-        saveSettings()
-    end)
-
-    DeadCheckUnbindSquare.MouseButton1Click:Connect(function()
-        settings.keyBinds.DeadCheck = nil
-        DeadCheckBindSquare.Text = "Bind"
-        DeadCheckBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-        saveSettings()
-    end)
-
-    TeamCheckUnbindSquare.MouseButton1Click:Connect(function()
-        settings.keyBinds.TeamCheck = nil
-        TeamCheckBindSquare.Text = "Bind"
-        TeamCheckBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-        saveSettings()
-    end)
-
-    SmoothnessUnbindSquare.MouseButton1Click:Connect(function()
-        settings.keyBinds.Smoothness = nil
-        SmoothnessBindSquare.Text = "Bind"
-        SmoothnessBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-        saveSettings()
-    end)
-
-    FovCircleUnbindSquare.MouseButton1Click:Connect(function()
-        settings.keyBinds.FovCircle = nil
-        FovCircleBindSquare.Text = "Bind"
-        FovCircleBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
-        saveSettings()
-    end)
-
-    -- Visuals Tab Content
-    local espToggles = settings.espToggles
-    local fullbrightEnabled = settings.fullbrightEnabled
-    local espPlayers = {}
-    local lastPositions = {}
-
-    local function DrawESP(plr)
-        local drawings = {
-            Box2D = Drawing.new("Quad"), -- Renamed to Box2D
-            Name = Drawing.new("Text"),
-            Speed = Drawing.new("Text"),
-            HealthText = Drawing.new("Text"),
-            HealthBar = Drawing.new("Square"),
-            HealthBarOutline = Drawing.new("Square"),
-            Tracer = Drawing.new("Line"),
-            Skeleton = {},
-            Box3D = {}
-        }
-        
-        drawings.Box2D.Color = Color3.fromRGB(0, 200, 255)
-        drawings.Box2D.Thickness = 1
-        drawings.Box2D.Transparency = 1
-        drawings.Box2D.Visible = false
-
-        drawings.Name.Size = 18
-        drawings.Name.Color = Color3.fromRGB(0, 200, 255)
-        drawings.Name.Outline = true
-        drawings.Name.Visible = false
-
-        drawings.Speed.Size = 16
-        drawings.Speed.Color = Color3.fromRGB(0, 200, 255)
-        drawings.Speed.Outline = true
-        drawings.Speed.Visible = false
-
-        drawings.HealthText.Size = 16
-        drawings.HealthText.Color = Color3.fromRGB(0, 200, 255)
-        drawings.HealthText.Outline = true
-        drawings.HealthText.Visible = false
-
-        drawings.HealthBar.Thickness = 0
-        drawings.HealthBar.Size = Vector2.new(150, 20) -- Fixed size
-        drawings.HealthBar.Visible = false
-
-        drawings.HealthBarOutline.Thickness = 1
-        drawings.HealthBarOutline.Size = Vector2.new(150, 20) -- Fixed size
-        drawings.HealthBarOutline.Color = Color3.fromRGB(0, 0, 0)
-        drawings.HealthBarOutline.Filled = false
-        drawings.HealthBarOutline.Visible = false
-
-        drawings.Tracer.Color = Color3.fromRGB(0, 200, 255)
-        drawings.Tracer.Thickness = 1
-        drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) -- Center screen
-        drawings.Tracer.Visible = false
-
-        local bones = {
-            {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
-            {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-            {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
-            {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-            {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightUpperArm", "RightHand"}
-        }
-        for _, pair in ipairs(bones) do
-            local line = Drawing.new("Line")
-            line.Color = Color3.fromRGB(0, 200, 255)
-            line.Thickness = 2
-            line.Visible = false
-            drawings.Skeleton[pair[1] .. pair[2]] = line
-        end
-
-        local box3DIndices = {
-            {1, 2}, {2, 3}, {3, 4}, {4, 1},
-            {5, 6}, {6, 7}, {7, 8}, {8, 5},
-            {1, 5}, {2, 6}, {3, 7}, {4, 8}
-        }
-        for i, edge in ipairs(box3DIndices) do
-            local line = Drawing.new("Line")
-            line.Color = Color3.fromRGB(0, 200, 255)
-            line.Thickness = 1
-            line.Visible = false
-            drawings.Box3D[i] = line
-        end
-
-        local function Update()
-            local connection
-            local character = getCharacter()
-            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-            if not rootPart then return end
-
-            connection = RunService.RenderStepped:Connect(function()
-                if plr.Character and plr.Character:FindFirstChild("UpperTorso") and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                    local upperTorso = plr.Character:FindFirstChild("UpperTorso")
-                    local upperTorsoPos, torsoVis = Camera:WorldToViewportPoint(upperTorso.Position)
-                    if torsoVis then
-                        local TopLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, 0)).p)
-                        local TopRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, 0)).p)
-                        local BottomLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, 0)).p)
-                        local BottomRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, 0)).p)
-
-                        if espToggles.Box2D then
-                            drawings.Box2D.PointA = Vector2.new(TopRight.X, TopRight.Y)
-                            drawings.Box2D.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
-                            drawings.Box2D.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
-                            drawings.Box2D.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
-                            drawings.Box2D.Visible = true
-                        else
-                            drawings.Box2D.Visible = false
-                        end
-
-                        if espToggles.Name and torsoVis then
-                            local nameWidth = drawings.Name.TextBounds.X
-                            drawings.Name.Position = Vector2.new(upperTorsoPos.X - (nameWidth / 2), upperTorsoPos.Y - 30)
-                            drawings.Name.Text = plr.Name
-                            drawings.Name.Visible = true
-                        else
-                            drawings.Name.Visible = false
-                        end
-
-                        if espToggles.Speed and torsoVis then
-                            local currentPos = plr.Character.HumanoidRootPart.Position
-                            if not lastPositions[plr] then lastPositions[plr] = currentPos end
-                            local lastPos = lastPositions[plr]
-                            local delta = (currentPos - lastPos).Magnitude
-                            local speed = delta / RunService.RenderStepped:Wait()
-                            drawings.Speed.Position = Vector2.new(upperTorsoPos.X, upperTorsoPos.Y + 10)
-                            drawings.Speed.Text = string.format("Speed: %.1f", speed)
-                            lastPositions[plr] = currentPos
-                            drawings.Speed.Visible = true
-                        else
-                            drawings.Speed.Visible = false
-                        end
-
-                        if espToggles.HealthBar and torsoVis then
-                            local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-                            if humanoid then
-                                local healthPercent = humanoid.Health / humanoid.MaxHealth
-                                local barX = upperTorsoPos.X - 75 -- Fixed position
-                                local barY = upperTorsoPos.Y
-
-                                drawings.HealthText.Text = math.floor(healthPercent * 100) .. "%"
-                                local textWidth = drawings.HealthText.TextBounds.X
-                                drawings.HealthText.Position = Vector2.new(barX + 75 - (textWidth / 2), barY - 20)
-                                drawings.HealthText.Visible = true
-
-                                drawings.HealthBar.Position = Vector2.new(barX, barY)
-                                drawings.HealthBar.Size = Vector2.new(150 * healthPercent, 20) -- Fixed size
-                                drawings.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0)
-                                drawings.HealthBar.Visible = true
-
-                                drawings.HealthBarOutline.Position = Vector2.new(barX, barY)
-                                drawings.HealthBarOutline.Size = Vector2.new(150, 20) -- Fixed size
+    boneDropdownFrame.Size = UDim2.new(0, 280, 0, #boneDropdownOptions 
+                                    drawings.HealthBarOutline.Position = Vector2.new(barX, barY)
                                 drawings.HealthBarOutline.Visible = true
                             else
                                 drawings.HealthText.Visible = false
@@ -1015,8 +608,9 @@ local success, err = pcall(function()
                             drawings.HealthBarOutline.Visible = false
                         end
 
-                        if espToggles.Tracer then
-                            drawings.Tracer.To = Vector2.new(upperTorsoPos.X, upperTorsoPos.Y) -- Render to chest
+                        if espToggles.Tracer and torsoVis then
+                            drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                            drawings.Tracer.To = Vector2.new(upperTorsoPos.X, upperTorsoPos.Y)
                             drawings.Tracer.Visible = true
                         else
                             drawings.Tracer.Visible = false
@@ -1024,21 +618,15 @@ local success, err = pcall(function()
 
                         if espToggles.Skeleton then
                             for _, pair in ipairs(bones) do
-                                local part1 = plr.Character:FindFirstChild(pair[1])
-                                local part2 = plr.Character:FindFirstChild(pair[2])
-                                if part1 and part2 then
-                                    local pos1, vis1 = Camera:WorldToViewportPoint(part1.Position)
-                                    local pos2, vis2 = Camera:WorldToViewportPoint(part2.Position)
-                                    if vis1 and vis2 then
-                                        local line = drawings.Skeleton[pair[1] .. pair[2]]
-                                        line.From = Vector2.new(pos1.X, pos1.Y)
-                                        line.To = Vector2.new(pos2.X, pos2.Y)
-                                        line.Visible = true
-                                    else
-                                        drawings.Skeleton[pair[1] .. pair[2]].Visible = false
-                                    end
+                                local bone1, bone2 = pair[1], pair[2]
+                                local bone1Pos, bone1Vis = Camera:WorldToViewportPoint(plr.Character[bone1].Position)
+                                local bone2Pos, bone2Vis = Camera:WorldToViewportPoint(plr.Character[bone2].Position)
+                                if bone1Vis and bone2Vis then
+                                    drawings.Skeleton[bone1 .. bone2].From = Vector2.new(bone1Pos.X, bone1Pos.Y)
+                                    drawings.Skeleton[bone1 .. bone2].To = Vector2.new(bone2Pos.X, bone2Pos.Y)
+                                    drawings.Skeleton[bone1 .. bone2].Visible = true
                                 else
-                                    drawings.Skeleton[pair[1] .. pair[2]].Visible = false
+                                    drawings.Skeleton[bone1 .. bone2].Visible = false
                                 end
                             end
                         else
@@ -1048,94 +636,101 @@ local success, err = pcall(function()
                         end
 
                         if espToggles.Box3D then
-                            local corners = {
-                                plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, -2),
-                                plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, -2),
-                                plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, -2),
-                                plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, -2),
-                                plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, 2),
-                                plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, 2),
-                                plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, 2),
-                                plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, 2)
+                            local rootPart = plr.Character.HumanoidRootPart
+                            local points = {
+                                rootPart.CFrame * CFrame.new(-2, 3, -2), -- Top-front-left
+                                rootPart.CFrame * CFrame.new(2, 3, -2),  -- Top-front-right
+                                rootPart.CFrame * CFrame.new(2, -3, -2), -- Bottom-front-right
+                                rootPart.CFrame * CFrame.new(-2, -3, -2),-- Bottom-front-left
+                                rootPart.CFrame * CFrame.new(-2, 3, 2),  -- Top-back-left
+                                rootPart.CFrame * CFrame.new(2, 3, 2),   -- Top-back-right
+                                rootPart.CFrame * CFrame.new(2, -3, 2),  -- Bottom-back-right
+                                rootPart.CFrame * CFrame.new(-2, -3, 2)  -- Bottom-back-left
                             }
-                            local screenCorners = {}
+                            local screenPoints = {}
                             local allVisible = true
-                            for i, corner in ipairs(corners) do
-                                local screenPos, onScreen = Camera:WorldToViewportPoint(corner.p)
-                                screenCorners[i] = Vector2.new(screenPos.X, screenPos.Y)
-                                if not onScreen then allVisible = false break end
+                            for i, point in ipairs(points) do
+                                local screenPos, visible = Camera:WorldToViewportPoint(point.p)
+                                screenPoints[i] = Vector2.new(screenPos.X, screenPos.Y)
+                                if not visible then allVisible = false end
                             end
                             if allVisible then
                                 for i, edge in ipairs(box3DIndices) do
-                                    local line = drawings.Box3D[i]
-                                    line.From = screenCorners[edge[1]]
-                                    line.To = screenCorners[edge[2]]
-                                    line.Visible = true
+                                    local p1, p2 = edge[1], edge[2]
+                                    drawings.Box3D[i].From = screenPoints[p1]
+                                    drawings.Box3D[i].To = screenPoints[p2]
+                                    drawings.Box3D[i].Visible = true
                                 end
                             else
-                                for _, line in ipairs(drawings.Box3D) do
+                                for _, line in pairs(drawings.Box3D) do
                                     line.Visible = false
                                 end
                             end
                         else
-                            for _, line in ipairs(drawings.Box3D) do
+                            for _, line in pairs(drawings.Box3D) do
                                 line.Visible = false
                             end
                         end
                     else
-                        for _, drawing in pairs(drawings) do
+                        for key, drawing in pairs(drawings) do
                             if type(drawing) == "table" then
-                                for _, line in pairs(drawing) do
-                                    line.Visible = false
+                                for _, subDrawing in pairs(drawing) do
+                                    subDrawing.Visible = false
                                 end
                             else
                                 drawing.Visible = false
                             end
                         end
                     end
-                else
-                    for _, drawing in pairs(drawings) do
+                end)
+                plr.CharacterRemoving:Connect(function()
+                    connection:Disconnect()
+                    for key, drawing in pairs(drawings) do
                         if type(drawing) == "table" then
-                            for _, line in pairs(drawing) do
-                                line.Visible = false
+                            for _, subDrawing in pairs(drawing) do
+                                subDrawing:Remove()
                             end
                         else
-                            drawing.Visible = false
+                            drawing:Remove()
                         end
                     end
-                    if not PlayersService:FindFirstChild(plr.Name) then
-                        connection:Disconnect()
-                    end
-                end
+                end)
             end)
         end
-        coroutine.wrap(Update)()
+
         espPlayers[plr] = drawings
+        Update()
     end
 
     for _, player in pairs(PlayersService:GetPlayers()) do
         if player ~= LocalPlayer then
-            local success, err = pcall(function()
-                DrawESP(player)
-            end)
-            if not success then
-                warn("Failed to apply ESP to player " .. player.Name .. ": " .. err)
-            end
+            DrawESP(player)
         end
     end
 
     PlayersService.PlayerAdded:Connect(function(player)
-        wait(1)
         if player ~= LocalPlayer then
-            local success, err = pcall(function()
-                DrawESP(player)
-            end)
-            if not success then
-                warn("Failed to apply ESP to player " .. player.Name .. ": " .. err)
-            end
+            DrawESP(player)
         end
     end)
 
+    PlayersService.PlayerRemoving:Connect(function(player)
+        if espPlayers[player] then
+            for key, drawing in pairs(espPlayers[player]) do
+                if type(drawing) == "table" then
+                    for _, subDrawing in pairs(drawing) do
+                        subDrawing:Remove()
+                    end
+                else
+                    drawing:Remove()
+                end
+            end
+            espPlayers[player] = nil
+            lastPositions[player] = nil
+        end
+    end)
+
+    -- Visuals Tab UI
     local baseYVisuals = 10
     local categoryLabelVisuals = Instance.new("TextLabel")
     categoryLabelVisuals.Size = UDim2.new(0, 280, 0, 30)
@@ -1149,45 +744,20 @@ local success, err = pcall(function()
     print("Visuals category label created at Y: " .. baseYVisuals)
 
     local yOffsetVisuals = baseYVisuals + 40
-    local visualFeatures = {"Box2D", "Name", "Speed", "HealthBar", "Tracer", "Skeleton", "Box3D"}
-    for _, feature in ipairs(visualFeatures) do
-        local enabled = espToggles[feature]
-        local Toggle = Instance.new("TextButton")
-        Toggle.Size = UDim2.new(0, 200, 0, 30)
-        Toggle.Position = UDim2.new(0, 10, 0, yOffsetVisuals)
-        Toggle.Text = "☐ " .. feature .. ": " .. (enabled and "ON" or "OFF")
-        Toggle.BackgroundTransparency = 1
-        Toggle.TextColor3 = enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-        Toggle.Font = Enum.Font.SourceSans
-        Toggle.TextSize = 16
-        Toggle.Parent = tabContents["Visuals"]
-        print(feature .. " toggle created at Y: " .. yOffsetVisuals)
-
-        Toggle.MouseButton1Click:Connect(function()
-            espToggles[feature] = not espToggles[feature]
-            Toggle.Text = "☐ " .. feature .. ": " .. (espToggles[feature] and "ON" or "OFF")
-            Toggle.TextColor3 = espToggles[feature] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-            settings.espToggles[feature] = espToggles[feature]
-            saveSettings()
-        end)
-        yOffsetVisuals = yOffsetVisuals + 40
-    end
-
-    -- Fullbright moved above other features
     local FullbrightToggle = Instance.new("TextButton")
     FullbrightToggle.Size = UDim2.new(0, 200, 0, 30)
-    FullbrightToggle.Position = UDim2.new(0, 10, 0, baseYVisuals + 40)
+    FullbrightToggle.Position = UDim2.new(0, 10, 0, yOffsetVisuals)
     FullbrightToggle.Text = "☐ Fullbright: " .. (fullbrightEnabled and "ON" or "OFF")
     FullbrightToggle.BackgroundTransparency = 1
     FullbrightToggle.TextColor3 = fullbrightEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
     FullbrightToggle.Font = Enum.Font.SourceSans
     FullbrightToggle.TextSize = 16
     FullbrightToggle.Parent = tabContents["Visuals"]
-    print("Fullbright toggle created at Y: " .. (baseYVisuals + 40))
+    print("Fullbright toggle created at Y: " .. yOffsetVisuals)
 
     local FullbrightBindSquare = Instance.new("TextButton")
     FullbrightBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    FullbrightBindSquare.Position = UDim2.new(0, 220, 0, baseYVisuals + 40)
+    FullbrightBindSquare.Position = UDim2.new(0, 220, 0, yOffsetVisuals)
     FullbrightBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     FullbrightBindSquare.Text = settings.keyBinds.Fullbright and settings.keyBinds.Fullbright.Name or "Bind"
     FullbrightBindSquare.BackgroundTransparency = 0
@@ -1198,7 +768,7 @@ local success, err = pcall(function()
 
     local FullbrightUnbindSquare = Instance.new("TextButton")
     FullbrightUnbindSquare.Size = UDim2.new(0, 30, 0, 30)
-    FullbrightUnbindSquare.Position = UDim2.new(0, 260, 0, baseYVisuals + 40)
+    FullbrightUnbindSquare.Position = UDim2.new(0, 260, 0, yOffsetVisuals)
     FullbrightUnbindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     FullbrightUnbindSquare.Text = "Unbind"
     FullbrightUnbindSquare.BackgroundTransparency = 0
@@ -1206,6 +776,31 @@ local success, err = pcall(function()
     FullbrightUnbindSquare.Font = Enum.Font.SourceSans
     FullbrightUnbindSquare.TextSize = 12
     FullbrightUnbindSquare.Parent = tabContents["Visuals"]
+
+    yOffsetVisuals = yOffsetVisuals + 40
+    local espTogglesList = {"Box2D", "Name", "Speed", "HealthBar", "Tracer", "Skeleton", "Box3D"}
+    for _, toggleName in ipairs(espTogglesList) do
+        local ESPToggle = Instance.new("TextButton")
+        ESPToggle.Size = UDim2.new(0, 200, 0, 30)
+        ESPToggle.Position = UDim2.new(0, 10, 0, yOffsetVisuals)
+        ESPToggle.Text = "☐ " .. toggleName .. ": " .. (espToggles[toggleName] and "ON" or "OFF")
+        ESPToggle.BackgroundTransparency = 1
+        ESPToggle.TextColor3 = espToggles[toggleName] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+        ESPToggle.Font = Enum.Font.SourceSans
+        ESPToggle.TextSize = 16
+        ESPToggle.Parent = tabContents["Visuals"]
+        print(toggleName .. " toggle created at Y: " .. yOffsetVisuals)
+
+        ESPToggle.MouseButton1Click:Connect(function()
+            espToggles[toggleName] = not espToggles[toggleName]
+            ESPToggle.Text = "☐ " .. toggleName .. ": " .. (espToggles[toggleName] and "ON" or "OFF")
+            ESPToggle.TextColor3 = espToggles[toggleName] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+            settings.espToggles[toggleName] = espToggles[toggleName]
+            saveSettings()
+        end)
+
+        yOffsetVisuals = yOffsetVisuals + 40
+    end
 
     FullbrightToggle.MouseButton1Click:Connect(function()
         fullbrightEnabled = not fullbrightEnabled
@@ -1225,6 +820,7 @@ local success, err = pcall(function()
     end)
 
     FullbrightBindSquare.MouseButton1Click:Connect(function() startBinding(FullbrightBindSquare) end)
+
     FullbrightUnbindSquare.MouseButton1Click:Connect(function()
         settings.keyBinds.Fullbright = nil
         FullbrightBindSquare.Text = "Bind"
@@ -1238,7 +834,8 @@ local success, err = pcall(function()
     local noClipEnabled = settings.noClipEnabled
     local infiniteJumpEnabled = settings.infiniteJumpEnabled
     local saveLastPositionEnabled = settings.saveLastPositionEnabled
-    local controlSpeed = 10000
+    local canInfiniteJump = infiniteJumpEnabled
+    local controlSpeed = 40000
 
     local baseYExploits = 10
     local categoryLabelExploits = Instance.new("TextLabel")
@@ -1363,7 +960,7 @@ local success, err = pcall(function()
     print("InfiniteJump toggle created at Y: " .. yOffsetExploits)
 
     local InfiniteJumpBindSquare = Instance.new("TextButton")
-        InfiniteJumpBindSquare.Size = UDim2.new(0, 30, 0, 30)
+    InfiniteJumpBindSquare.Size = UDim2.new(0, 30, 0, 30)
     InfiniteJumpBindSquare.Position = UDim2.new(0, 220, 0, yOffsetExploits)
     InfiniteJumpBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     InfiniteJumpBindSquare.Text = settings.keyBinds.InfiniteJump and settings.keyBinds.InfiniteJump.Name or "Bind"
@@ -1426,6 +1023,8 @@ local success, err = pcall(function()
         if rootPart then
             lastPosition = rootPart.CFrame
             print("Saved position: " .. tostring(lastPosition))
+        else
+            print("Failed to save position: No HumanoidRootPart found.")
         end
     end
 
@@ -1436,7 +1035,11 @@ local success, err = pcall(function()
             if rootPart then
                 rootPart.CFrame = lastPosition
                 print("Loaded position: " .. tostring(lastPosition))
+            else
+                print("Failed to load position: No HumanoidRootPart found.")
             end
+        else
+            print("No position to load or SaveLastPosition is disabled.")
         end
     end
 
@@ -1444,15 +1047,20 @@ local success, err = pcall(function()
         local character = getCharacter()
         local rootPart = character and character:FindFirstChild("HumanoidRootPart")
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        if not rootPart or not humanoid then return end
+        if not rootPart or not humanoid then
+            print("Cannot start flying: Missing character components.")
+            return
+        end
 
         humanoid.PlatformStand = true
         local bv = Instance.new("BodyVelocity")
+        bv.Name = "FlyVelocity"
         bv.Velocity = Vector3.new(0, 0, 0)
         bv.MaxForce = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
         bv.Parent = rootPart
         
         local bg = Instance.new("BodyGyro")
+        bg.Name = "FlyGyro"
         bg.MaxTorque = Vector3.new(controlSpeed, controlSpeed, controlSpeed)
         bg.P = 5000
         bg.D = 500
@@ -1487,14 +1095,22 @@ local success, err = pcall(function()
         local character = getCharacter()
         local rootPart = character and character:FindFirstChild("HumanoidRootPart")
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        if not rootPart or not humanoid then return end
+        if not rootPart or not humanoid then
+            print("Cannot stop flying: Missing character components.")
+            return
+        end
 
         humanoid.PlatformStand = false
-        if rootPart:FindFirstChild("BodyVelocity") then rootPart.BodyVelocity:Destroy() end
-        if rootPart:FindFirstChild("BodyGyro") then rootPart.BodyGyro:Destroy() end
+        if rootPart:FindFirstChild("FlyVelocity") then
+            rootPart.FlyVelocity:Destroy()
+        end
+        if rootPart:FindFirstChild("FlyGyro") then
+            rootPart.FlyGyro:Destroy()
+        end
         humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
         if saveLastPositionEnabled then
             savePosition()
+            print("Position saved on fly stop.")
         end
         print("Admin Fly OFF!")
     end
@@ -1520,6 +1136,7 @@ local success, err = pcall(function()
         else
             stopFlying()
             if saveLastPositionEnabled then
+                wait(0.1) -- Small delay to ensure position is saved
                 loadPosition()
             end
         end
@@ -1704,7 +1321,7 @@ local success, err = pcall(function()
     UnbindAllButton.Parent = tabContents["Settings"]
     print("UnbindAll button created at Y: " .. yOffsetSettings)
 
-    -- Player List GUI (Always Displayed, Updated Dynamically)
+    -- Player List GUI (Updated Spacing)
     local PlayerListFrame = Instance.new("Frame")
     PlayerListFrame.Size = UDim2.new(0, 250, 0, 350)
     PlayerListFrame.Position = UDim2.new(1, -260, 0.5, -175)
@@ -1733,6 +1350,7 @@ local success, err = pcall(function()
     local playerFrames = {}
 
     local function updatePlayerList()
+        -- Clear existing frames
         for playerName, frame in pairs(playerFrames) do
             if not PlayersService:FindFirstChild(playerName) then
                 frame:Destroy()
@@ -1740,11 +1358,15 @@ local success, err = pcall(function()
             end
         end
 
+        local playerCount = 0
         for _, player in pairs(PlayersService:GetPlayers()) do
             if not playerFrames[player.Name] then
+                playerCount = playerCount + 1
+                local yPos = (playerCount - 1) * 70 -- Increased spacing to 70 units
+
                 local PlayerFrame = Instance.new("Frame")
                 PlayerFrame.Size = UDim2.new(0, 230, 0, 60)
-                PlayerFrame.Position = UDim2.new(0, 10, 0, (#playerFrames * 70))
+                PlayerFrame.Position = UDim2.new(0, 10, 0, yPos)
                 PlayerFrame.BackgroundTransparency = 1
                 PlayerFrame.Parent = PlayerListScroll
                 playerFrames[player.Name] = PlayerFrame
@@ -1810,7 +1432,7 @@ local success, err = pcall(function()
                 end)
             end
         end
-        PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, (#playerFrames * 70) + 10)
+        PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, playerCount * 70)
     end
 
     RunService.RenderStepped:Connect(updatePlayerList)
@@ -1942,7 +1564,15 @@ local success, err = pcall(function()
                             FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
                             FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
                             settings.flyEnabled = flyEnabled
-                            if flyEnabled then startFlying() else stopFlying() if saveLastPositionEnabled then loadPosition() end end
+                            if flyEnabled then
+                                startFlying()
+                            else
+                                stopFlying()
+                                if saveLastPositionEnabled then
+                                    wait(0.1)
+                                    loadPosition()
+                                end
+                            end
                         elseif feature == "NoClip" then
                             noClipEnabled = not noClipEnabled
                             NoClipToggle.Text = "☐ NoClip: " .. (noClipEnabled and "ON" or "OFF")
@@ -1960,7 +1590,9 @@ local success, err = pcall(function()
                             SaveLastPositionToggle.Text = "☐ Save Last Position: " .. (saveLastPositionEnabled and "ON" or "OFF")
                             SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
                             settings.saveLastPositionEnabled = saveLastPositionEnabled
-                            if not saveLastPositionEnabled and lastPosition then loadPosition() end
+                            if not saveLastPositionEnabled and lastPosition then
+                                loadPosition()
+                            end
                         elseif feature == "PlayerList" then
                             playerListEnabled = not playerListEnabled
                             PlayerListToggle.Text = "☐ Player List: " .. (playerListEnabled and "ON" or "OFF")
