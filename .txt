@@ -312,7 +312,7 @@ local success, err = pcall(function()
         end)
     end
 
-    -- Aimbot Tab Content (Using Provided Aimbot Logic)
+    -- Aimbot Tab Content
     local aimbotEnabled = settings.aimbotEnabled
     local deadCheck = settings.deadCheck
     local teamCheck = settings.teamCheck
@@ -594,8 +594,415 @@ local success, err = pcall(function()
     local boneDropdownOpen = false
     local boneDropdownOptions = {"Head", "UpperTorso", "LowerTorso"}
     local boneDropdownFrame = Instance.new("Frame")
-    boneDropdownFrame.Size = UDim2.new(0, 280, 0, #boneDropdownOptions 
-                                    drawings.HealthBarOutline.Position = Vector2.new(barX, barY)
+    boneDropdownFrame.Size = UDim2.new(0, 280, 0, #boneDropdownOptions * 30)
+    boneDropdownFrame.Position = UDim2.new(0, 10, 0, yOffset + 30)
+    boneDropdownFrame.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+    boneDropdownFrame.BackgroundTransparency = 0
+    boneDropdownFrame.Visible = false
+    boneDropdownFrame.Parent = tabContents["Aimbot"]
+    print("Bone dropdown frame created at Y: " .. (yOffset + 30))
+
+    for i, option in ipairs(boneDropdownOptions) do
+        local optionButton = Instance.new("TextButton")
+        optionButton.Size = UDim2.new(1, -10, 0, 30)
+        optionButton.Position = UDim2.new(0, 5, 0, (i - 1) * 30)
+        optionButton.Text = option
+        optionButton.BackgroundTransparency = 1
+        optionButton.TextColor3 = Color3.fromRGB(0, 200, 255)
+        optionButton.Font = Enum.Font.SourceSans
+        optionButton.TextSize = 16
+        optionButton.Parent = boneDropdownFrame
+
+        optionButton.MouseButton1Click:Connect(function()
+            aimbotBone = option
+            AimbotBoneLabel.Text = "Aim Bone: " .. aimbotBone
+            AimbotBoneDropdown.Text = "▼ " .. aimbotBone
+            settings.aimbotBone = aimbotBone
+            saveSettings()
+            boneDropdownFrame.Visible = false
+            boneDropdownOpen = false
+        end)
+    end
+
+    AimbotBoneDropdown.MouseButton1Click:Connect(function()
+        boneDropdownOpen = not boneDropdownOpen
+        boneDropdownFrame.Visible = boneDropdownOpen
+    end)
+
+    -- Aimbot FOV Circle Drawing
+    local fovCircle = Drawing.new("Circle")
+    fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    fovCircle.Radius = aimbotFovSize
+    fovCircle.Color = Color3.fromRGB(255, 0, 0)
+    fovCircle.Thickness = 2
+    fovCircle.Filled = false
+    fovCircle.Visible = aimbotFovEnabled
+
+    -- Aimbot Logic
+    local function isPlayerInFov(player)
+        if not aimbotFovEnabled then
+            return true
+        end
+        if not player.Character or not player.Character:FindFirstChild(aimbotBone) then
+            return false
+        end
+        local bonePos = player.Character[aimbotBone].Position
+        local screenPos, onScreen = Camera:WorldToViewportPoint(bonePos)
+        if not onScreen then
+            return false
+        end
+        local distanceFromCenter = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+        return distanceFromCenter <= aimbotFovSize
+    end
+
+    local function getNearestPlayer()
+        local nearestDistance = math.huge
+        local nearestPlayer = nil
+        local character = getCharacter()
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        local localTeam = LocalPlayer.Team
+        if not rootPart then return nil end
+
+        for _, otherPlayer in pairs(PlayersService:GetPlayers()) do
+            if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local humanoid = otherPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    local isDead = deadCheck and humanoid.Health <= 0
+                    local isSameTeam = teamCheck and localTeam and otherPlayer.Team and (otherPlayer.Team == localTeam)
+                    if not isDead and not isSameTeam and isPlayerInFov(otherPlayer) then
+                        local distance = (rootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).Magnitude
+                        if distance < nearestDistance then
+                            nearestDistance = distance
+                            nearestPlayer = otherPlayer
+                        end
+                    end
+                end
+            end
+        end
+        return nearestPlayer
+    end
+
+    AimbotToggle.MouseButton1Click:Connect(function()
+        aimbotEnabled = not aimbotEnabled
+        AimbotToggle.Text = "☐ Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+        AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+        settings.aimbotEnabled = aimbotEnabled
+        saveSettings()
+    end)
+
+    DeadCheckToggle.MouseButton1Click:Connect(function()
+        deadCheck = not deadCheck
+        DeadCheckToggle.Text = "☐ Dead Check: " .. (deadCheck and "ON" or "OFF")
+        DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+        settings.deadCheck = deadCheck
+        saveSettings()
+    end)
+
+    TeamCheckToggle.MouseButton1Click:Connect(function()
+        teamCheck = not teamCheck
+        TeamCheckToggle.Text = "☐ Team Check: " .. (teamCheck and "ON" or "OFF")
+        TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+        settings.teamCheck = teamCheck
+        saveSettings()
+    end)
+
+    SmoothnessToggle.MouseButton1Click:Connect(function()
+        aimbotSmoothnessEnabled = not aimbotSmoothnessEnabled
+        SmoothnessToggle.Text = "☐ Smoothness: " .. (aimbotSmoothnessEnabled and "ON" or "OFF")
+        SmoothnessToggle.TextColor3 = aimbotSmoothnessEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+        settings.aimbotSmoothnessEnabled = aimbotSmoothnessEnabled
+        saveSettings()
+    end)
+
+    FovCircleToggle.MouseButton1Click:Connect(function()
+        aimbotFovEnabled = not aimbotFovEnabled
+        FovCircleToggle.Text = "☐ FOV Circle: " .. (aimbotFovEnabled and "ON" or "OFF")
+        FovCircleToggle.TextColor3 = aimbotFovEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+        fovCircle.Visible = aimbotFovEnabled
+        settings.aimbotFovEnabled = aimbotFovEnabled
+        saveSettings()
+    end)
+
+    local draggingSmoothnessSlider = false
+    local draggingFovCircleSlider = false
+
+    SmoothnessSlider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingSmoothnessSlider = true
+        end
+    end)
+
+    SmoothnessSlider.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingSmoothnessSlider = false
+        end
+    end)
+
+    FovCircleSlider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingFovCircleSlider = true
+        end
+    end)
+
+    FovCircleSlider.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingFovCircleSlider = false
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        local mouseX = UserInputService:GetMouseLocation().X
+
+        if draggingSmoothnessSlider then
+            local smoothnessSliderPos = SmoothnessSlider.AbsolutePosition.X
+            local smoothnessSliderWidth = SmoothnessSlider.AbsoluteSize.X
+            local smoothnessNewPos = math.clamp((mouseX - smoothnessSliderPos) / smoothnessSliderWidth, 0, 1)
+            SmoothnessKnob.Position = UDim2.new(smoothnessNewPos, 0, 0, 0)
+            aimbotSmoothness = tonumber(string.format("%.2f", 0.1 + (smoothnessNewPos * 0.9)))
+            SmoothnessLabel.Text = "Smoothness: " .. aimbotSmoothness
+            settings.aimbotSmoothness = aimbotSmoothness
+            saveSettings()
+        end
+
+        if draggingFovCircleSlider then
+            local fovCircleSliderPos = FovCircleSlider.AbsolutePosition.X
+            local fovCircleSliderWidth = FovCircleSlider.AbsoluteSize.X
+            local fovCircleNewPos = math.clamp((mouseX - fovCircleSliderPos) / fovCircleSliderWidth, 0, 1)
+            FovCircleKnob.Position = UDim2.new(fovCircleNewPos, 0, 0, 0)
+            aimbotFovSize = math.floor(1 + (fovCircleNewPos * 639))
+            FovCircleLabel.Text = "FOV Size: " .. aimbotFovSize
+            fovCircle.Radius = aimbotFovSize
+            settings.aimbotFovSize = aimbotFovSize
+            saveSettings()
+        end
+
+        fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    end)
+
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseButton2 and aimbotEnabled then
+            targetPlayer = getNearestPlayer()
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild(aimbotBone) then
+                local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid and (not deadCheck or humanoid.Health > 0) and isPlayerInFov(targetPlayer) then
+                    RunService:BindToRenderStep("LockOnPlayer", Enum.RenderPriority.Camera.Value + 1, function()
+                        if aimbotSmoothnessEnabled then
+                            local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character[aimbotBone].Position)
+                            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, aimbotSmoothness * 0.1)
+                        else
+                            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPlayer.Character[aimbotBone].Position)
+                        end
+                    end)
+                end
+            end
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            RunService:UnbindFromRenderStep("LockOnPlayer")
+            targetPlayer = nil
+        end
+    end)
+
+    -- Key Binding Logic
+    local bindingFeature = nil
+    local function startBinding(bindSquare)
+        bindingFeature = bindSquare
+        bindSquare.Text = "Press Key"
+        bindSquare.TextColor3 = Color3.fromRGB(255, 255, 0)
+    end
+
+    AimbotBindSquare.MouseButton1Click:Connect(function() startBinding(AimbotBindSquare) end)
+    DeadCheckBindSquare.MouseButton1Click:Connect(function() startBinding(DeadCheckBindSquare) end)
+    TeamCheckBindSquare.MouseButton1Click:Connect(function() startBinding(TeamCheckBindSquare) end)
+    SmoothnessBindSquare.MouseButton1Click:Connect(function() startBinding(SmoothnessBindSquare) end)
+    FovCircleBindSquare.MouseButton1Click:Connect(function() startBinding(FovCircleBindSquare) end)
+
+    AimbotUnbindSquare.MouseButton1Click:Connect(function()
+        settings.keyBinds.Aimbot = nil
+        AimbotBindSquare.Text = "Bind"
+        AimbotBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
+        saveSettings()
+    end)
+
+    DeadCheckUnbindSquare.MouseButton1Click:Connect(function()
+        settings.keyBinds.DeadCheck = nil
+        DeadCheckBindSquare.Text = "Bind"
+        DeadCheckBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
+        saveSettings()
+    end)
+
+    TeamCheckUnbindSquare.MouseButton1Click:Connect(function()
+        settings.keyBinds.TeamCheck = nil
+        TeamCheckBindSquare.Text = "Bind"
+        TeamCheckBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
+        saveSettings()
+    end)
+
+    SmoothnessUnbindSquare.MouseButton1Click:Connect(function()
+        settings.keyBinds.Smoothness = nil
+        SmoothnessBindSquare.Text = "Bind"
+        SmoothnessBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
+        saveSettings()
+    end)
+
+    FovCircleUnbindSquare.MouseButton1Click:Connect(function()
+        settings.keyBinds.FovCircle = nil
+        FovCircleBindSquare.Text = "Bind"
+        FovCircleBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
+        saveSettings()
+    end)
+
+    -- Visuals Tab Content
+    local espToggles = settings.espToggles
+    local fullbrightEnabled = settings.fullbrightEnabled
+    local espPlayers = {}
+    local lastPositions = {}
+
+    local function DrawESP(plr)
+        local drawings = {
+            Box2D = Drawing.new("Quad"),
+            Name = Drawing.new("Text"),
+            Speed = Drawing.new("Text"),
+            HealthText = Drawing.new("Text"),
+            HealthBar = Drawing.new("Square"),
+            HealthBarOutline = Drawing.new("Square"),
+            Tracer = Drawing.new("Line"),
+            Skeleton = {},
+            Box3D = {}
+        }
+        
+        drawings.Box2D.Color = Color3.fromRGB(0, 200, 255)
+        drawings.Box2D.Thickness = 1
+        drawings.Box2D.Transparency = 1
+        drawings.Box2D.Visible = false
+
+        drawings.Name.Size = 18
+        drawings.Name.Color = Color3.fromRGB(0, 200, 255)
+        drawings.Name.Outline = true
+        drawings.Name.Visible = false
+
+        drawings.Speed.Size = 16
+        drawings.Speed.Color = Color3.fromRGB(0, 200, 255)
+        drawings.Speed.Outline = true
+        drawings.Speed.Visible = false
+
+        drawings.HealthText.Size = 16
+        drawings.HealthText.Color = Color3.fromRGB(0, 200, 255)
+        drawings.HealthText.Outline = true
+        drawings.HealthText.Visible = false
+
+        drawings.HealthBar.Thickness = 0
+        drawings.HealthBar.Size = Vector2.new(150, 10) -- Fixed size
+        drawings.HealthBar.Visible = false
+
+        drawings.HealthBarOutline.Thickness = 1
+        drawings.HealthBarOutline.Size = Vector2.new(150, 10) -- Fixed size
+        drawings.HealthBarOutline.Color = Color3.fromRGB(0, 0, 0)
+        drawings.HealthBarOutline.Filled = false
+        drawings.HealthBarOutline.Visible = false
+
+        drawings.Tracer.Color = Color3.fromRGB(0, 200, 255)
+        drawings.Tracer.Thickness = 1
+        drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        drawings.Tracer.Visible = false
+
+        local bones = {
+            {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
+            {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
+            {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
+            {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
+            {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightUpperArm", "RightHand"}
+        }
+        for _, pair in ipairs(bones) do
+            local line = Drawing.new("Line")
+            line.Color = Color3.fromRGB(0, 200, 255)
+            line.Thickness = 2
+            line.Visible = false
+            drawings.Skeleton[pair[1] .. pair[2]] = line
+        end
+
+        local box3DIndices = {
+            {1, 2}, {2, 3}, {3, 4}, {4, 1},
+            {5, 6}, {6, 7}, {7, 8}, {8, 5},
+            {1, 5}, {2, 6}, {3, 7}, {4, 8}
+        }
+        for i, edge in ipairs(box3DIndices) do
+            local line = Drawing.new("Line")
+            line.Color = Color3.fromRGB(0, 200, 255)
+            line.Thickness = 1
+            line.Visible = false
+            drawings.Box3D[i] = line
+        end
+
+        local function Update()
+            local connection
+            local character = getCharacter()
+            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+            if not rootPart then return end
+
+            connection = RunService.RenderStepped:Connect(function()
+                if plr.Character and plr.Character:FindFirstChild("UpperTorso") and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                    local upperTorso = plr.Character:FindFirstChild("UpperTorso")
+                    local upperTorsoPos, torsoVis = Camera:WorldToViewportPoint(upperTorso.Position)
+                    if torsoVis then
+                        local TopLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, 3, 0)).p)
+                        local TopRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, 3, 0)).p)
+                        local BottomLeft = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(-2, -3, 0)).p)
+                        local BottomRight = Camera:WorldToViewportPoint((plr.Character.HumanoidRootPart.CFrame * CFrame.new(2, -3, 0)).p)
+
+                        if espToggles.Box2D then
+                            drawings.Box2D.PointA = Vector2.new(TopRight.X, TopRight.Y)
+                            drawings.Box2D.PointB = Vector2.new(TopLeft.X, TopLeft.Y)
+                            drawings.Box2D.PointC = Vector2.new(BottomLeft.X, BottomLeft.Y)
+                            drawings.Box2D.PointD = Vector2.new(BottomRight.X, BottomRight.Y)
+                            drawings.Box2D.Visible = true
+                        else
+                            drawings.Box2D.Visible = false
+                        end
+
+                        if espToggles.Name and torsoVis then
+                            local nameWidth = drawings.Name.TextBounds.X
+                            drawings.Name.Position = Vector2.new(upperTorsoPos.X - (nameWidth / 2), upperTorsoPos.Y - 30)
+                            drawings.Name.Text = plr.Name
+                            drawings.Name.Visible = true
+                        else
+                            drawings.Name.Visible = false
+                        end
+
+                        if espToggles.Speed and torsoVis then
+                            local currentPos = plr.Character.HumanoidRootPart.Position
+                            if not lastPositions[plr] then lastPositions[plr] = currentPos end
+                            local lastPos = lastPositions[plr]
+                            local delta = (currentPos - lastPos).Magnitude
+                            local speed = delta / RunService.RenderStepped:Wait()
+                            drawings.Speed.Position = Vector2.new(upperTorsoPos.X, upperTorsoPos.Y + 10)
+                            drawings.Speed.Text = string.format("Speed: %.1f", speed)
+                            lastPositions[plr] = currentPos
+                            drawings.Speed.Visible = true
+                        else
+                            drawings.Speed.Visible = false
+                        end
+
+                        if espToggles.HealthBar and torsoVis then
+                            local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+                            if humanoid then
+                                local healthPercent = humanoid.Health / humanoid.MaxHealth
+                                local barX = upperTorsoPos.X - 75 -- Fixed position relative to screen
+                                local barY = upperTorsoPos.Y + 20 -- Fixed position below name
+
+                                drawings.HealthText.Text = math.floor(healthPercent * 100) .. "%"
+                                local textWidth = drawings.HealthText.TextBounds.X
+                                drawings.HealthText.Position = Vector2.new(barX + 75 - (textWidth / 2), barY - 15)
+                                drawings.HealthText.Visible = true
+
+                                drawings.HealthBar.Position = Vector2.new(barX, barY)
+                                drawings.HealthBar.Size = Vector2.new(150 * healthPercent, 10) -- Fixed height, scaled width
+                                drawings.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0)
+                                drawings.HealthBar.Visible = true
+
+                                drawings.HealthBarOutline.Position = Vector2.new(barX, barY)
                                 drawings.HealthBarOutline.Visible = true
                             else
                                 drawings.HealthText.Visible = false
@@ -836,6 +1243,7 @@ local success, err = pcall(function()
     local saveLastPositionEnabled = settings.saveLastPositionEnabled
     local canInfiniteJump = infiniteJumpEnabled
     local controlSpeed = 40000
+    local lastPosition = nil
 
     local baseYExploits = 10
     local categoryLabelExploits = Instance.new("TextLabel")
@@ -961,7 +1369,7 @@ local success, err = pcall(function()
 
     local InfiniteJumpBindSquare = Instance.new("TextButton")
     InfiniteJumpBindSquare.Size = UDim2.new(0, 30, 0, 30)
-    InfiniteJumpBindSquare.Position = UDim2.new(0, 220, 0, yOffsetExploits)
+        InfiniteJumpBindSquare.Position = UDim2.new(0, 220, 0, yOffsetExploits)
     InfiniteJumpBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     InfiniteJumpBindSquare.Text = settings.keyBinds.InfiniteJump and settings.keyBinds.InfiniteJump.Name or "Bind"
     InfiniteJumpBindSquare.BackgroundTransparency = 0
@@ -1014,8 +1422,6 @@ local success, err = pcall(function()
     SaveLastPositionUnbindSquare.Font = Enum.Font.SourceSans
     SaveLastPositionUnbindSquare.TextSize = 12
     SaveLastPositionUnbindSquare.Parent = tabContents["Exploits"]
-
-    local lastPosition = nil
 
     local function savePosition()
         local character = getCharacter()
