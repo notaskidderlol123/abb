@@ -15,7 +15,7 @@ local success, err = pcall(function()
     -- File-based config
     local configFile = "NettlewareConfig.json"
 
-    -- Default settings (removed speed-related settings)
+    -- Default settings
     local settings = {
         aimbotEnabled = false,
         deadCheck = false,
@@ -309,7 +309,7 @@ local success, err = pcall(function()
         end)
     end
 
-    -- Aimbot Tab Content (unchanged)
+    -- Aimbot Tab Content
     local aimbotEnabled = settings.aimbotEnabled
     local deadCheck = settings.deadCheck
     local teamCheck = settings.teamCheck
@@ -621,7 +621,7 @@ local success, err = pcall(function()
         boneDropdownFrame.Visible = boneDropdownOpen
     end)
 
-    -- Aimbot FOV Circle Drawing (unchanged)
+    -- Aimbot FOV Circle Drawing
     local fovCircle = Drawing.new("Circle")
     fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     fovCircle.Radius = aimbotFovSize
@@ -630,7 +630,7 @@ local success, err = pcall(function()
     fovCircle.Filled = false
     fovCircle.Visible = aimbotFovEnabled
 
-    -- Aimbot Logic with Bone Selection (unchanged)
+    -- Aimbot Logic with Bone Selection
     local function isPlayerInFov(player)
         if not aimbotFovEnabled then
             return true
@@ -763,8 +763,7 @@ local success, err = pcall(function()
             local smoothnessSliderWidth = SmoothnessSlider.AbsoluteSize.X
             local smoothnessNewPos = math.clamp((mouseX - smoothnessSliderPos) / smoothnessSliderWidth, 0, 1)
             SmoothnessKnob.Position = UDim2.new(smoothnessNewPos, 0, 0, 0)
-            aimbotSmoothness = 0.1 + (smoothnessNewPos * 0.9)
-            aimbotSmoothness = math.round(aimbotSmoothness * 10) / 10
+            aimbotSmoothness = 0.1 + (smoothnessNewPos * 0.9) -- Reverted to original range
             SmoothnessLabel.Text = "Smoothness: " .. aimbotSmoothness
             settings.aimbotSmoothness = aimbotSmoothness
             saveSettings()
@@ -807,7 +806,7 @@ local success, err = pcall(function()
         end
     end)
 
-    -- Key Binding Logic (unchanged)
+    -- Key Binding Logic
     local bindingFeature = nil
     local function startBinding(bindSquare)
         bindingFeature = bindSquare
@@ -821,61 +820,6 @@ local success, err = pcall(function()
         featureBindSquare.TextColor3 = Color3.fromRGB(0, 200, 255)
         saveSettings()
     end
-
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if bindingFeature and not gameProcessed then
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                local key = input.KeyCode
-                local feature = nil
-                if bindingFeature == AimbotBindSquare then feature = "Aimbot"
-                elseif bindingFeature == DeadCheckBindSquare then feature = "DeadCheck"
-                elseif bindingFeature == TeamCheckBindSquare then feature = "TeamCheck"
-                elseif bindingFeature == SmoothnessBindSquare then feature = "Smoothness"
-                elseif bindingFeature == FovCircleBindSquare then feature = "FovCircle"
-                end
-                if feature then
-                    settings.keyBinds[feature] = key
-                    bindingFeature.Text = key.Name
-                    bindingFeature.TextColor3 = Color3.fromRGB(0, 200, 255)
-                    saveSettings()
-                end
-                bindingFeature = nil
-            end
-        elseif not gameProcessed then
-            for feature, key in pairs(settings.keyBinds) do
-                if key and input.KeyCode == key then
-                    if feature == "Aimbot" then
-                        aimbotEnabled = not aimbotEnabled
-                        AimbotToggle.Text = "☐ Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
-                        AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        settings.aimbotEnabled = aimbotEnabled
-                    elseif feature == "DeadCheck" then
-                        deadCheck = not deadCheck
-                        DeadCheckToggle.Text = "☐ Dead Check: " .. (deadCheck and "ON" or "OFF")
-                        DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        settings.deadCheck = deadCheck
-                    elseif feature == "TeamCheck" then
-                        teamCheck = not teamCheck
-                        TeamCheckToggle.Text = "☐ Team Check: " .. (teamCheck and "ON" or "OFF")
-                        TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        settings.teamCheck = teamCheck
-                    elseif feature == "Smoothness" then
-                        aimbotSmoothnessEnabled = not aimbotSmoothnessEnabled
-                        SmoothnessToggle.Text = "☐ Smoothness: " .. (aimbotSmoothnessEnabled and "ON" or "OFF")
-                        SmoothnessToggle.TextColor3 = aimbotSmoothnessEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        settings.aimbotSmoothnessEnabled = aimbotSmoothnessEnabled
-                    elseif feature == "FovCircle" then
-                        aimbotFovEnabled = not aimbotFovEnabled
-                        FovCircleToggle.Text = "☐ FOV Circle: " .. (aimbotFovEnabled and "ON" or "OFF")
-                        FovCircleToggle.TextColor3 = aimbotFovEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        fovCircle.Visible = aimbotFovEnabled
-                        settings.aimbotFovEnabled = aimbotFovEnabled
-                    end
-                    saveSettings()
-                end
-            end
-        end
-    end)
 
     AimbotBindSquare.MouseButton1Click:Connect(function() startBinding(AimbotBindSquare) end)
     AimbotUnbindButton.MouseButton1Click:Connect(function() unbind(AimbotBindSquare, "Aimbot") end)
@@ -1239,7 +1183,7 @@ local success, err = pcall(function()
         saveSettings()
     end)
 
-    -- Exploits Tab Content (removed speed-related UI)
+    -- Exploits Tab Content
     local flyEnabled = settings.flyEnabled
     local flySpeed = settings.flySpeed
     local noClipEnabled = settings.noClipEnabled
@@ -1368,7 +1312,7 @@ local success, err = pcall(function()
 
     local InfiniteJumpBindSquare = Instance.new("TextButton")
     InfiniteJumpBindSquare.Size = UDim2.new(0, 30, 0, 30)
-        InfiniteJumpBindSquare.Position = UDim2.new(0, 260, 0, yOffsetExploits)
+    InfiniteJumpBindSquare.Position = UDim2.new(0, 260, 0, yOffsetExploits)
     InfiniteJumpBindSquare.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     InfiniteJumpBindSquare.Text = settings.keyBinds.InfiniteJump and settings.keyBinds.InfiniteJump.Name or "Bind"
     InfiniteJumpBindSquare.BackgroundTransparency = 0
@@ -1389,7 +1333,7 @@ local success, err = pcall(function()
 
     yOffsetExploits = yOffsetExploits + 40
     local SaveLastPositionToggle = Instance.new("TextButton")
-    SaveLastPositionToggle.Size = UDim2.new(0, 240, 0, 30)
+        SaveLastPositionToggle.Size = UDim2.new(0, 240, 0, 30)
     SaveLastPositionToggle.Position = UDim2.new(0, 10, 0, yOffsetExploits)
     SaveLastPositionToggle.Text = "☐ Save Last Position: " .. (saveLastPositionEnabled and "ON" or "OFF")
     SaveLastPositionToggle.BackgroundTransparency = 1
@@ -1617,36 +1561,91 @@ local success, err = pcall(function()
     SaveLastPositionBindSquare.MouseButton1Click:Connect(function() startBinding(SaveLastPositionBindSquare) end)
     SaveLastPositionUnbindButton.MouseButton1Click:Connect(function() unbind(SaveLastPositionBindSquare, "SaveLastPosition") end)
 
+    -- Unified Keybind Input Handling
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed then
-            for feature, key in pairs(settings.keyBinds) do
-                if key and input.KeyCode == key then
-                    if feature == "Fly" then
-                        flyEnabled = not flyEnabled
-                        FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
-                        FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        settings.flyEnabled = flyEnabled
-                        if flyEnabled then startFlying() else stopFlying() end
-                    elseif feature == "NoClip" then
-                        noClipEnabled = not noClipEnabled
-                        NoClipToggle.Text = "☐ NoClip: " .. (noClipEnabled and "ON" or "OFF")
-                        NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        settings.noClipEnabled = noClipEnabled
-                        updateNoClip(noClipEnabled)
-                    elseif feature == "InfiniteJump" then
-                        infiniteJumpEnabled = not infiniteJumpEnabled
-                        InfiniteJumpToggle.Text = "☐ Infinite Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
-                        InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        settings.infiniteJumpEnabled = infiniteJumpEnabled
-                        canInfiniteJump = infiniteJumpEnabled
-                    elseif feature == "SaveLastPosition" then
-                        saveLastPositionEnabled = not saveLastPositionEnabled
-                        SaveLastPositionToggle.Text = "☐ Save Last Position: " .. (saveLastPositionEnabled and "ON" or "OFF")
-                        SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-                        settings.saveLastPositionEnabled = saveLastPositionEnabled
-                        if saveLastPositionEnabled then savePosition() else loadPosition() end
-                    end
+        if not gameProcessed and input.UserInputType == Enum.UserInputType.Keyboard then
+            if bindingFeature then
+                local featureName = nil
+                if bindingFeature == AimbotBindSquare then featureName = "Aimbot"
+                elseif bindingFeature == DeadCheckBindSquare then featureName = "DeadCheck"
+                elseif bindingFeature == TeamCheckBindSquare then featureName = "TeamCheck"
+                elseif bindingFeature == SmoothnessBindSquare then featureName = "Smoothness"
+                elseif bindingFeature == FovCircleBindSquare then featureName = "FovCircle"
+                elseif bindingFeature == FlyBindSquare then featureName = "Fly"
+                elseif bindingFeature == NoClipBindSquare then featureName = "NoClip"
+                elseif bindingFeature == InfiniteJumpBindSquare then featureName = "InfiniteJump"
+                elseif bindingFeature == SaveLastPositionBindSquare then featureName = "SaveLastPosition"
+                elseif bindingFeature == PlayerListBindSquare then featureName = "PlayerList"
+                end
+                if featureName then
+                    settings.keyBinds[featureName] = input.KeyCode
+                    bindingFeature.Text = input.KeyCode.Name
+                    bindingFeature.TextColor3 = Color3.fromRGB(0, 200, 255)
                     saveSettings()
+                end
+                bindingFeature = nil
+            else
+                for feature, key in pairs(settings.keyBinds) do
+                    if key and input.KeyCode == key then
+                        if feature == "Aimbot" then
+                            aimbotEnabled = not aimbotEnabled
+                            AimbotToggle.Text = "☐ Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+                            AimbotToggle.TextColor3 = aimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            settings.aimbotEnabled = aimbotEnabled
+                        elseif feature == "DeadCheck" then
+                            deadCheck = not deadCheck
+                            DeadCheckToggle.Text = "☐ Dead Check: " .. (deadCheck and "ON" or "OFF")
+                            DeadCheckToggle.TextColor3 = deadCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            settings.deadCheck = deadCheck
+                        elseif feature == "TeamCheck" then
+                            teamCheck = not teamCheck
+                            TeamCheckToggle.Text = "☐ Team Check: " .. (teamCheck and "ON" or "OFF")
+                            TeamCheckToggle.TextColor3 = teamCheck and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            settings.teamCheck = teamCheck
+                        elseif feature == "Smoothness" then
+                            aimbotSmoothnessEnabled = not aimbotSmoothnessEnabled
+                            SmoothnessToggle.Text = "☐ Smoothness: " .. (aimbotSmoothnessEnabled and "ON" or "OFF")
+                            SmoothnessToggle.TextColor3 = aimbotSmoothnessEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            settings.aimbotSmoothnessEnabled = aimbotSmoothnessEnabled
+                        elseif feature == "FovCircle" then
+                            aimbotFovEnabled = not aimbotFovEnabled
+                            FovCircleToggle.Text = "☐ FOV Circle: " .. (aimbotFovEnabled and "ON" or "OFF")
+                            FovCircleToggle.TextColor3 = aimbotFovEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            fovCircle.Visible = aimbotFovEnabled
+                            settings.aimbotFovEnabled = aimbotFovEnabled
+                        elseif feature == "Fly" then
+                            flyEnabled = not flyEnabled
+                            FlyToggle.Text = "☐ Fly: " .. (flyEnabled and "ON" or "OFF")
+                            FlyToggle.TextColor3 = flyEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            settings.flyEnabled = flyEnabled
+                            if flyEnabled then startFlying() else stopFlying() end
+                        elseif feature == "NoClip" then
+                            noClipEnabled = not noClipEnabled
+                            NoClipToggle.Text = "☐ NoClip: " .. (noClipEnabled and "ON" or "OFF")
+                            NoClipToggle.TextColor3 = noClipEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            settings.noClipEnabled = noClipEnabled
+                            updateNoClip(noClipEnabled)
+                        elseif feature == "InfiniteJump" then
+                            infiniteJumpEnabled = not infiniteJumpEnabled
+                            InfiniteJumpToggle.Text = "☐ Infinite Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
+                            InfiniteJumpToggle.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            settings.infiniteJumpEnabled = infiniteJumpEnabled
+                            canInfiniteJump = infiniteJumpEnabled
+                        elseif feature == "SaveLastPosition" then
+                            saveLastPositionEnabled = not saveLastPositionEnabled
+                            SaveLastPositionToggle.Text = "☐ Save Last Position: " .. (saveLastPositionEnabled and "ON" or "OFF")
+                            SaveLastPositionToggle.TextColor3 = saveLastPositionEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            settings.saveLastPositionEnabled = saveLastPositionEnabled
+                            if saveLastPositionEnabled then savePosition() else loadPosition() end
+                        elseif feature == "PlayerList" then
+                            playerListEnabled = not playerListEnabled
+                            PlayerListToggle.Text = "☐ Player List: " .. (playerListEnabled and "ON" or "OFF")
+                            PlayerListToggle.TextColor3 = playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
+                            PlayerListFrame.Visible = playerListEnabled
+                            settings.playerListEnabled = playerListEnabled
+                        end
+                        saveSettings()
+                    end
                 end
             end
         end
@@ -1924,13 +1923,6 @@ local success, err = pcall(function()
             GuiBindButton.TextColor3 = Color3.fromRGB(0, 200, 255)
             saveSettings()
             changingGuiBind = false
-        elseif not gameProcessed and settings.keyBinds.PlayerList and input.KeyCode == settings.keyBinds.PlayerList then
-            playerListEnabled = not playerListEnabled
-            PlayerListToggle.Text = "☐ Player List: " .. (playerListEnabled and "ON" or "OFF")
-            PlayerListToggle.TextColor3 = playerListEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 200, 255)
-            PlayerListFrame.Visible = playerListEnabled
-            settings.playerListEnabled = playerListEnabled
-            saveSettings()
         end
     end)
 
